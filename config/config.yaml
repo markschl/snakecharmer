@@ -1,0 +1,187 @@
+# Input files
+input:
+  # Both directories and glob patterns can be specified,
+  # it is no problem if some files are matched by both.
+  # However, multiple files with the same name are currently
+  # pooled together before processing. Which files were chosen
+  # and which ones were pooled can be found in 'results/samples.yaml'
+  directories:
+    - test/gz
+  patterns:
+    - path/to/other/files/**/Abc*.gz
+  # recursive: true causes directories to be searched recursively, and
+  # glob patterns can contain /**/ to match unknown/unlimited directory depth
+  recursive: true
+  # Name patterns for determining sample names: This pipeline does not
+  # require any metadata file specifying sample names and corresponding input files.
+  # However, it is necessary to specify the correct name pattern to obtain
+  # sample names from the file names.
+  # Options are:
+  # - sample_read: e.g. Sample_Name_R1.fasta.gz
+  # - illumina: e.g. Sample_Name_S276_L001_R1_001.fastq.gz
+  # - regular expression with two groups, the first one matches the sample name
+  #     and the second one the read number (1 = forward, 2 = reverse).
+  #     For example, the sample_read pattern looks like this: 
+  #     '(.+?)_R([12])\.fastq\.gz'
+  name_pattern: sample_read  # {sample_read, illumina}
+
+# Pipeline definition
+pipelines:
+  # UNOISE3 pipeline using Vsearch for denoising
+  unoise:
+    cluster: usearch_unoise3  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
+    taxonomy: default  # using settings below
+  # UNOISE3 pipeline using Usearch for denoising
+  unoise_usearch:
+    cluster: usearch_unoise3  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
+    taxonomy: default  # using settings below
+    # Here, we choose USEARCH for denoising instead of VSEARCH.
+    # The below settings simply overwrite the settings found
+    # below the pipelines definition in this file.
+    settings:
+      usearch:
+        unoise: { program: usearch }
+  # QIIME / DADA2
+  qiime_dada2:
+    cluster: qiime_dada2  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
+    taxonomy: default  # using settings below
+  # Amptk with UNOISE3 clustering
+  amptk_unoise:
+    cluster: amptk_unoise3  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
+    taxonomy: default  # using settings below
+  # Amptk with Dada2 clustering
+  amptk_dada2:
+    cluster: amptk_dada2  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
+    taxonomy: default  # using settings below
+
+# Files to compare with ASVs/OTUs using usearch_global (VSEARCH)
+compare:
+  # my_comparison:
+  #   file: path/to/seqs.fasta
+  #   ident_threshold: 0.8
+  #   maxhits: 1
+  # or, specify a list of name / file combinations
+  # name: path/to/file.fasta
+  default_settings:
+    ident_threshold: 0.9
+    maxhits: 1
+    maxaccepts: 64
+    maxrejects: 64
+
+# General settings used by all pipelines 
+# (but can be overridden using the 'settings' entry in the pipeline definition)
+
+# Primer sequences
+primers:
+  # Several primers can be specified. The desired combinations can be 
+  # specified as well (see 'combinations' below).
+  # In addition, each primer can be a comma delimited list of Oligos, which
+  # were mixed together. However, they should still start at the same 
+  # nucleotide position to allow global trimming.
+  forward: 
+    - ITS3-KYO2: GGGATGAAGAACGYAGYRAA
+  reverse:
+    - ITS4: AATCCTCCGCTTATTGATATGC,AATCCTCCGCTGAWTAATATGC
+  # default is all poosible primer combinations
+  combinations: default
+    # Instead of 'default', a list of specific desired combinations
+    # can be supplied. Every combination will obtain its own results directory
+    # - ITS3-KYO2...ITS4
+  trim:
+    min_overlap: 15
+    max_error_rate: 0.25
+
+# For QIIME, it is possible to configure another version
+# (must be installed using conda)
+qiime:
+  version: qiime2-2022.8
+
+# General filter settings
+filter:
+  min_length: 100
+
+# Usearch pipeline specific settings
+usearch:
+  # paired end merging
+  merge:
+    overlap_ident: 75  # percent
+    # max. nucleotide differences
+    # by default, we don't care about this, only rely on overlap identity
+    max_diffs: 1000
+    # how long is the amplicon expected on average? Only used to calculate expected errors
+    # for pipelines not accepting maximum error rates
+    expected_length: 400
+
+  # read filtering before denoising
+  filter:
+    # maximum per-base errors
+    # (e.g. 0.002 per bp gives 0.8 errors per 400 bp)
+    max_error_rate: 0.002
+
+  # UNOISE3 options
+  unoise:
+    min_size: 8
+    program: vsearch  # { vsearch, usearch }
+
+  # mapping options for creation of OTU table
+  otutab:
+    maxaccepts: 64
+    maxrejects: 64
+    ident_threshold: 0.98
+
+# DADA2 specific settings
+dada2:
+  trim_max_err: 1.0
+  max_err_fwd: 1
+  max_err_rev: 15
+  trunc_fwd: 280
+  trunc_rev: 250
+  chimera_method: consensus  # { consensus, per-sample, pooled }
+  pooling_method: independent  # { independent, pseudo, pooled }
+  merge_maxdiffs: 1
+
+# Taxonomic assignment methods
+taxonomy_methods:
+  # SINTAX (USEARCH)
+  sintax_90:
+    method: sintax_usearch  # { sintax_usearch, qiime_sklearn }
+    confidence: 0.9
+  sklearn_90:
+    # classify-sklearn plugin in QIIME2 with Naive Bayes classifier
+    # note: the creation of the database and the taxonomy assignment use
+    #   a lot of memory with the UNITE database.
+    method: qiime_sklearn  # { sintax_usearch, qiime_sklearn }
+    confidence: 0.9
+
+# Definition of all taxonomic databases
+# with optional filters allowing to only keep
+# entries defined at specific taxonomic ranks
+# These filters may be more elaborate in the future.
+taxonomy_dbs:
+  # UNITE including global and 97% singletons (doi.org/10.15156/BIO/1264861)
+  unite_all:
+    db: unite_eukarya_all  # defined in taxonomy.yaml
+  unite_all_species:
+    db: unite_eukarya_all  # defined in taxonomy.yaml
+    # only keep references with known species annotation
+    defined: species
+  # UNITE with singletons set as RefS (doi.org/10.15156/BIO/1264819)
+  unite_refs_species:
+    db: unite_eukarya_refs  # defined in taxonomy.yaml
+    defined: species
+
+# ITS recognition (fungi)
+ITSx:
+  # most important settings
+  organism_groups: all  # -t setting
+  e-value: 1e-5
+  # commonly used search options
+  allow_single_domain: 1e-9,0
+  complement: F        # ITSx uses T (true) as default, but we know the orientation of our amplicon
+  heuristics: F,
+  # common output options
+  graphical: F         # ITSx has T as default
+  fasta: T
+  preserve: F
+  save_regions: all    # ITSx has only ITS1,ITS2 as default
+  partial: 50          # ITSx has 0 as default

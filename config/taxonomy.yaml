@@ -1,0 +1,10 @@
+
+taxonomy_db_sources:
+  unite_eukarya_refs:
+    type: unite_otus
+    reference: 10.15156/BIO/1264819
+    url: https://files.plutof.ut.ee/public/orig/48/29/4829D91F763E20F0F4376A60AA53FC9FBE6029A7D1BDC1B45347DD64EDE5D560.tgz
+  unite_eukarya_all:
+    type: unite_otus
+    reference: 10.15156/BIO/1264861
+    url: https://files.plutof.ut.ee/public/orig/1D/31/1D31FA3A308BDC2FB2750D62C0AA40C5058C15405A3CC5C626CC3A3F5E3903ED.tgz

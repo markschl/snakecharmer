@@ -1,0 +1,6 @@
+channels:
+  - bioconda
+dependencies:
+  - vsearch=2.21
+  - zstd=1.5
+  

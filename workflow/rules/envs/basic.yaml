@@ -1,0 +1,3 @@
+dependencies:
+  - zstd=1.5
+  

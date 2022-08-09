@@ -1,0 +1,115 @@
+from snakemake.utils import min_version
+
+##### set minimum snakemake version #####
+
+min_version("6.1.4")
+
+##### configuration #####
+
+
+configfile: "config/config.yaml"
+configfile: "config/taxonomy.yaml"
+
+
+##### load rules #####
+
+
+include: "rules/common.smk"
+include: "rules/usearch.smk"
+include: "rules/qiime.smk"
+include: "rules/amptk.smk"
+include: "rules/taxonomy.smk"
+include: "rules/other.smk"
+
+
+#### Paths ####
+
+pipeline_dirs = expand(
+    "results/{name}/pipeline_{cluster}",
+    zip,
+    name=cfg.pipelines.keys(),
+    cluster=(p["cluster"] for p in cfg.pipelines.values()),
+)
+
+simple_results_dirs = expand(
+    "results/{name}/data",
+    name=(name for name, p in cfg.pipelines.items() if p['is_simple'])
+)
+
+results_dirs = expand(
+    "{prefix}/{primers}/{strategy}",
+    prefix=pipeline_dirs,
+    strategy=cfg.sequencing_strategies,
+    primers=cfg.primer_combinations,
+)
+
+
+taxonomy_prefixes = lambda sub_path: list(chain(*[
+        expand(
+            "results/{name}/pipeline_{cluster}/{primers}/{strategy}/{sub_path}/{tax[db_name]}-{tax[method]}-{tax[method_name]}",
+            name=name,
+            cluster=p["cluster"],
+            strategy=p["sequencing_strategies"],
+            primers=cfg.primer_combinations,
+            sub_path=sub_path,
+            tax=p["taxonomy"].values(),
+        )
+        for name, p in cfg.pipelines.items()
+    ]))
+
+
+#### target rules #####
+
+from itertools import chain
+
+
+rule config:
+    input:
+        "results/samples.yaml",
+        expand("results/{name}/config.yaml", name=cfg.pipelines),
+
+
+rule quality:
+    input:
+        rules.multiqc_fastqc.output,
+        rules.config.input,
+
+
+rule denoise:
+    input:
+        rules.config.input,
+        simple_results_dirs,
+        expand("{prefix}/denoised.fasta", prefix=results_dirs),
+        expand("{prefix}/denoised_otutab.txt.gz", prefix=results_dirs),
+        expand("{prefix}/denoised.biom", prefix=results_dirs),
+        expand("{prefix}/_validation/multiqc/multiqc_report.html", prefix=pipeline_dirs),
+        # TODO: not all pipelines produce a report
+        expand("{prefix}/_validation/sample_report.tsv", prefix=pipeline_dirs, allow_missing=True),
+
+
+rule taxonomy:
+    input:
+        expand("{prefix}.txt.gz", prefix=taxonomy_prefixes('taxonomy')),
+        expand("{prefix}.biom", prefix=taxonomy_prefixes('taxonomy')),
+        expand("{prefix}.fasta.gz", prefix=taxonomy_prefixes('taxonomy/fasta')),
+
+
+rule ITS:
+    input:
+        expand("{prefix}/ITSx/out.positions.txt", prefix=results_dirs),
+
+
+rule cmp:
+    input:
+        expand("{prefix}/cmp/{db}.txt", prefix=results_dirs, db=cfg.cmp_files),
+        expand("{prefix}/cmp/{db}.bam", prefix=results_dirs, db=cfg.cmp_files),
+
+
+rule clean:
+    shell:
+        "rm -Rf input processing"
+
+
+rule clean_all:
+    shell:
+        "rm -Rf results input processing logs"

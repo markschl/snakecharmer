@@ -1,0 +1,123 @@
+# Input files
+input:
+  directories:
+    - gz
+  recursive: true
+  name_pattern: sample_read  # {sample_read, illumina}
+
+# Pipeline definition
+pipelines:
+  # UNOISE3 pipeline using Vsearch for denoising
+  unoise:
+    cluster: usearch_unoise3
+    taxonomy: default
+  # UNOISE3 pipeline using Usearch for denoising
+  unoise_usearch:
+    cluster: usearch_unoise3
+    taxonomy: default
+    settings:
+      usearch:
+        unoise: { program: usearch }
+  # QIIME / DADA2
+  qiime_dada2:
+    cluster: qiime_dada2
+    taxonomy: default
+  # Amptk
+  amptk_unoise:
+    cluster: amptk_unoise3
+    taxonomy: default
+  amptk_dada2:
+    cluster: amptk_dada2
+    taxonomy: default
+
+# Files to compare with ASVs/OTUs using usearch_global (VSEARCH)
+compare:
+  mock:
+    file: mock/mock_ITS2.fasta
+    maxhits: 1
+    ident_threshold: 0.9
+  default_settings:
+    maxaccepts: 64
+    maxrejects: 64
+
+# General settings used by all pipelines 
+# (but can be overridden using the 'settings' entry in the pipeline definition)
+
+# Primer sequences
+primers:
+  forward: 
+    - ITS3-KYO2: GGGATGAAGAACGYAGYRAA,TCGATGAAGAMCGYWGCVAD
+  reverse:
+    - ITS4: AATCCTCCGCTTATTGATATGC,AATCCTCCGCTGAWTAATATGC
+  combinations: default
+  trim:
+    min_overlap: 15
+    max_error_rate: 0.25
+
+# For QIIME, it is possible to configure another version
+# (must be installed using conda)
+qiime:
+  version: qiime2-2022.8
+
+# General filter settings
+filter:
+  min_length: 100
+
+# Usearch pipeline specific settings
+usearch:
+  # paired end merging
+  merge:
+    overlap_ident: 75  # percent
+    max_diffs: 1000
+    expected_length: 400
+
+  # read filtering before denoising
+  filter:
+    max_error_rate: 0.002
+
+  unoise:
+    min_size: 8
+    program: vsearch
+
+  otutab:
+    maxaccepts: 64
+    maxrejects: 64
+    ident_threshold: 0.98
+
+# DADA2 specific settings
+dada2:
+  trim_max_err: 1.0
+  max_err_fwd: 5
+  max_err_rev: 15
+  trunc_fwd: 280
+  trunc_rev: 250
+  chimera_method: consensus  # { consensus, per-sample, pooled }
+  pooling_method: independent  # { independent, pseudo, pooled }
+  merge_maxdiffs: 1
+
+# Taxonomic assignment methods
+taxonomy_methods:
+  sintax_70:
+    method: sintax_usearch
+    confidence: 0.7
+
+# Definition of all taxonomic databases
+taxonomy_dbs:
+  unite_all:
+    db: unite_eukarya_all
+
+# ITS recognition (fungi)
+ITSx:
+  # most important settings
+  organism_groups: all  # -t setting
+  e-value: 1e-5
+  # commonly used search options
+  allow_single_domain: 1e-9,0
+  complement: F        # ITSx uses T (true) as default, but we know the orientation of our amplicon
+  heuristics: F,
+  # common output options
+  graphical: F         # ITSx has T as default
+  fasta: T
+  preserve: F
+  save_regions: all    # ITSx has only ITS1,ITS2 as default
+  partial: 50          # ITSx has 0 as default

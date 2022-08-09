@@ -1,0 +1,7 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - vsearch=2.21
+  - samtools=1.15.1
+  - zstd=1.5
