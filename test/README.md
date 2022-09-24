@@ -1,10 +1,10 @@
 # Test data
 
-The directory `test_data/gz` contains example data from an Illumina MiSeq run of two uneven (staggered) mock communities (Schlegel et al. 2018). The first 5000 reads are stored in the files. Another 5000 is present for one community (`mock1_more` directory) to showcase the automatic merging of files with the same name. Due to the reduced sequencing depth, only the more abundant species in the community are found. Still, this dataset is useful for validating the pipelines and their parameter combinations.
+The directory `test/gz` contains example files from an Illumina MiSeq run of two uneven (staggered) mock communities (Schlegel et al. 2018). A subset of 5000 reads is stored in the files. Another 5000 reads from the first uneven community (mock1) are in separate files in `mock1_more` directory to showcase the automatic merging of files with the same name. Due to the reduced sequencing depth, only the more abundant species in the community are found. Still, this dataset is useful for validating the pipelines and their parameter combinations.
 
 ## How to analyze
 
-These example commands run all the clustering pipelines (on a local computer) and compare the results.
+These commands run all the clustering pipelines (on a local computer) and compare the results.
 
 ```sh
 conda activate snakemake

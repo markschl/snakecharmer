@@ -60,8 +60,6 @@ compare:
   #   file: path/to/seqs.fasta
   #   ident_threshold: 0.8
   #   maxhits: 1
-  # or, specify a list of name / file combinations
-  # name: path/to/file.fasta
   default_settings:
     ident_threshold: 0.9
     maxhits: 1
@@ -80,6 +78,7 @@ primers:
   # nucleotide position to allow global trimming.
   forward: 
     - ITS3-KYO2: GGGATGAAGAACGYAGYRAA
+    # - fITS7: GTGARTCATCGAATCTTTG
   reverse:
     - ITS4: AATCCTCCGCTTATTGATATGC,AATCCTCCGCTGAWTAATATGC
   # default is all poosible primer combinations
@@ -87,6 +86,7 @@ primers:
     # Instead of 'default', a list of specific desired combinations
     # can be supplied. Every combination will obtain its own results directory
     # - ITS3-KYO2...ITS4
+    # - fITS7...ITS4
   trim:
     min_overlap: 15
     max_error_rate: 0.25
