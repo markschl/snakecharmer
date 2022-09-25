@@ -33,7 +33,7 @@ pipeline_dirs = expand(
 
 simple_results_dirs = expand(
     "results/{name}/data",
-    name=(name for name, p in cfg.pipelines.items() if p['is_simple'])
+    name=(name for name, p in cfg.pipelines.items() if p["is_simple"]),
 )
 
 results_dirs = expand(
@@ -84,14 +84,18 @@ rule denoise:
         expand("{prefix}/denoised.biom", prefix=results_dirs),
         expand("{prefix}/_validation/multiqc/multiqc_report.html", prefix=pipeline_dirs),
         # TODO: not all pipelines produce a report
-        expand("{prefix}/_validation/sample_report.tsv", prefix=pipeline_dirs, allow_missing=True),
+        expand(
+            "{prefix}/_validation/sample_report.tsv",
+            prefix=pipeline_dirs,
+            allow_missing=True,
+        ),
 
 
 rule taxonomy:
     input:
-        expand("{prefix}.txt.gz", prefix=taxonomy_prefixes('taxonomy')),
-        expand("{prefix}.biom", prefix=taxonomy_prefixes('taxonomy')),
-        expand("{prefix}.fasta.gz", prefix=taxonomy_prefixes('taxonomy/fasta')),
+        expand("{prefix}.txt.gz", prefix=taxonomy_prefixes("taxonomy")),
+        expand("{prefix}.biom", prefix=taxonomy_prefixes("taxonomy")),
+        expand("{prefix}.fasta.gz", prefix=taxonomy_prefixes("taxonomy/fasta")),
 
 
 rule ITS:

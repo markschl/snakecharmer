@@ -47,8 +47,8 @@ rule trim_primers_paired:
         par=lambda w: cfg[w.name]["settings"]["primers"]["trim"],
         minlen=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
     input:
-        fprimers='processing/primers/forward.fasta',
-        rprimers_rev='processing/primers/reverse_rev.fasta',
+        fprimers="processing/primers/forward.fasta",
+        rprimers_rev="processing/primers/reverse_rev.fasta",
         seq="processing/{name}/usearch/paired/1_merged/{sample}/{sample}.fastq.zst",
     output:
         "processing/{name}/usearch/paired/2_trim/{sample}/merged/{sample}_fwd.log",

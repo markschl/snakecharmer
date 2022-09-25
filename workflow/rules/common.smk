@@ -16,9 +16,7 @@ def get_link_paths(samples, outdir):
             if len(files) == 1:
                 root, f = next(iter(files))
                 f = join(root, f)
-                out = join(
-                    sample_dir, "{}_R{}.fastq.gz".format(sample_name, read_num)
-                )
+                out = join(sample_dir, "{}_R{}.fastq.gz".format(sample_name, read_num))
                 link_paths.append((f, out))
             else:
                 files = sorted(files)
@@ -71,8 +69,7 @@ rule dump_samples:
             strategy: {
                 sample: {
                     "R{}".format(r): [
-                        os.path.relpath(join(prefix, fname))
-                        for prefix, fname in files
+                        os.path.relpath(join(prefix, fname)) for prefix, fname in files
                     ]
                     if len(files) > 1
                     else os.path.relpath(join(*list(files)[0]))
@@ -112,10 +109,14 @@ rule dump_config:
 
 rule setup_project:
     output:
-        fprimers='processing/primers/forward.fasta',
-        rprimers='processing/primers/reverse.fasta',
-        rprimers_rev='processing/primers/reverse_rev.fasta',
-        simple_sym=[directory("results/{name}/data".format(**p)) for p in cfg.pipelines.values() if p['is_simple']]
+        fprimers="processing/primers/forward.fasta",
+        rprimers="processing/primers/reverse.fasta",
+        rprimers_rev="processing/primers/reverse_rev.fasta",
+        simple_sym=[
+            directory("results/{name}/data".format(**p))
+            for p in cfg.pipelines.values()
+            if p["is_simple"]
+        ],
     log:
         "logs/setup_project.log",
     run:
@@ -127,7 +128,12 @@ rule setup_project:
             # symlink dirs
             for sym_dir in output.simple_sym:
                 p = cfg.pipelines[os.path.basename(dirname(sym_dir))]
-                res_dir = join(dirname(sym_dir), 'pipeline_' + p['cluster'], p['single_primercomb'], p['single_strategy'])
+                res_dir = join(
+                    dirname(sym_dir),
+                    "pipeline_" + p["cluster"],
+                    p["single_primercomb"],
+                    p["single_strategy"],
+                )
                 if not os.path.exists(res_dir):
                     os.makedirs(res_dir)
                 if os.path.exists(sym_dir):
@@ -201,7 +207,10 @@ rule multiqc_fastqc:
     input:
         [
             join(
-                "results", '_validation', "fastqc", splitext(splitext(p)[0])[0] + "_fastqc.html"
+                "results",
+                "_validation",
+                "fastqc",
+                splitext(splitext(p)[0])[0] + "_fastqc.html",
             )
             for _, p in link_paths
         ],

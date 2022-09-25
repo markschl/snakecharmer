@@ -104,13 +104,14 @@ rule qiime_trim_paired:
             --o-trimmed-sequences {output} &> {log}
         """
 
+
 def transform_settings(settings):
     deepcopy(settings)
-    settings['chimera_method'] = settings.get('chimera_method', 'consensus')
-    if settings['chimera_method'] == 'per-sample':
-        settings['chimera_method'] = 'none'    
-    settings['pooling_method'] = settings.get('pooling_method', 'independent')
-    if settings['pooling_method'] == 'pooled':
+    settings["chimera_method"] = settings.get("chimera_method", "consensus")
+    if settings["chimera_method"] == "per-sample":
+        settings["chimera_method"] = "none"
+    settings["pooling_method"] = settings.get("pooling_method", "independent")
+    if settings["pooling_method"] == "pooled":
         print('Warning: "pooling_method = pooled" not possible for QIIME2', file=stderr)
     return settings
 

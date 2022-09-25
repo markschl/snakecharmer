@@ -34,7 +34,7 @@ rule itsx:
 rule vsearch_global:
     params:
         par=lambda w: cfg.cmp_files[w.db],
-        maxhits=lambda w: cfg.cmp_files[w.db].get('maxhits', 0),  # 0 = unlimited
+        maxhits=lambda w: cfg.cmp_files[w.db].get("maxhits", 0),  # 0 = unlimited
     input:
         otus="results/{name}/{pipeline}/{primers}/{strategy}/denoised.fasta",
     output:

@@ -39,6 +39,7 @@ rule filter_taxdb:
         fi
         """
 
+
 rule make_tax_fasta:
     input:
         fa="results/{name}/{pipeline}/{primers}/{strategy}/denoised.fasta",
@@ -64,7 +65,9 @@ rule make_tax_biom:
         biom="results/{name}/{pipeline}/{primers}/{strategy}/denoised.biom",
         tax="results/{name}/{pipeline}/{primers}/{strategy}/taxonomy/{tax_name}.txt.gz",
     output:
-        tax_tmp=temp("processing/{name}/{pipeline}/{primers}/{strategy}/_tax_tmp/{tax_name}.txt"),
+        tax_tmp=temp(
+            "processing/{name}/{pipeline}/{primers}/{strategy}/_tax_tmp/{tax_name}.txt"
+        ),
         biom="results/{name}/{pipeline}/{primers}/{strategy}/taxonomy/{tax_name}.biom",
     log:
         "logs/{name}/other/{strategy}/{pipeline}/{primers}/make_tax_biom/{tax_name}.log",

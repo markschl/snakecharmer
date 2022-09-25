@@ -112,7 +112,7 @@ def amptk_denoise_params(method, settings):
             par["chimera_method"],
         ]
         p = par.get("pooling_method", "independent")
-        if p == 'pooled':
+        if p == "pooled":
             out.append("--pool")
         elif p == "pseudo":
             out.append("--pseudopool")
