@@ -46,7 +46,7 @@ read_pipeline_results = function(INPUT,
     if (verbose)
       cat(paste0('...', name, '\n'), file = stderr())
     if (!is.null(out$taxonomy[[name]])) {
-      warning(sprintf('Taxonomy "%s is present both in gzip-compressed and uncompressed form, used "%s"', name, tax_file))
+      warning(sprintf('Taxonomy "%s is present both in gzip-compressed and uncompressed form, used "%s"\n', name, tax_file))
     }
     out$taxonomy[[name]] = read_qiime_taxonomy(tax_file, ...)
   }

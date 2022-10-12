@@ -8,7 +8,7 @@ library(tibble)
 library(ggplot2)
 theme_set(theme_bw())
 
-source(file.path("..", "..", "R", "read_input.R"))
+source(file.path("..", "..", "R", "read_amplicon.R"))
 ```
 
 ## Read data

@@ -65,7 +65,7 @@ snakemake -j 10 -c20 \
 
 ## Using in R
 
-The R source file [`R/read_input.R`](R/read_input.R) provides code for reading all data from a results directory. See also the small [example analysis](test/R_example/example.md).
+The R source file [`R/read_amplicon.R`](R/read_amplicon.R) provides code for reading all data from a results directory. See also the small [example analysis](test/R_example/example.md).
 
 ## Still not finished...
 
