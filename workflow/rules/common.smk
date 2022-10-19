@@ -1,10 +1,19 @@
 import logging
 import gzip
 import shutil
+from collections import OrderedDict
 from sys import stderr
 from os.path import splitext, dirname, join
 import os
 import lib
+
+localrules:
+    dump_samples,
+    dump_config,
+    setup_project,
+
+
+#### Functions ####
 
 
 def get_link_paths(samples, outdir):
@@ -35,6 +44,18 @@ def get_link_paths(samples, outdir):
     return link_paths, combine_samples
 
 
+def combine_primers(primers_by_marker):
+    out = {'forward': {}, 'reverse': {}}
+    for marker, primers_by_dir in primers_by_marker.items():
+        for dir_, primers in primers_by_dir.items():
+            for name, seqs in primers.items():
+                if name in out[dir_]:
+                    assert seqs == out[dir_][name], 'Sequences of primer {} differ between different markers'.format(name)
+                else:
+                    out[dir_][name] = seqs
+    return out
+
+
 #### Start ####
 
 cfg = lib.Config(config)
@@ -47,12 +68,6 @@ sample_data = {
 }
 link_paths = [p for paths, _ in sample_data.values() for p in paths]
 combine_samples = {strategy: data[1] for strategy, data in sample_data.items()}
-
-
-localrules:
-    dump_samples,
-    dump_config,
-    setup_project,
 
 
 #### Configuration ####
@@ -99,7 +114,10 @@ rule dump_config:
             del c["settings"]["taxonomy_dbs"]
             del c["settings"]["taxonomy_methods"]
             c["taxonomy"] = {
-                "-".join(name): config for name, config in c["taxonomy"].items()
+                marker: {
+                    "-".join(name): config for name, config in tax.items()
+                }
+                for marker, tax in c["taxonomy"].items()
             }
             yaml.dump(c, o)
 
@@ -122,9 +140,11 @@ rule setup_project:
     run:
         with lib.file_logging(log) as out:
             # primer FASTA
-            lib.make_primer_fasta(cfg.fwd_primers, output.fprimers)
-            lib.make_primer_fasta(cfg.rev_primers, output.rprimers)
-            lib.make_primer_fasta(cfg.rev_primers_rev, output.rprimers_rev)
+            primers = combine_primers(cfg.primers)
+            primers_rev = combine_primers(cfg.primers_rev)
+            lib.make_primer_fasta(primers['forward'], output.fprimers)
+            lib.make_primer_fasta(primers['reverse'], output.rprimers)
+            lib.make_primer_fasta(primers_rev['reverse'], output.rprimers_rev)
             # symlink dirs
             for sym_dir in output.simple_sym:
                 p = cfg.pipelines[os.path.basename(dirname(sym_dir))]

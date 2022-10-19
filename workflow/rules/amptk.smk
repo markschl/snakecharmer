@@ -40,17 +40,17 @@ rule amptk_collect:
 
 rule amptk_trim_merge:
     params:
-        f_primer_seq=lambda w: cfg.fwd_primers_consensus[w.f_primer],
-        r_primer_seq=lambda w: cfg.rev_primers_consensus[w.r_primer],
+        f_primer_seq=lambda w: cfg.primers_consensus[w.marker]['forward'][w.f_primer],
+        r_primer_seq=lambda w: cfg.primers_consensus[w.marker]['reverse'][w.r_primer],
         # note: we limit the max. number of primer mismatches to 2.
         # The reason is that Amptk rrently does another primer trimming after merging the 
         # already trimmed reads. With too liberal mismatch thresholds, this will yield
         # many unspecific primer matches, leading to unwanted trimming of reads.
         pmismatch=lambda w: min(2, round((
-                len(cfg.fwd_primers_consensus[w.f_primer])
-                + len(cfg.rev_primers_consensus[w.r_primer])
+                len(cfg.primers_consensus[w.marker]['forward'][w.f_primer])
+                + len(cfg.primers_consensus[w.marker]['reverse'][w.r_primer])
             ) / 2
-            * cfg[w.name]["settings"]["primers"]["trim"]["max_error_rate"]
+            * cfg[w.name]["settings"]["primers"]["trim_settings"]["max_error_rate"]
         )),
         min_len=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
     input:
@@ -60,11 +60,11 @@ rule amptk_trim_merge:
             read=[1, 2],
         ),
     output:
-        demux="processing/{name}/amptk/analysis/paired/{f_primer}...{r_primer}/illumina.demux.fq.gz",
-        mapping="processing/{name}/amptk/analysis/paired/{f_primer}...{r_primer}/illumina.mapping_file.txt",
-        log="processing/{name}/amptk/analysis/paired/{f_primer}...{r_primer}/illumina.amptk-demux.log",
+        demux="processing/{name}/amptk/analysis/paired/{marker}__{f_primer}...{r_primer}/illumina.demux.fq.gz",
+        mapping="processing/{name}/amptk/analysis/paired/{marker}__{f_primer}...{r_primer}/illumina.mapping_file.txt",
+        log="processing/{name}/amptk/analysis/paired/{marker}__{f_primer}...{r_primer}/illumina.amptk-demux.log",
     log:
-        "logs/{name}/amptk/paired/{f_primer}...{r_primer}/trim_merge.log",
+        "logs/{name}/amptk/paired/{marker}__{f_primer}...{r_primer}/trim_merge.log",
     conda:
         "amptk"
     threads: workflow.cores
@@ -171,7 +171,7 @@ rule amptk_stats_paired:
     input:
         merge=expand(
             "processing/{{name}}/amptk/analysis/paired/{primers}/illumina.amptk-demux.log",
-            primers=cfg.primer_combinations,
+            primers=cfg.primer_combinations_flat,
         ),
     output:
         "results/{name}/pipeline_amptk_{method}/_validation/sample_report.tsv",

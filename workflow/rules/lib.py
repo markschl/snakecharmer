@@ -14,7 +14,7 @@ from os.path import dirname
 
 # Set environment variable of pipeline root dir to allow post-deploy 
 # scripts to run other scripts stored in that directory
-# TODO: may be kind of a hack, not sure if it works in all cases
+# TODO: kind of a hack, not sure if it works in all cases; possibly replace with standard Snakemake scripts
 os.environ['PIPELINE_DIR'] = dirname(dirname(dirname(srcdir('.'))))
 
 
@@ -95,7 +95,7 @@ def group_samples(**collect_args):
 
 def parse_primers(primers):
     for p in primers:
-        assert isinstance(p, dict)
+        assert isinstance(p, dict), "Primers must be defined in the form: 'name: sequence1,sequence2,...'"
         id = next(iter(p.keys()))
         seqs = next(iter(p.values()))
         seqs = [s.strip() for s in seqs.split(',')]
@@ -170,42 +170,64 @@ class Config(object):
     def _read_primers(self):
         # if self.config['primers']['process_unmerged'] is True:
         #     self.unmerged_read_idx = self.read_idx
-
-        self.fwd_primers = dict(parse_primers(self.config['primers']['forward']))
-        self.rev_primers = dict(parse_primers(self.config['primers']['reverse']))
-        self.fwd_primers_rev = {p: [seq.reverse_complement(s) for s in seqs] for p, seqs in self.fwd_primers.items()}
-        self.rev_primers_rev = {p: [seq.reverse_complement(s) for s in seqs] for p, seqs in self.rev_primers.items()}
-
-        self.fwd_primers_consensus = {name: consensus(seq.SeqRecord(name, s) for s in primers)
-                                      for name, primers in self.fwd_primers.items()}
-        self.rev_primers_consensus = {name: consensus(seq.SeqRecord(name, s) for s in primers)
-                                      for name, primers in self.rev_primers.items()}
-        self.rev_primers_consensus_rev = {name: seq.reverse_complement(s) for name, s in self.rev_primers_consensus.items()}
-        self.fwd_primers_consensus_rev = {name: seq.reverse_complement(s) for name, s in self.fwd_primers_consensus.items()}
-
-        # obtain primer combinations
-        self.primer_combinations = []
-        comb = self.config['primers'].get('combinations', 'default')
-        if comb == 'default':
-            assert len(self.fwd_primers) == 1 and len(self.rev_primers) == 1, \
-                "With multiple forward/reverse primers, a list of combinations needs to be specified (forward...reverse)"
-            self.primer_combinations.append(list(self.fwd_primers)[0] + '...' + list(self.rev_primers)[0])
-        else:
-            assert isinstance(comb, list)
-            for c in comb:
-                s = c.split('...')
-                assert len(s) == 2
-                assert s[0] in self.fwd_primers, 'Unknown forward primer: {}'.format(s[0])
-                assert s[1] in self.rev_primers, 'Unknown reverse primer: {}'.format(s[1])
-                self.primer_combinations.append(c)
+        self.primers = {}
+        self.primers_rev = {}
+        self.primers_consensus = {}
+        self.primers_consensus_rev = {}
+        self.primer_combinations = {}
+        self.primer_combinations_flat = []
+        self.markers = list(self.config['primers'])
+        for marker, primers in self.config['primers'].items():
+            if marker == 'trim_settings':
+                # ignore settings
+                continue
+            assert isinstance(primers, dict), 'Invalid primer settings for marker {}'.format(marker)
+            # parse primers
+            pr = self.primers[marker] = {dir_: dict(parse_primers(primers[dir_])) for dir_ in ['forward', 'reverse']}
+            # reverse complement versions
+            self.primers_rev[marker] = {
+                direction: {p: [seq.reverse_complement(s) for s in seqs] for p, seqs in pseqs.items()}
+                for direction, pseqs in pr.items()
+            }
+            # primer consensus
+            cns = self.primers_consensus[marker] = {
+                direction: {name: consensus(seq.SeqRecord(name, s) for s in seqs)
+                                      for name, seqs in pseqs.items()}
+                for direction, pseqs in pr.items()
+            }
+            # reverse complement consensus
+            self.primers_consensus_rev[marker] = {
+                direction: {name: seq.reverse_complement(s) for name, s in cons.items()}
+                for direction, cons in cns.items()
+            }
+            # obtain primer combinations
+            combinations = primers.get('combinations', 'default')
+            if combinations == 'default':
+                self.primer_combinations[marker] = []
+                for fwd, rev in product(pr['forward'], pr['reverse']):
+                    self.primer_combinations[marker].append('{}...{}'.format(fwd, rev))
+                    self.primer_combinations_flat.append('{}__{}...{}'.format(marker, fwd, rev))
+            else:
+                assert isinstance(combinations, list)
+                self.primer_combinations[marker] = combinations
+                for c in combinations:
+                    s = c.split('...')
+                    assert len(s) == 2
+                    assert s[0] in self.primers['forward'], 'Unknown forward primer: {}'.format(s[0])
+                    assert s[1] in self.primers['reverse'], 'Unknown reverse primer: {}'.format(s[1])
+                    self.primer_combinations_flat.append('{}__{}'.format(marker, c))
+        # make sure the same primer combinations don't occur in different markers
+        comb = [c for _, comb in self.primer_combinations.items() for c in comb]
+        assert len(set(comb)) == len(comb), 'Primer combinations cannot be identical across markers'
 
     def _init_config(self):
         # prepare taxonomy databases
-        for db in self.config['taxonomy_dbs'].values():
-            # complete optional values
-            if not 'defined' in db:
-                db['defined'] = '_all'
-            db.update(self.config['taxonomy_db_sources'][db['db']])
+        for dbs in self.config['taxonomy_dbs'].values():
+            for db in dbs.values():
+                # complete optional values
+                if not 'defined' in db:
+                    db['defined'] = '_all'
+                db.update(self.config['taxonomy_db_sources'][db['db']])
 
         # parse pipeline definitions
         self.pipelines = self.config['pipelines']
@@ -229,27 +251,36 @@ class Config(object):
             p['sequencing_strategies'] = self.sequencing_strategies
 
             # prepare list of taxonomy assignment methods (with corresponding databases)
+            # first, replace 'default'
             settings = p['settings']
-            dbs = settings['taxonomy_dbs']
-            db_names = list(dbs.keys())
-            methods = settings['taxonomy_methods']
-            method_names = list(methods.keys())
-            if p['taxonomy'] != 'default':
-                _dbs = p['taxonomy']['dbs']
-                _methods = p['taxonomy']['methods']
-                assert not set(_dbs).difference(db_names)
-                assert not set(_methods).difference(method_names)
-                db_names = _dbs
-                method_names = _methods
-            p['taxonomy'] = {
-                (db, method): {'db_name': db, 'method_name': method, **dbs[db], **methods[method]}
-                for db, method in product(db_names, method_names)
-            }
+            if p['taxonomy'] == 'default':
+                p['taxonomy'] = {
+                    'dbs': {marker: list(dbs) for marker, dbs in settings['taxonomy_dbs'].items()},
+                    'methods': list(settings['taxonomy_methods'])
+                }
+            else:
+                assert 'dbs' in p['taxonomy']
+                assert 'methods' in p['taxonomy']
+            # validate method names
+            method_names = p['taxonomy']['methods']
+            method_cfg = settings['taxonomy_methods']
+            assert not set(method_names).difference(method_cfg)
+            # then, for every marker, assemble the combinations
+            tax = {}
+            for marker, db_names in p['taxonomy']['dbs'].items():
+                db_cfg = settings['taxonomy_dbs'][marker]
+                assert not set(db_names).difference(db_cfg)
+                tax[marker] = {
+                    (db, method): {'marker': marker, 'db_name': db, 'method_name': method, **db_cfg[db], **method_cfg[method]}
+                    for db, method in product(db_names, method_names)
+                }
+            # finally, replace the initial taxonomy configuration by the parsed one
+            p['taxonomy'] = tax
 
             # is it a 'simple' pipeline (with only one results dir, see setup_project())?
-            p['is_simple'] = len(p["sequencing_strategies"]) == 1 and len(self.primer_combinations) == 1
+            p['is_simple'] = len(p["sequencing_strategies"]) == 1 and len(self.primer_combinations_flat) == 1
             # simplify path generation
-            p['single_primercomb'] = self.primer_combinations[0] if p['is_simple'] else None
+            p['single_primercomb'] = self.primer_combinations_flat[0] if p['is_simple'] else None
             p['single_strategy'] = p['sequencing_strategies'][0] if p['is_simple'] else None
 
     # allow access to pipeline settings in a dict-like way

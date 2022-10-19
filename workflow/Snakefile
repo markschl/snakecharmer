@@ -39,22 +39,24 @@ simple_results_dirs = expand(
 results_dirs = expand(
     "{prefix}/{primers}/{strategy}",
     prefix=pipeline_dirs,
+    primers=cfg.primer_combinations_flat,
     strategy=cfg.sequencing_strategies,
-    primers=cfg.primer_combinations,
 )
 
 
 taxonomy_prefixes = lambda sub_path: list(chain(*[
         expand(
-            "results/{name}/pipeline_{cluster}/{primers}/{strategy}/{sub_path}/{tax[db_name]}-{tax[method]}-{tax[method_name]}",
+            "results/{name}/pipeline_{cluster}/{marker}__{primers}/{strategy}/{sub_path}/{tax[db_name]}-{tax[method]}-{tax[method_name]}",
             name=name,
             cluster=p["cluster"],
             strategy=p["sequencing_strategies"],
-            primers=cfg.primer_combinations,
+            marker=marker,
+            primers=primer_comb,
             sub_path=sub_path,
-            tax=p["taxonomy"].values(),
+            tax=p["taxonomy"][marker].values(),
         )
         for name, p in cfg.pipelines.items()
+        for marker, primer_comb in cfg.primer_combinations.items()
     ]))
 
 
@@ -94,7 +96,7 @@ rule denoise:
 rule taxonomy:
     input:
         expand("{prefix}.txt.gz", prefix=taxonomy_prefixes("taxonomy")),
-        expand("{prefix}.biom", prefix=taxonomy_prefixes("taxonomy")),
+        expand("{prefix}.biom.gz", prefix=taxonomy_prefixes("taxonomy")),
         expand("{prefix}.fasta.gz", prefix=taxonomy_prefixes("taxonomy/fasta")),
 
 
@@ -117,3 +119,8 @@ rule clean:
 rule clean_all:
     shell:
         "rm -Rf results input processing logs"
+
+
+rule clean_tax:
+    shell:
+        "rm -Rf refdb"

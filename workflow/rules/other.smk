@@ -4,11 +4,11 @@ rule itsx:
     params:
         par=config["ITSx"],
     input:
-        fa="results/{name}/{pipeline}/{primers}/{strategy}/denoised.fasta",
+        fa="results/{name}/{pipeline}/ITS__{primers}/{strategy}/denoised.fasta",
     output:
-        pos="results/{name}/{pipeline}/{primers}/{strategy}/ITSx/out.positions.txt",
+        pos="results/{name}/{pipeline}/ITS__{primers}/{strategy}/ITSx/out.positions.txt",
     log:
-        "logs/{name}/other/{strategy}/{pipeline}/{primers}/ITSx.log",
+        "logs/{name}/other/{strategy}/{pipeline}/ITS__{primers}/ITSx.log",
     conda:
         "envs/itsx.yaml"
     threads: min(workflow.cores, 8)  # too many does not make sense

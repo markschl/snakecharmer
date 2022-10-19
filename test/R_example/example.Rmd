@@ -29,7 +29,7 @@ res_base <- file.path("..", "results")
 res_unoise <- read_pipeline_results(file.path(res_base, "unoise", "data"))
 ```
 
-The result of `read_pipeline_results` is a list with different components: *`r paste(names(res_unoise), collapse=', ')`*.
+The result of `read_pipeline_results` is a list with different components:
 
 - `otutab`: Count matrix with ASVs/OTUs in rows and samples in columns.
 - `taxonomy`: List of data frames, one per taxonomic assignment method (here, only one was used: `r paste(names(res_unoise$taxonomy), collapse=', ')`) with OTU, taxonomic ranks and a `def_rank` column specifying the rank, at which the names are defined. The taxonomic table should never have any `NA` values. Unknown names were auto-filled based on the known names, e.g. `Ascomycota_ord_unknown`. At the species level, taxa re named `Saccharomyces sp.` (if genus known) or `Ascomycota clone` (genus unknown). These name patterns can be configured in `read_pipeline_results` (`unknown_fmt` and `unknown_species_fmt`, see documentation of `replace_missing_taxa`). Example with shortened names:

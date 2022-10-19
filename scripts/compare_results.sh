@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO: this script may be incorporated in the pipeline
+
 set -euo pipefail
 
 

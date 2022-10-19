@@ -9,7 +9,7 @@ These commands run all the clustering pipelines (on a local computer) and compar
 ```sh
 conda activate snakemake
 # run the denoising with 6 cores
-snakemake -j 6 --use-conda --conda-prefix ~/conda -d test denoise cmp
+snakemake -j6 --use-conda --conda-prefix ~/conda -d test denoise cmp
 # (optional) remove working directories (but not logs)
 snakemake -j1 -d test clean
 # run a general comparison script (useful for any pipeline comparison)

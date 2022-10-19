@@ -17,24 +17,34 @@ input:
   # However, it is necessary to specify the correct name pattern to obtain
   # sample names from the file names.
   # Options are:
-  # - sample_read: e.g. Sample_Name_R1.fasta.gz
-  # - illumina: e.g. Sample_Name_S276_L001_R1_001.fastq.gz
+  # - sample_read: e.g. Sample_Name_R1.fasta.gz 
+  # - illumina: e.g. Sample_Name_S276_L001_R1_001.fastq.gz 
   # - regular expression with two groups, the first one matches the sample name
   #     and the second one the read number (1 = forward, 2 = reverse).
   #     For example, the sample_read pattern looks like this: 
   #     '(.+?)_R([12])\.fastq\.gz'
-  name_pattern: sample_read  # {sample_read, illumina}
+  #     The illumina pattern: "(.+?)_S\d+_L\d+_R([12])_\d{3}\.fastq\.gz"
+  name_pattern: sample_read  # {sample_read, illumina, <regex>}
 
 # Pipeline definition
+# Each pipeline needs two options:
+#  cluster: name of a clustering/denoising method
+#  taxonomy: either default (all databases and methods listed in 'taxonomy_dbs'
+#     and 'taxonomy_methods'), or a custom combination of database/method names
+#     (see 'unoise_usearch' pipeline below)
 pipelines:
   # UNOISE3 pipeline using Vsearch for denoising
   unoise:
     cluster: usearch_unoise3  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
-    taxonomy: default  # using settings below
+    taxonomy: default  # using all taxonomy_dbs and taxonomy_methods
   # UNOISE3 pipeline using Usearch for denoising
   unoise_usearch:
     cluster: usearch_unoise3  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
-    taxonomy: default  # using settings below
+    # example with taxonomy assignments overridden to only a selection of databases and methods
+    taxonomy:
+      dbs:
+        ITS: [unite_species]
+      methods: [sintax_90]
     # Here, we choose USEARCH for denoising instead of VSEARCH.
     # The below settings simply overwrite the settings found
     # below the pipelines definition in this file.
@@ -44,15 +54,15 @@ pipelines:
   # QIIME / DADA2
   qiime_dada2:
     cluster: qiime_dada2  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
-    taxonomy: default  # using settings below
+    taxonomy: default
   # Amptk with UNOISE3 clustering
   amptk_unoise:
-    cluster: amptk_unoise3  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
-    taxonomy: default  # using settings below
+    cluster: amptk_unoise3
+    taxonomy: default
   # Amptk with Dada2 clustering
   amptk_dada2:
-    cluster: amptk_dada2  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
-    taxonomy: default  # using settings below
+    cluster: amptk_dada2
+    taxonomy: default
 
 # Files to compare with ASVs/OTUs using usearch_global (VSEARCH)
 compare:
@@ -71,23 +81,36 @@ compare:
 
 # Primer sequences
 primers:
-  # Several primers can be specified. The desired combinations can be 
-  # specified as well (see 'combinations' below).
-  # In addition, each primer can be a comma delimited list of Oligos, which
-  # were mixed together. However, they should still start at the same 
-  # nucleotide position to allow global trimming.
-  forward: 
-    - ITS3-KYO2: GGGATGAAGAACGYAGYRAA
-    # - fITS7: GTGARTCATCGAATCTTTG
-  reverse:
-    - ITS4: AATCCTCCGCTTATTGATATGC,AATCCTCCGCTGAWTAATATGC
-  # default is all poosible primer combinations
-  combinations: default
-    # Instead of 'default', a list of specific desired combinations
-    # can be supplied. Every combination will obtain its own results directory
-    # - ITS3-KYO2...ITS4
-    # - fITS7...ITS4
-  trim:
+  # Primers are grouped per marker. The marker name (in this case ITS) needs to be
+  # present in the 'taxonomy_dbs' configuration. Only databases from the given
+  # marker will be used for taxonomy assignments.
+  # Furthermore, some marker-specific rules such as 'ITSx' will only be run with ITS sequences
+  ITS:
+    # Several primers can be specified. The desired combinations can be 
+    # specified as well (see 'combinations' below. Multiple primer combinations
+    # may occur if:
+    # - Different samples were amplified with different primers
+    # - Some or all samples are a mix of different amplicons, which were pooled before indexing
+    # Each primer can further be a comma delimited list of oligos, which
+    # were mixed together. However, they should still start at the same 
+    # nucleotide position to allow global trimming. The oligos may include adapter and/or linker
+    # sequences, but their position is not required to be at the exact sequence start or end.
+    forward: 
+      - ITS3-KYO2: GGGATGAAGAACGYAGYRAA
+      # - fITS7: GTGARTCATCGAATCTTTG
+    reverse:
+      - ITS4: AATCCTCCGCTTATTGATATGC,AATCCTCCGCTGAWTAATATGC
+    # Primer combinations: either 'default' (to use all possible combinations), 
+    #   or a list of combinations (see below)
+    combinations: default
+      ## Instead of 'default', a list of specific desired combinations
+      ## can be supplied. Every combination will obtain its own results directory
+      ## (named "marker__forward...reverse")
+      ## The primer combination format must be: "forward...reverse"
+      # - ITS3-KYO2...ITS4
+      # - fITS7...ITS4
+  # Primer trimming settings
+  trim_settings:
     min_overlap: 15
     max_error_rate: 0.25
 
@@ -158,17 +181,14 @@ taxonomy_methods:
 # entries defined at specific taxonomic ranks
 # These filters may be more elaborate in the future.
 taxonomy_dbs:
-  # UNITE including global and 97% singletons (doi.org/10.15156/BIO/1264861)
-  unite_all:
-    db: unite_eukarya_all  # defined in taxonomy.yaml
-  unite_all_species:
-    db: unite_eukarya_all  # defined in taxonomy.yaml
-    # only keep references with known species annotation
-    defined: species
-  # UNITE with singletons set as RefS (doi.org/10.15156/BIO/1264819)
-  unite_refs_species:
-    db: unite_eukarya_refs  # defined in taxonomy.yaml
-    defined: species
+  ITS:
+    # UNITE including global and 97% singletons (doi.org/10.15156/BIO/1264861)
+    unite:
+      db: unite_eukarya_all  # defined in taxonomy.yaml
+    unite_species:
+      db: unite_eukarya_all  # defined in taxonomy.yaml
+      # only keep references with known species annotation
+      defined: species
 
 # ITS recognition (fungi)
 ITSx:

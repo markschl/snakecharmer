@@ -1,11 +1,11 @@
 
 rule obtain_taxdb:
     params:
-        par=lambda w: config["taxonomy_dbs"][w.db],
+        par=lambda w: config["taxonomy_dbs"][w.marker][w.db],
     output:
-        "refdb/taxonomy/{db}/all/seqs.fasta.zst",
+        "refdb/taxonomy/{marker}/{db}/all/seqs.fasta.zst",
     log:
-        "logs/taxdb/obtain/{db}.log",
+        "logs/taxdb/obtain/{marker}/{db}.log",
     conda:
         "envs/basic.yaml"
     # cache: True
@@ -19,11 +19,11 @@ rule obtain_taxdb:
 
 rule filter_taxdb:
     input:
-        "refdb/taxonomy/{db}/all/seqs.fasta.zst",
+        "refdb/taxonomy/{marker}/{db}/all/seqs.fasta.zst",
     output:
-        "refdb/taxonomy/{db}/filtered/{defined}.fasta.zst",
+        "refdb/taxonomy/{marker}/{db}/filtered/{defined}.fasta.zst",
     log:
-        "logs/taxdb/filter/{db}/{defined}.log",
+        "logs/taxdb/filter/{marker}/{db}/{defined}.log",
     conda:
         "envs/basic.yaml"
     group:
@@ -68,7 +68,7 @@ rule make_tax_biom:
         tax_tmp=temp(
             "processing/{name}/{pipeline}/{primers}/{strategy}/_tax_tmp/{tax_name}.txt"
         ),
-        biom="results/{name}/{pipeline}/{primers}/{strategy}/taxonomy/{tax_name}.biom",
+        biom="results/{name}/{pipeline}/{primers}/{strategy}/taxonomy/{tax_name}.biom.gz",
     log:
         "logs/{name}/other/{strategy}/{pipeline}/{primers}/make_tax_biom/{tax_name}.log",
     conda:
@@ -82,7 +82,8 @@ rule make_tax_biom:
           sed 's/Taxon/taxonomy/g' |
           sed 's/Feature ID/# Feature ID/g' > {output.tax_tmp}
         biom add-metadata -i {input.biom}  \
-          -o {output.biom} \
+          -o /dev/stdout \
           --observation-metadata-fp {output.tax_tmp} \
-          --sc-separated taxonomy --float-fields Confidence --output-as-json
+          --sc-separated taxonomy --float-fields Confidence --output-as-json |
+          gzip -c > {output.biom}
         """

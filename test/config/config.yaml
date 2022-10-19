@@ -45,12 +45,13 @@ compare:
 
 # Primer sequences
 primers:
-  forward: 
-    - ITS3-KYO2: GGGATGAAGAACGYAGYRAA,TCGATGAAGAMCGYWGCVAD
-  reverse:
-    - ITS4: AATCCTCCGCTTATTGATATGC,AATCCTCCGCTGAWTAATATGC
-  combinations: default
-  trim:
+  ITS:
+    forward: 
+      - ITS3-KYO2: GGGATGAAGAACGYAGYRAA,TCGATGAAGAMCGYWGCVAD
+    reverse:
+      - ITS4: AATCCTCCGCTTATTGATATGC,AATCCTCCGCTGAWTAATATGC
+    combinations: default
+  trim_settings:
     min_overlap: 15
     max_error_rate: 0.25
 
@@ -100,11 +101,16 @@ taxonomy_methods:
   sintax_70:
     method: sintax_usearch
     confidence: 0.7
+  ## be careful with activating on PC (uses lots of memory)
+  # sklearn_90:
+  #   method: qiime_sklearn  # { sintax_usearch, qiime_sklearn }
+  #   confidence: 0.7
 
 # Definition of all taxonomic databases
 taxonomy_dbs:
-  unite_all:
-    db: unite_eukarya_all
+  ITS:
+    unite:
+      db: unite_eukarya_all
 
 # ITS recognition (fungi)
 ITSx:

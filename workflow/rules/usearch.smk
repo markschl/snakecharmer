@@ -44,8 +44,9 @@ rule usearch_merge_paired:
 
 rule trim_primers_paired:
     params:
-        par=lambda w: cfg[w.name]["settings"]["primers"]["trim"],
+        par=lambda w: cfg[w.name]["settings"]["primers"]["trim_settings"],
         minlen=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
+        primer_comb=cfg.primer_combinations_flat
     input:
         fprimers="processing/primers/forward.fasta",
         rprimers_rev="processing/primers/reverse_rev.fasta",
@@ -56,7 +57,7 @@ rule trim_primers_paired:
         "processing/{name}/usearch/paired/2_trim/{sample}/merged/{sample}_stats.txt",
         expand(
             "processing/{{name}}/usearch/paired/2_trim/{{sample}}/merged/{primers}.fastq.zst",
-            primers=cfg.primer_combinations,
+            primers=cfg.primer_combinations_flat,
         ),
     log:
         "logs/{name}/usearch/paired/2_trim/{sample}.log",
@@ -72,7 +73,15 @@ rule trim_primers_paired:
             --overlap {params.par[min_overlap]} \
             --minimum-length {params.minlen} \
              2> {log}
+        # create empty zstd archives if file does not exist
         $PIPELINE_DIR/workflow/scripts/utils/create_if_not_exists.sh {output} 2>> {log}
+        # rename output to contain marker name
+        # TODO: kind of complicated procedure
+        prefix=processing/{wildcards.name}/usearch/paired/2_trim/{wildcards.sample}/merged
+        for marker_comb in {params.primer_comb}; do
+            comb=${{marker_comb##*__}}
+            mv "$prefix/$comb.fastq.zst" "$prefix/$marker_comb.fastq.zst"
+        done
         """
 
 
@@ -271,17 +280,17 @@ rule convert_taxdb_utax:
 
 rule assign_taxonomy_sintax:
     params:
-        par=lambda w: cfg[w.name]["taxonomy"][(w.db_name, w.tax_method)],
+        par=lambda w: cfg[w.name]["taxonomy"][w.marker][(w.db_name, w.tax_method)],
     input:
-        fa="results/{name}/{pipeline}/{primers}/{strategy}/denoised.fasta",
-        db=lambda w: "refdb/taxonomy/{db_name}/formatted/utax/{defined}.fasta.zst".format(
-            **cfg[w.name]["taxonomy"][(w.db_name, w.tax_method)]
+        fa="results/{name}/{pipeline}/{marker}__{primers}/{strategy}/denoised.fasta",
+        db=lambda w: "refdb/taxonomy/{{marker}}/{db_name}/formatted/utax/{defined}.fasta.zst".format(
+            **cfg[w.name]["taxonomy"][w.marker][(w.db_name, w.tax_method)]
         ),
     output:
-        tax="results/{name}/{pipeline}/{primers}/{strategy}/taxonomy/{db_name}-sintax_usearch-{tax_method}.txt.gz",
-        sintax="results/{name}/{pipeline}/{primers}/{strategy}/taxonomy/sintax/{db_name}-sintax_usearch-{tax_method}.txt.gz",
+        tax="results/{name}/{pipeline}/{marker}__{primers}/{strategy}/taxonomy/{db_name}-sintax_usearch-{tax_method}.txt.gz",
+        sintax="results/{name}/{pipeline}/{marker}__{primers}/{strategy}/taxonomy/sintax/{db_name}-sintax_usearch-{tax_method}.txt.gz",
     log:
-        "logs/{name}/other/{strategy}/{pipeline}/{primers}/taxonomy_sintax/{db_name}-{tax_method}.log",
+        "logs/{name}/other/{strategy}/{pipeline}/{marker}__{primers}/taxonomy_sintax/{db_name}-{tax_method}.log",
     conda:
         "envs/usearch-vsearch.yaml"
     threads: workflow.cores
@@ -337,7 +346,7 @@ rule usearch_stats_paired:
         ),
         filter=expand(
             "processing/{{name}}/usearch/paired/3_filter_derep/{primers}/{sample}/{sample}_stats.txt",
-            primers=cfg.primer_combinations,
+            primers=cfg.primer_combinations_flat,
             sample=cfg.sample_names["paired"],
         ),
     output:
@@ -375,7 +384,7 @@ rule usearch_stats_paired:
             with open(output[0], 'w') as out:
                 writer = csv.writer(out, delimiter='\t')
                 header = ['sample', 'raw', 'merged', '(%)', 'fwd-primer', '(%)', 'rev-primer', '(%)']
-                for p in cfg.primer_combinations:
+                for p in cfg.primer_combinations_flat:
                     header += [p, "filtered", "(%)"]
                 writer.writerow(header)
                 percent = lambda x: round(100 * x, 2)
@@ -385,7 +394,7 @@ rule usearch_stats_paired:
                     assert m == m2, "Number of sequences in logfiles from read merging and primer trimming does not match: {} vs. {}".format(m, m2)
                     row = [sample, raw, m, percent(m/raw), tf, percent(tf/m), tr, percent(tr/m)]
                     f = flt2[sample]
-                    for p in cfg.primer_combinations:
+                    for p in cfg.primer_combinations_flat:
                         kept, removed = f[p]
                         total = kept + removed
                         row += [total, kept, percent(kept / total)]

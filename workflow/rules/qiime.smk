@@ -72,18 +72,18 @@ rule qiime_import:
 
 rule qiime_trim_paired:
     params:
-        f_primer_seq=lambda w: cfg.fwd_primers_consensus[w.f_primer],
-        f_primer_seq_rev=lambda w: cfg.fwd_primers_consensus_rev[w.f_primer],
-        r_primer_seq=lambda w: cfg.rev_primers_consensus[w.r_primer],
-        r_primer_seq_rev=lambda w: cfg.rev_primers_consensus_rev[w.r_primer],
-        err_rate=lambda w: cfg[w.name]["settings"]["primers"]["trim"]["max_error_rate"],
+        f_primer_seq=lambda w: cfg.primers_consensus[w.marker]['forward'][w.f_primer],
+        f_primer_seq_rev=lambda w: cfg.primers_consensus_rev[w.marker]['forward'][w.f_primer],
+        r_primer_seq=lambda w: cfg.primers_consensus[w.marker]['reverse'][w.r_primer],
+        r_primer_seq_rev=lambda w: cfg.primers_consensus_rev[w.marker]['reverse'][w.r_primer],
+        err_rate=lambda w: cfg[w.name]["settings"]["primers"]["trim_settings"]["max_error_rate"],
         min_len=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
     input:
         "processing/{name}/qiime/paired/demux.qza",
     output:
-        "processing/{name}/qiime/paired/{f_primer}...{r_primer}/trim.qza",
+        "processing/{name}/qiime/paired/{marker}__{f_primer}...{r_primer}/trim.qza",
     log:
-        "logs/{name}/qiime/paired/{f_primer}...{r_primer}/trim.log",
+        "logs/{name}/qiime/paired/{marker}__{f_primer}...{r_primer}/trim.log",
     conda:
         config["qiime"]["version"]
     threads: workflow.cores
@@ -270,21 +270,21 @@ rule qiime_taxdb_train_nb:
 
 rule assign_taxonomy_qiime_sklearn:
     params:
-        par=lambda w: cfg[w.name]["taxonomy"][(w.db_name, w.tax_method)],
+        par=lambda w: cfg[w.name]["taxonomy"][w.marker][(w.db_name, w.tax_method)],
     input:
-        seq="results/{name}/{pipeline}/{primers}/{strategy}/denoised.fasta",
-        db=lambda w: "refdb/taxonomy/{db_name}/formatted/qiime_nb/{defined}.qza".format(
-            **cfg[w.name]["taxonomy"][(w.db_name, w.tax_method)]
+        seq="results/{name}/{pipeline}/{marker}__{primers}/{strategy}/denoised.fasta",
+        db=lambda w: "refdb/taxonomy/{{marker}}/{db_name}/formatted/qiime_nb/{defined}.qza".format(
+            **cfg[w.name]["taxonomy"][w.marker][(w.db_name, w.tax_method)]
         ),
     output:
         tmp=temp(
             directory(
-                "processing/{name}/{pipeline}/{primers}/{strategy}/taxonomy/{db_name}-{tax_method}/denoised_sklearn"
+                "processing/{name}/{pipeline}/{marker}__{primers}/{strategy}/taxonomy/{db_name}-{tax_method}/denoised_sklearn"
             )
         ),
-        tax="results/{name}/{pipeline}/{primers}/{strategy}/taxonomy/{db_name}-qiime_sklearn-{tax_method}.txt.gz",
+        tax="results/{name}/{pipeline}/{marker}__{primers}/{strategy}/taxonomy/{db_name}-qiime_sklearn-{tax_method}.txt.gz",
     log:
-        "logs/{name}/{pipeline}/{strategy}/taxonomy_sklearn/{primers}/{db_name}-{tax_method}.log",
+        "logs/{name}/{pipeline}/{strategy}/taxonomy_sklearn/{marker}__{primers}/{db_name}-{tax_method}.log",
     conda:
         config["qiime"]["version"]
     threads: 1  # needs a LOT of memory depending on the database
