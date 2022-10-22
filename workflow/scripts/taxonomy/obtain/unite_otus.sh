@@ -37,7 +37,6 @@ st set -l "$tax" -d '{l:2}' "$fa" |
   iconv -c -f UTF-8 -t ASCII |  # replace invalid ASCII
   st replace -dr ';s__[^_]+_sp\.?\s*$' ';s__unidentified' | # Convert "Genus_sp" or "Genus_sp." to unidentified (there are a few of these)
   st replace -dr '([a-z]__)unidentified' '$1' | # convert "unidentified" to empty string
-  st replace -d ';' '; ' |  # TODO: remove
   zstd -c > "$outfile"
 
 # clean up

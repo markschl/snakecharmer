@@ -10,8 +10,8 @@ set -euo pipefail
 
 if [ $# -lt 3 ]; then
     echo "usage: $0 <type> <url> <outfile>" >&2
-    echo "  type: unite_otus, ..." >&2
-    echo "  url: file URL" >&2
+    echo "  type: unite_otus, midori ..." >&2
+    echo "  url: file URL (unite_otus) or URL prefix without .fasta.gz/.taxon.gz (midori)" >&2
     echo "  outfile: *.fasta.zst" >&2
     exit 1
 fi
@@ -21,7 +21,7 @@ url="$1" && shift
 outfile="$1" && shift
 
 
-if [[ "$type" =~ ^(unite_otus)$ ]]; then
+if [[ "$type" =~ ^(unite_otus|midori)$ ]]; then
   # run sub-script
   script_dir=$(dirname $0)
   $script_dir/obtain/$type.sh "$url" "$outfile"

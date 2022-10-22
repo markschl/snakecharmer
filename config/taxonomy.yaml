@@ -2,9 +2,21 @@
 taxonomy_db_sources:
   unite_eukarya_refs:
     type: unite_otus
-    reference: 10.15156/BIO/1264819
+    reference: https://doi.org/10.15156/BIO/1264819
     url: https://files.plutof.ut.ee/public/orig/48/29/4829D91F763E20F0F4376A60AA53FC9FBE6029A7D1BDC1B45347DD64EDE5D560.tgz
   unite_eukarya_all:
     type: unite_otus
-    reference: 10.15156/BIO/1264861
+    reference: https://doi.org/10.15156/BIO/1264861
     url: https://files.plutof.ut.ee/public/orig/1D/31/1D31FA3A308BDC2FB2750D62C0AA40C5058C15405A3CC5C626CC3A3F5E3903ED.tgz
+  Midori_COI:
+    type: midori
+    reference: https://doi.org/10.1002/edn3.303
+    url: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank251/QIIME/uniq/MIDORI2_UNIQ_NUC_GB251_CO1_QIIME
+  Midori_16S:
+      type: midori
+    reference: https://doi.org/10.1002/edn3.303
+      url: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank251/QIIME/uniq/MIDORI2_UNIQ_NUC_GB251_lrRNA_QIIME
+  # Midori_COI_sp:
+  #   type: midori
+  #   reference: https://doi.org/10.1002/edn3.303
+  #   url: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank251/QIIME_sp/uniq/MIDORI2_UNIQ_NUC_SP_GB251_CO1_QIIME
