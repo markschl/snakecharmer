@@ -299,7 +299,7 @@ rule assign_taxonomy_sintax:
     shell:
         """
         $PIPELINE_DIR/workflow/scripts/usearch/sintax_usearch.sh \
-          {input.fa} {input.db} {output.tax} \
+          {params.par[program]} {input.fa} {input.db} {output.tax} \
             -strand both \
             -sintax_cutoff {params.par[confidence]} \
             -threads {threads} \

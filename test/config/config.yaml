@@ -101,7 +101,8 @@ taxonomy_methods:
   sintax_70:
     method: sintax_usearch
     confidence: 0.7
-  ## be careful with activating on PC (uses lots of memory)
+    program: vsearch
+  # # be careful with activating on PC (uses lots of memory)
   # sklearn_90:
   #   method: qiime_sklearn  # { sintax_usearch, qiime_sklearn }
   #   confidence: 0.7
