@@ -38,17 +38,17 @@ def collect_sample_files(directories=None, patterns=None, recursive=False):
             'At least one of "directories" and "patterns" must be defined in "input"')
     if patterns is not None:
         for pattern in patterns:
-            for f in sorted(glob.glob(os.path.expanduser(pattern), recursive=recursive)):
+            for f in glob.glob(os.path.expanduser(pattern), recursive=recursive):
                 yield f
     if directories is not None:
         if recursive is True:
             for rd in directories:
                 for root, _, fnames in os.walk(rd):
-                    for f in sorted(fnames):
+                    for f in fnames:
                         yield os.path.join(root, f)
         else:
             for root in directories:
-                for f in sorted(os.listdirs(root)):
+                for f in os.listdirs(root):
                     yield os.path.join(root, f)
 
 
@@ -92,7 +92,8 @@ def group_samples(**collect_args):
     # group by forward only / paired end
     by_strategy = {'single': [], 'paired': []}
     for sample_name, by_read in d.items():
-        by_read = sorted(by_read.items())
+        # make sure that sample files are sorted
+        by_read = sorted((read, list(files)) for read, files in by_read.items())
         n = len(by_read)
         assert n > 0
         if n > 2:
