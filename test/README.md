@@ -8,8 +8,12 @@ These commands run all the clustering pipelines (on a local computer) and compar
 
 ```sh
 conda activate snakemake
-# run the denoising with 6 cores
-snakemake -j6 --use-conda --conda-prefix ~/conda -d test denoise cmp
+# run the denoising and ITSx with 6 cores
+snakemake -c6 --use-conda --conda-prefix ~/conda -d test denoise ITS
+# running sequence comparisons and taxonomy assignments only on one core
+# to make sure that the order of ASVs does not change between runs
+# TODO: couldn't yet figure out why adding '--rerun-incomplete --rerun-triggers mtime' is necessary
+snakemake -c1 --use-conda --conda-prefix ~/conda -d test cmp taxonomy --rerun-incomplete --rerun-triggers mtime
 # (optional) remove working directories (but not logs)
 snakemake -j1 -d test clean
 # run a general comparison script (useful for any pipeline comparison)

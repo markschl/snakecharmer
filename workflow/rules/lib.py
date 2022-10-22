@@ -38,17 +38,17 @@ def collect_sample_files(directories=None, patterns=None, recursive=False):
             'At least one of "directories" and "patterns" must be defined in "input"')
     if patterns is not None:
         for pattern in patterns:
-            for f in glob.glob(os.path.expanduser(pattern), recursive=recursive):
+            for f in sorted(glob.glob(os.path.expanduser(pattern), recursive=recursive)):
                 yield f
     if directories is not None:
         if recursive is True:
             for rd in directories:
                 for root, _, fnames in os.walk(rd):
-                    for f in fnames:
+                    for f in sorted(fnames):
                         yield os.path.join(root, f)
         else:
             for root in directories:
-                for f in os.listdirs(root):
+                for f in sorted(os.listdirs(root)):
                     yield os.path.join(root, f)
 
 
