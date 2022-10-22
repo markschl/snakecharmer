@@ -7,6 +7,7 @@ from os.path import splitext, dirname, join
 import os
 import lib
 
+
 localrules:
     dump_samples,
     dump_config,
@@ -45,12 +46,13 @@ def get_link_paths(samples, outdir):
 
 
 def combine_primers(primers_by_marker):
-    out = {'forward': {}, 'reverse': {}}
+    out = {"forward": {}, "reverse": {}}
     for marker, primers_by_dir in primers_by_marker.items():
         for dir_, primers in primers_by_dir.items():
             for name, seqs in primers.items():
                 if name in out[dir_]:
-                    assert seqs == out[dir_][name], 'Sequences of primer {} differ between different markers'.format(name)
+                    assert (seqs == out[dir_][name]), \
+                          "Sequences of primer {} differ between different markers".format(name)
                 else:
                     out[dir_][name] = seqs
     return out
@@ -114,9 +116,7 @@ rule dump_config:
             del c["settings"]["taxonomy_dbs"]
             del c["settings"]["taxonomy_methods"]
             c["taxonomy"] = {
-                marker: {
-                    "-".join(name): config for name, config in tax.items()
-                }
+                marker: {"-".join(name): config for name, config in tax.items()}
                 for marker, tax in c["taxonomy"].items()
             }
             yaml.dump(c, o)
@@ -142,9 +142,9 @@ rule setup_project:
             # primer FASTA
             primers = combine_primers(cfg.primers)
             primers_rev = combine_primers(cfg.primers_rev)
-            lib.make_primer_fasta(primers['forward'], output.fprimers)
-            lib.make_primer_fasta(primers['reverse'], output.rprimers)
-            lib.make_primer_fasta(primers_rev['reverse'], output.rprimers_rev)
+            lib.make_primer_fasta(primers["forward"], output.fprimers)
+            lib.make_primer_fasta(primers["reverse"], output.rprimers)
+            lib.make_primer_fasta(primers_rev["reverse"], output.rprimers_rev)
             # symlink dirs
             for sym_dir in output.simple_sym:
                 p = cfg.pipelines[os.path.basename(dirname(sym_dir))]
@@ -225,15 +225,8 @@ rule fastqc:
 
 rule multiqc_fastqc:
     input:
-        [
-            join(
-                "results",
-                "_validation",
-                "fastqc",
-                splitext(splitext(p)[0])[0] + "_fastqc.html",
-            )
-            for _, p in link_paths
-        ],
+        [join("results", "_validation", "fastqc", splitext(splitext(p)[0])[0] + "_fastqc.html")
+        for _, p in link_paths],
     output:
         "results/_validation/multiqc/multiqc_report.html",
     log:

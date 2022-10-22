@@ -1,3 +1,6 @@
+import traceback
+from contextlib import contextmanager
+from snakemake.io import Log
 from collections import defaultdict
 from copy import deepcopy
 import glob
@@ -12,7 +15,7 @@ from seq.alignment import consensus
 from snakemake.workflow import srcdir
 from os.path import dirname
 
-# Set environment variable of pipeline root dir to allow post-deploy 
+# Set environment variable of pipeline root dir to allow post-deploy
 # scripts to run other scripts stored in that directory
 # TODO: kind of a hack, not sure if it works in all cases; possibly replace with standard Snakemake scripts
 os.environ['PIPELINE_DIR'] = dirname(dirname(dirname(srcdir('.'))))
@@ -31,7 +34,8 @@ def collect_samples(name_pattern, *args, **kwargs):
 
 def collect_sample_files(directories=None, patterns=None, recursive=False):
     if directories is None and patterns is None:
-        raise Exception('At least one of "directories" and "patterns" must be defined in "input"')
+        raise Exception(
+            'At least one of "directories" and "patterns" must be defined in "input"')
     if patterns is not None:
         for pattern in patterns:
             for f in glob.glob(os.path.expanduser(pattern), recursive=recursive):
@@ -60,13 +64,23 @@ def parse_pattern(name_pattern):
 def parse_sample(f, pattern):
     m = pattern.match(f)
     if m is None:
-        raise Exception('Sample name "{}" not matched by Regex pattern "{}". Is the name_pattern option correctly specified? Regex patterns can be debugged e.g. on https://regexr.com'.format(f, pattern.pattern))
+        raise Exception(
+            'Sample name "{}" not matched by Regex pattern "{}". Is '
+            'the name_pattern option correctly specified? Regex patterns '
+            'can be debugged e.g. on https://regexr.com'.format(
+                f, pattern.pattern)
+        )
     sample_name = m.group(1)
     read = m.group(2)
-    assert sample_name is not None and read is not None, 'Regular expression in "name_pattern" needs to have exactly two groups, the first for the sample name and the second for the read number.'
-    assert read in ('1', '2'), 'Read number in file name must be 1 or 2, found instead "{}". Is the Regex pattern (name_pattern) correct?'.format(read)
+    assert (sample_name is not None and read is not None), \
+        'Regular expression in "name_pattern" needs to have exactly two groups, '  \
+        'the first for the sample name and the second for the read number.'
+    assert (read in ('1', '2')), \
+        'Read number in file name must be 1 or 2, found instead "{}". ' \
+        'Is the Regex pattern (name_pattern) correct?'.format(read)
     if '-' in sample_name:
-        print('- in sample name: {}. Does not work with USEARCH pipeline'.format(sample_name), file=sys.stderr)
+        print('- in sample name: {}. Does not work '
+              'with USEARCH pipeline'.format(sample_name), file=sys.stderr)
     return sample_name, int(read)
 
 
@@ -82,20 +96,25 @@ def group_samples(**collect_args):
         n = len(by_read)
         assert n > 0
         if n > 2:
-            raise Exception('More than 2 read files for sample {}'.format(sample_name))
+            raise Exception(
+                'More than 2 read files for sample {}'.format(sample_name)
+            )
         elif n == 2:
             if len(by_read[0][1]) != len(by_read[1][1]):
-                raise Exception('Read file number mismatch for sample {}'.format(sample_name))
+                raise Exception(
+                    'Read file number mismatch for sample {}'.format(
+                        sample_name)
+                )
             by_strategy['paired'].append((sample_name, by_read))
         elif n == 1:
             by_strategy['single'].append((sample_name, by_read))
     return by_strategy
 
 
-
 def parse_primers(primers):
     for p in primers:
-        assert isinstance(p, dict), "Primers must be defined in the form: 'name: sequence1,sequence2,...'"
+        assert isinstance(p, dict), \
+            "Primers must be defined in the form: 'name: sequence1,sequence2,...'"
         id = next(iter(p.keys()))
         seqs = next(iter(p.values()))
         seqs = [s.strip() for s in seqs.split(',')]
@@ -112,7 +131,8 @@ def make_primer_fasta(primers, outfile):
 def recursive_update(target, other):
     if hasattr(target, 'items') and hasattr(target, '__getitem__') and hasattr(other, 'items'):
         for name, values in other.items():
-            target[name] = recursive_update(target[name], values) if name in target else values
+            target[name] = recursive_update(target[name], values) \
+                if name in target else values
         return target
     return other
 
@@ -133,7 +153,7 @@ class Config(object):
         self._read_cmp_files()
         self._init_config()
         # from pprint import pprint; pprint(vars(self))
-    
+
     def _read_samples(self):
         _cfg = self.config['input']
         self.samples = group_samples(
@@ -142,9 +162,11 @@ class Config(object):
             name_pattern=_cfg['name_pattern'],
             recursive=_cfg.get('recursive', False)
         )
-        self.sample_names = {strategy: [s for s, _ in samples] 
-                            for strategy, samples in self.samples.items()}
-        self.sequencing_strategies = [name for name, samples in self.samples.items() if samples]
+        self.sample_names = {strategy: [s for s, _ in samples]
+                             for strategy, samples in self.samples.items()}
+        self.sequencing_strategies = [
+            name for name, samples in self.samples.items() if samples
+        ]
         self.strategy_sample_read = [
             (strategy, sample, read)
             for strategy, samples in self.samples.items()
@@ -181,23 +203,27 @@ class Config(object):
             if marker == 'trim_settings':
                 # ignore settings
                 continue
-            assert isinstance(primers, dict), 'Invalid primer settings for marker {}'.format(marker)
+            assert isinstance(primers, dict), \
+                'Invalid primer settings for marker {}'.format(marker)
             # parse primers
-            pr = self.primers[marker] = {dir_: dict(parse_primers(primers[dir_])) for dir_ in ['forward', 'reverse']}
+            pr = self.primers[marker] = {dir_: dict(parse_primers(
+                primers[dir_])) for dir_ in ['forward', 'reverse']}
             # reverse complement versions
             self.primers_rev[marker] = {
-                direction: {p: [seq.reverse_complement(s) for s in seqs] for p, seqs in pseqs.items()}
+                direction: {p: [seq.reverse_complement(s) for s in seqs]
+                            for p, seqs in pseqs.items()}
                 for direction, pseqs in pr.items()
             }
             # primer consensus
             cns = self.primers_consensus[marker] = {
                 direction: {name: consensus(seq.SeqRecord(name, s) for s in seqs)
-                                      for name, seqs in pseqs.items()}
+                            for name, seqs in pseqs.items()}
                 for direction, pseqs in pr.items()
             }
             # reverse complement consensus
             self.primers_consensus_rev[marker] = {
-                direction: {name: seq.reverse_complement(s) for name, s in cons.items()}
+                direction: {name: seq.reverse_complement(
+                    s) for name, s in cons.items()}
                 for direction, cons in cns.items()
             }
             # obtain primer combinations
@@ -205,20 +231,30 @@ class Config(object):
             if combinations == 'default':
                 self.primer_combinations[marker] = []
                 for fwd, rev in product(pr['forward'], pr['reverse']):
-                    self.primer_combinations[marker].append('{}...{}'.format(fwd, rev))
-                    self.primer_combinations_flat.append('{}__{}...{}'.format(marker, fwd, rev))
+                    self.primer_combinations[marker].append(
+                        '{}...{}'.format(fwd, rev))
+                    self.primer_combinations_flat.append(
+                        '{}__{}...{}'.format(marker, fwd, rev))
             else:
-                assert isinstance(combinations, list)
+                assert isinstance(combinations, list), \
+                    'Primer combinations of marker {} are not in list form'.format(marker)
                 self.primer_combinations[marker] = combinations
                 for c in combinations:
                     s = c.split('...')
-                    assert len(s) == 2
-                    assert s[0] in self.primers['forward'], 'Unknown forward primer: {}'.format(s[0])
-                    assert s[1] in self.primers['reverse'], 'Unknown reverse primer: {}'.format(s[1])
+                    assert (len(s) == 2), \
+                        "Primer combinations must be in the form 'forward...reverse'. " \
+                        "Encountered '{}' instead.".format(c)
+                    assert (s[0] in self.primers['forward']), \
+                        'Unknown forward primer: {}'.format(s[0])
+                    assert (s[1] in self.primers['reverse']), \
+                        'Unknown reverse primer: {}'.format(s[1])
                     self.primer_combinations_flat.append('{}__{}'.format(marker, c))
         # make sure the same primer combinations don't occur in different markers
-        comb = [c for _, comb in self.primer_combinations.items() for c in comb]
-        assert len(set(comb)) == len(comb), 'Primer combinations cannot be identical across markers'
+        comb = [c for _, comb in self.primer_combinations.items()
+                for c in comb]
+        assert (len(set(comb)) == len(comb)), \
+            'Identical primer combinations found across markers.' \
+            'This is not allowed.'
 
     def _init_config(self):
         # prepare taxonomy databases
@@ -242,8 +278,8 @@ class Config(object):
                 recursive_update(p['settings'], settings)
             else:
                 p['settings'] = deepcopy(self.config)
-            
-            # determine/adjust sequencing strategies 
+
+            # determine/adjust sequencing strategies
             # TODO: some more work needed to activate this option
             # if p.get('forward_only', None) is True:
             #     p['sequencing_strategies'] = ['single']
@@ -259,12 +295,20 @@ class Config(object):
                     'methods': list(settings['taxonomy_methods'])
                 }
             else:
-                assert 'dbs' in p['taxonomy']
-                assert 'methods' in p['taxonomy']
+                assert (isinstance(p['taxonomy'], dict)), \
+                    "'taxonomy' definition of pipeline {} needs to be 'default' or " \
+                    "{'dbs': [db1, db2, ...], methods: [method1, method2, ...]}".format(name)
+                assert ('dbs' in p['taxonomy']), \
+                    "'dbs' option missing in 'taxonomy' definition of pipeline {}.".format(name)
+                assert ('methods' in p['taxonomy']), \
+                    "'methods' option missing in 'taxonomy' definition of pipeline {}.".format(name)
             # validate method names
             method_names = p['taxonomy']['methods']
             method_cfg = settings['taxonomy_methods']
-            assert not set(method_names).difference(method_cfg)
+            strange_methods = set(method_names).difference(method_cfg)
+            assert not strange_methods, \
+                "Pipeline {} has taxonomy method names that are not listed in 'taxonomy_methods'" \
+                "below in the config file: {}".format(name, ', '.join(strange_methods))
             # then, for every marker, assemble the combinations
             tax = {}
             for marker, db_names in p['taxonomy']['dbs'].items():
@@ -278,7 +322,8 @@ class Config(object):
             p['taxonomy'] = tax
 
             # is it a 'simple' pipeline (with only one results dir, see setup_project())?
-            p['is_simple'] = len(p["sequencing_strategies"]) == 1 and len(self.primer_combinations_flat) == 1
+            p['is_simple'] = len(p["sequencing_strategies"]) == 1 and len(
+                self.primer_combinations_flat) == 1
             # simplify path generation
             p['single_primercomb'] = self.primer_combinations_flat[0] if p['is_simple'] else None
             p['single_strategy'] = p['sequencing_strategies'][0] if p['is_simple'] else None
@@ -289,11 +334,6 @@ class Config(object):
 
 
 #### Helpers ####
-
-
-from snakemake.io import Log
-from contextlib import contextmanager
-import traceback
 
 
 @contextmanager
@@ -307,4 +347,3 @@ def file_logging(f):
         except Exception as e:
             traceback.print_exc(file=handle)
             raise
-

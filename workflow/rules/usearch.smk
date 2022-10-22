@@ -46,7 +46,7 @@ rule trim_primers_paired:
     params:
         par=lambda w: cfg[w.name]["settings"]["primers"]["trim_settings"],
         minlen=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
-        primer_comb=cfg.primer_combinations_flat
+        primer_comb=cfg.primer_combinations_flat,
     input:
         fprimers="processing/primers/forward.fasta",
         rprimers_rev="processing/primers/reverse_rev.fasta",
@@ -371,7 +371,8 @@ rule usearch_stats_paired:
                     out[key(f)] = [int(n) for n in next(csv.reader(h, delimiter="\t"))]
             return out
 
-        percent = lambda x, y: round(100 * x / y, 2) if y > 0 else 0.
+
+        percent = lambda x, y: round(100 * x / y, 2) if y > 0 else 0.0
 
         with file_logging(log):
             # read data
@@ -395,7 +396,7 @@ rule usearch_stats_paired:
                 for sample in merge:
                     raw, m = merge[sample]
                     m2, tf, tr = trim[sample]
-                    assert m == m2, "Number of sequences in logfiles from read merging and primer trimming does not match: {} vs. {}".format(m, m2)
+                    assert (m == m2), "Number of sequences in logfiles from read merging and primer trimming does not match: {} vs. {}".format(m, m2)
                     row = [sample, raw, m, percent(m, raw), tf, percent(tf, m), tr, percent(tr, m)]
                     f = flt2[sample]
                     for p in cfg.primer_combinations_flat:

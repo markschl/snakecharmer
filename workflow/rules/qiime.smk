@@ -72,11 +72,17 @@ rule qiime_import:
 
 rule qiime_trim_paired:
     params:
-        f_primer_seq=lambda w: cfg.primers_consensus[w.marker]['forward'][w.f_primer],
-        f_primer_seq_rev=lambda w: cfg.primers_consensus_rev[w.marker]['forward'][w.f_primer],
-        r_primer_seq=lambda w: cfg.primers_consensus[w.marker]['reverse'][w.r_primer],
-        r_primer_seq_rev=lambda w: cfg.primers_consensus_rev[w.marker]['reverse'][w.r_primer],
-        err_rate=lambda w: cfg[w.name]["settings"]["primers"]["trim_settings"]["max_error_rate"],
+        f_primer_seq=lambda w: cfg.primers_consensus[w.marker]["forward"][w.f_primer],
+        f_primer_seq_rev=lambda w: cfg.primers_consensus_rev[w.marker]["forward"][
+            w.f_primer
+        ],
+        r_primer_seq=lambda w: cfg.primers_consensus[w.marker]["reverse"][w.r_primer],
+        r_primer_seq_rev=lambda w: cfg.primers_consensus_rev[w.marker]["reverse"][
+            w.r_primer
+        ],
+        err_rate=lambda w: cfg[w.name]["settings"]["primers"]["trim_settings"][
+            "max_error_rate"
+        ],
         min_len=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
     input:
         "processing/{name}/qiime/paired/demux.qza",

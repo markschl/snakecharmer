@@ -40,8 +40,8 @@ rule amptk_collect:
 
 rule amptk_trim_merge:
     params:
-        f_primer_seq=lambda w: cfg.primers_consensus[w.marker]['forward'][w.f_primer],
-        r_primer_seq=lambda w: cfg.primers_consensus[w.marker]['reverse'][w.r_primer],
+        f_primer_seq=lambda w: cfg.primers_consensus[w.marker]["forward"][w.f_primer],
+        r_primer_seq=lambda w: cfg.primers_consensus[w.marker]["reverse"][w.r_primer],
         # note: we limit the max. number of primer mismatches to 2.
         # The reason is that Amptk rrently does another primer trimming after merging the 
         # already trimmed reads. With too liberal mismatch thresholds, this will yield
@@ -97,13 +97,22 @@ def amptk_denoise_params(method, settings):
     # from pprint import pprint; pprint(settings)
     if method == "unoise3":
         par = settings["usearch"]
-        return ' '.join([
-            '--usearch', '$(which usearch)',
-            '--maxee', str(par["merge"]["expected_length"] * settings["usearch"]["filter"]["max_error_rate"]),
-            '--method', par["unoise"]['program'],
-            '--minsize', str(par["unoise"]['min_size'])
-        ])
-    if method == 'dada2':
+        return " ".join(
+            [
+                "--usearch",
+                "$(which usearch)",
+                "--maxee",
+                str(
+                    par["merge"]["expected_length"]
+                    * settings["usearch"]["filter"]["max_error_rate"]
+                ),
+                "--method",
+                par["unoise"]["program"],
+                "--minsize",
+                str(par["unoise"]["min_size"]),
+            ]
+        )
+    if method == "dada2":
         par = settings["dada2"]
         out = [
             "--maxee",
