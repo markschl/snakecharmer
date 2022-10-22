@@ -49,22 +49,22 @@ def collect_sample_files(directories=None, patterns=None, recursive=False):
 
 
 def parse_pattern(name_pattern):
-    name_pattern = name_pattern.lower()
-    if name_pattern == 'illumina':
+    pat = name_pattern.lower()
+    if pat == 'illumina':
         name_pattern = r"(.+?)_S\d+_L\d+_R([12])_\d{3}\.fastq\.gz"
-    elif name_pattern == 'sample_read':
-        name_pattern = r"(.+?)_R([12])\.fastq\.gz"        
+    elif pat == 'sample_read':
+        name_pattern = r"(.+?)_R([12])\.fastq\.gz"
     return name_pattern
 
 
 def parse_sample(f, pattern):
     m = pattern.match(f)
     if m is None:
-        #return None, None
-        raise Exception('Invalid sample name: {}'.format(f))
+        raise Exception('Sample name "{}" not matched by Regex pattern "{}". Is the name_pattern option correctly specified? Regex patterns can be debugged e.g. on https://regexr.com'.format(f, pattern.pattern))
     sample_name = m.group(1)
     read = m.group(2)
-    assert read in ('1', '2')
+    assert sample_name is not None and read is not None, 'Regular expression in "name_pattern" needs to have exactly two groups, the first for the sample name and the second for the read number.'
+    assert read in ('1', '2'), 'Read number in file name must be 1 or 2, found instead "{}". Is the Regex pattern (name_pattern) correct?'.format(read)
     if '-' in sample_name:
         print('- in sample name: {}. Does not work with USEARCH pipeline'.format(sample_name), file=sys.stderr)
     return sample_name, int(read)
