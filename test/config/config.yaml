@@ -1,3 +1,7 @@
+# Software versions
+qiime:
+  version: qiime2-2022.8
+
 # Input files
 input:
   directories:
@@ -7,11 +11,11 @@ input:
 
 # Pipeline definition
 pipelines:
-  # UNOISE3 pipeline using Vsearch for denoising
+  # UNOISE3 pipeline using VSEARCH for denoising
   unoise:
     cluster: usearch_unoise3
     taxonomy: default
-  # UNOISE3 pipeline using Usearch for denoising
+  # UNOISE3 pipeline using USEARCH for denoising
   unoise_usearch:
     cluster: usearch_unoise3
     taxonomy: default
@@ -40,10 +44,7 @@ compare:
     maxaccepts: 64
     maxrejects: 64
 
-# General settings used by all pipelines 
-# (but can be overridden using the 'settings' entry in the pipeline definition)
-
-# Primer sequences
+# Primers
 primers:
   ITS:
     forward: 
@@ -55,10 +56,22 @@ primers:
     min_overlap: 15
     max_error_rate: 0.25
 
-# For QIIME, it is possible to configure another version
-# (must be installed using conda)
-qiime:
-  version: qiime2-2022.8
+# Taxonomic databases
+taxonomy_dbs:
+  ITS:
+    unite:
+      db: unite_eukarya_all
+
+# Taxonomic assignment methods
+taxonomy_methods:
+  sintax_70:
+    method: sintax_usearch
+    confidence: 0.7
+    program: vsearch
+  # # be careful with activating on PC (uses lots of memory)
+  # sklearn_90:
+  #   method: qiime_sklearn  # { sintax_usearch, qiime_sklearn }
+  #   confidence: 0.7
 
 # General filter settings
 filter:
@@ -96,35 +109,15 @@ dada2:
   pooling_method: independent  # { independent, pseudo, pooled }
   merge_maxdiffs: 1
 
-# Taxonomic assignment methods
-taxonomy_methods:
-  sintax_70:
-    method: sintax_usearch
-    confidence: 0.7
-    program: vsearch
-  # # be careful with activating on PC (uses lots of memory)
-  # sklearn_90:
-  #   method: qiime_sklearn  # { sintax_usearch, qiime_sklearn }
-  #   confidence: 0.7
-
-# Definition of all taxonomic databases
-taxonomy_dbs:
-  ITS:
-    unite:
-      db: unite_eukarya_all
-
 # ITS recognition (fungi)
 ITSx:
-  # most important settings
   organism_groups: all  # -t setting
   e-value: 1e-5
-  # commonly used search options
   allow_single_domain: 1e-9,0
-  complement: F        # ITSx uses T (true) as default, but we know the orientation of our amplicon
+  complement: F
   heuristics: F,
-  # common output options
-  graphical: F         # ITSx has T as default
+  graphical: F
   fasta: T
   preserve: F
-  save_regions: all    # ITSx has only ITS1,ITS2 as default
-  partial: 50          # ITSx has 0 as default
+  save_regions: all
+  partial: 50

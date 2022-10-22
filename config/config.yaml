@@ -1,4 +1,3 @@
-
 #### Software options ####
 
 # For QIIME, it is possible to configure the exact version
@@ -6,14 +5,13 @@
 qiime:
   version: qiime2-2022.8
 
-
 #### Input files ####
 
 input:
   # Lists of directories and/or glob patterns can be specified.
-  # It is no problem if some files are matched by both, they will only 
+  # It is no problem if some files are matched by both, they will only
   # be included once.
-  # However, multiple files with the same name in different directories are 
+  # However, multiple files with the same name in different directories are
   # currently pooled together before processing. Which files were chosen
   # and which ones were pooled is listed in 'results/samples.yaml' after
   # running the 'config' or other commands.
@@ -29,15 +27,14 @@ input:
   # However, it is necessary to specify the correct name pattern to obtain
   # sample names from the file names.
   # Options are:
-  # - sample_read: e.g. Sample_Name_R1.fasta.gz 
-  # - illumina: e.g. Sample_Name_S276_L001_R1_001.fastq.gz 
+  # - sample_read: e.g. Sample_Name_R1.fasta.gz
+  # - illumina: e.g. Sample_Name_S276_L001_R1_001.fastq.gz
   # - regular expression with two groups, the first one matches the sample name
   #     and the second one the read number (1 = forward, 2 = reverse).
-  #     For example, the sample_read pattern looks like this: 
+  #     For example, the sample_read pattern looks like this:
   #     '(.+?)_R([12])\.fastq\.gz'
   #     The illumina pattern: "(.+?)_S\d+_L\d+_R([12])_\d{3}\.fastq\.gz"
   name_pattern: sample_read  # {sample_read, illumina, <regex>}
-
 
 ##### Pipeline definition ####
 
@@ -51,13 +48,13 @@ pipelines:
   # UNOISE3 pipeline using VSEARCH for denoising
   unoise:
     cluster: usearch_unoise3  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
-    taxonomy: default  # using all taxonomy_dbs and taxonomy_methods
+    taxonomy: default # using all taxonomy_dbs and taxonomy_methods
   # UNOISE3 pipeline using USEARCH for denoising and a custom combination
   # of taxonomy databases/assignment methods
   unoise_usearch:
     cluster: usearch_unoise3  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
     taxonomy:
-      dbs:   # overrides 'taxonomy_dbs' (below)
+      dbs:  # overrides 'taxonomy_dbs' (below)
         ITS: [unite_species]
       methods:  # overrides 'taxonomy_methods' (below)
         - sintax_90
@@ -83,12 +80,11 @@ pipelines:
     cluster: amptk_dada2
     taxonomy: default
 
-
 #### Files to compare with ASVs/OTUs using usearch_global (VSEARCH) ####
 
 compare:
   my_comparison:
-    file: path/to/seqs.fasta   # searched against denoised.fasta
+    file: path/to/seqs.fasta  # searched against denoised.fasta
     ident_threshold: 0.8  # min. identity (0 - 1)
     maxhits: 1
   default_settings:
@@ -96,7 +92,6 @@ compare:
     maxhits: 1
     maxaccepts: 64
     maxrejects: 64
-
 
 #### Primers ####
 
@@ -106,24 +101,24 @@ primers:
   # marker will be used for taxonomy assignments.
   # Furthermore, some marker-specific rules such as 'ITSx' will only be run with ITS sequences
   ITS:
-    # Several primers can be specified. The desired combinations can be 
+    # Several primers can be specified. The desired combinations can be
     # specified as well (see 'combinations' below. Multiple primer combinations
     # may occur if:
     # - Different samples were amplified with different primers
     # - Some or all samples are a mix of different amplicons, which were pooled before indexing
     # Each primer can further be a comma delimited list of oligos, which
-    # were mixed together. However, they should still start at the same 
+    # were mixed together. However, they should still start at the same
     # nucleotide position to allow global trimming. Note that some pipelines
     # cannot deal with primer mixtures, in these cases the consensus sequence of the
     # single mixed sequences is used.
-    # The oligos may include adapter and/or linker sequences, but their position is not 
+    # The oligos may include adapter and/or linker sequences, but their position is not
     # required to be at the exact sequence start or end.
-    forward: 
+    forward:
       - ITS3-KYO2: GGGATGAAGAACGYAGYRAA
       # - fITS7: GTGARTCATCGAATCTTTG
     reverse:
       - ITS4: AATCCTCCGCTTATTGATATGC,AATCCTCCGCTGAWTAATATGC
-    # Primer combinations: either 'default' (to use all possible combinations), 
+    # Primer combinations: either 'default' (to use all possible combinations),
     #   or a list of combinations (see below)
     combinations: default
       ## Instead of 'default', a list of specific desired combinations
@@ -137,10 +132,9 @@ primers:
     min_overlap: 15
     max_error_rate: 0.25
 
-
 #### Taxonomy assignment ####
 
-# By default, every possible combination of databases and 
+# By default, every possible combination of databases and
 # assignment methods is used. This can be changed by modifying
 # the 'taxonomy' option in the 'pipelines' definion (above)
 
@@ -179,10 +173,9 @@ taxonomy_methods:
     method: qiime_sklearn  # { sintax_usearch, qiime_sklearn }
     confidence: 0.9
 
-
 #### Default settings ####
 
-# All of these settings can be overridden by individual pipelines 
+# All of these settings can be overridden by individual pipelines
 # using the 'settings' key (see 'pipelines' above)
 
 # General filter settings
@@ -198,7 +191,7 @@ usearch:
     # max. nucleotide differences
     # by default, we don't care about this, only rely on overlap identity
     max_diffs: 1000
-    # How long is the merged amplicon expected on average? 
+    # How long is the merged amplicon expected on average?
     # Only used to calculate expected errors for pipelines not accepting
     # error rates for quality filtering (only absolute number of expected errors)
     expected_length: 400
@@ -240,11 +233,11 @@ ITSx:
   e-value: 1e-5
   # commonly used search options
   allow_single_domain: 1e-9,0
-  complement: F        # ITSx uses T (true) as default, but we know the orientation of our amplicon
+  complement: F  # ITSx uses T (true) as default, but we know the orientation of our amplicon
   heuristics: F,
   # common output options
-  graphical: F         # ITSx has T as default
+  graphical: F  # ITSx has T as default
   fasta: T
   preserve: F
-  save_regions: all    # ITSx has only ITS1,ITS2 as default
-  partial: 50          # ITSx has 0 as default
+  save_regions: all  # ITSx has only ITS1,ITS2 as default
+  partial: 50  # ITSx has 0 as default

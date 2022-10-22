@@ -13,9 +13,9 @@ taxonomy_db_sources:
     reference: https://doi.org/10.1002/edn3.303
     url: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank251/QIIME/uniq/MIDORI2_UNIQ_NUC_GB251_CO1_QIIME
   Midori_16S:
-      type: midori
+    type: midori
     reference: https://doi.org/10.1002/edn3.303
-      url: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank251/QIIME/uniq/MIDORI2_UNIQ_NUC_GB251_lrRNA_QIIME
+    url: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank251/QIIME/uniq/MIDORI2_UNIQ_NUC_GB251_lrRNA_QIIME
   # Midori_COI_sp:
   #   type: midori
   #   reference: https://doi.org/10.1002/edn3.303
