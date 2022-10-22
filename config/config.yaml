@@ -1,10 +1,22 @@
-# Input files
+
+#### Software options ####
+
+# For QIIME, it is possible to configure the exact version
+# (must be installed in a Conda environment with the given name)
+qiime:
+  version: qiime2-2022.8
+
+
+#### Input files ####
+
 input:
-  # Both directories and glob patterns can be specified,
-  # it is no problem if some files are matched by both.
-  # However, multiple files with the same name are currently
-  # pooled together before processing. Which files were chosen
-  # and which ones were pooled can be found in 'results/samples.yaml'
+  # Lists of directories and/or glob patterns can be specified.
+  # It is no problem if some files are matched by both, they will only 
+  # be included once.
+  # However, multiple files with the same name in different directories are 
+  # currently pooled together before processing. Which files were chosen
+  # and which ones were pooled is listed in 'results/samples.yaml' after
+  # running the 'config' or other commands.
   directories:
     - test/gz
   patterns:
@@ -26,28 +38,35 @@ input:
   #     The illumina pattern: "(.+?)_S\d+_L\d+_R([12])_\d{3}\.fastq\.gz"
   name_pattern: sample_read  # {sample_read, illumina, <regex>}
 
-# Pipeline definition
+
+##### Pipeline definition ####
+
 # Each pipeline needs two options:
 #  cluster: name of a clustering/denoising method
-#  taxonomy: either default (all databases and methods listed in 'taxonomy_dbs'
-#     and 'taxonomy_methods'), or a custom combination of database/method names
-#     (see 'unoise_usearch' pipeline below)
+#  taxonomy: either 'default' (all databases and methods listed
+#    below under the 'taxonomy_dbs' and 'taxonomy_methods' options,
+#    or a custom combination of database/method names
+#     (see example in 'unoise_usearch' pipeline)
 pipelines:
-  # UNOISE3 pipeline using Vsearch for denoising
+  # UNOISE3 pipeline using VSEARCH for denoising
   unoise:
     cluster: usearch_unoise3  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
     taxonomy: default  # using all taxonomy_dbs and taxonomy_methods
-  # UNOISE3 pipeline using Usearch for denoising
+  # UNOISE3 pipeline using USEARCH for denoising and a custom combination
+  # of taxonomy databases/assignment methods
   unoise_usearch:
     cluster: usearch_unoise3  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
-    # example with taxonomy assignments overridden to only a selection of databases and methods
     taxonomy:
-      dbs:
+      dbs:   # overrides 'taxonomy_dbs' (below)
         ITS: [unite_species]
-      methods: [sintax_90]
+      methods:  # overrides 'taxonomy_methods' (below)
+        - sintax_90
     # Here, we choose USEARCH for denoising instead of VSEARCH.
     # The below settings simply overwrite the settings found
-    # below the pipelines definition in this file.
+    # below the pipelines definition in this file. The settings
+    # hierarchy needs to be exactly the same as below, best
+    # check results/<pipeline>/config.yaml to see if the settings
+    # override was correctly specified.
     settings:
       usearch:
         unoise: { program: usearch }
@@ -64,22 +83,23 @@ pipelines:
     cluster: amptk_dada2
     taxonomy: default
 
-# Files to compare with ASVs/OTUs using usearch_global (VSEARCH)
+
+#### Files to compare with ASVs/OTUs using usearch_global (VSEARCH) ####
+
 compare:
-  # my_comparison:
-  #   file: path/to/seqs.fasta
-  #   ident_threshold: 0.8
-  #   maxhits: 1
+  my_comparison:
+    file: path/to/seqs.fasta   # searched against denoised.fasta
+    ident_threshold: 0.8  # min. identity (0 - 1)
+    maxhits: 1
   default_settings:
     ident_threshold: 0.9
     maxhits: 1
     maxaccepts: 64
     maxrejects: 64
 
-# General settings used by all pipelines 
-# (but can be overridden using the 'settings' entry in the pipeline definition)
 
-# Primer sequences
+#### Primers ####
+
 primers:
   # Primers are grouped per marker. The marker name (in this case ITS) needs to be
   # present in the 'taxonomy_dbs' configuration. Only databases from the given
@@ -93,8 +113,11 @@ primers:
     # - Some or all samples are a mix of different amplicons, which were pooled before indexing
     # Each primer can further be a comma delimited list of oligos, which
     # were mixed together. However, they should still start at the same 
-    # nucleotide position to allow global trimming. The oligos may include adapter and/or linker
-    # sequences, but their position is not required to be at the exact sequence start or end.
+    # nucleotide position to allow global trimming. Note that some pipelines
+    # cannot deal with primer mixtures, in these cases the consensus sequence of the
+    # single mixed sequences is used.
+    # The oligos may include adapter and/or linker sequences, but their position is not 
+    # required to be at the exact sequence start or end.
     forward: 
       - ITS3-KYO2: GGGATGAAGAACGYAGYRAA
       # - fITS7: GTGARTCATCGAATCTTTG
@@ -114,10 +137,53 @@ primers:
     min_overlap: 15
     max_error_rate: 0.25
 
-# For QIIME, it is possible to configure another version
-# (must be installed using conda)
-qiime:
-  version: qiime2-2022.8
+
+#### Taxonomy assignment ####
+
+# By default, every possible combination of databases and 
+# assignment methods is used. This can be changed by modifying
+# the 'taxonomy' option in the 'pipelines' definion (above)
+
+# Definition of all taxonomic databases used by default
+# (sources are configured in taxonomy.yaml).
+# Optional filters allow to only keep reference sequences
+# with a certain taxonomic rank defined.
+# TODO: More filtering or trimming options could be added
+taxonomy_dbs:
+  ITS:
+    # UNITE including global and 97% singletons (doi.org/10.15156/BIO/1264861)
+    unite:
+      db: unite_eukarya_all  # defined in taxonomy.yaml
+    unite_species:
+      db: unite_eukarya_all  # defined in taxonomy.yaml
+      # only keep references with known species annotation
+      defined: species
+  COI:
+    midori:
+      db: Midori_COI
+  Mito_16S:
+    midori:
+      db: Midori_16S
+
+# Assignment methods
+taxonomy_methods:
+  # SINTAX (USEARCH)
+  sintax_90:
+    method: sintax_usearch  # { sintax_usearch, qiime_sklearn }
+    confidence: 0.9
+    program: vsearch
+  sklearn_90:
+    # classify-sklearn plugin in QIIME2 with Naive Bayes classifier
+    # note: the creation of the database and the taxonomy assignment use
+    #   a lot of memory with the UNITE database.
+    method: qiime_sklearn  # { sintax_usearch, qiime_sklearn }
+    confidence: 0.9
+
+
+#### Default settings ####
+
+# All of these settings can be overridden by individual pipelines 
+# using the 'settings' key (see 'pipelines' above)
 
 # General filter settings
 filter:
@@ -125,20 +191,23 @@ filter:
 
 # Usearch pipeline specific settings
 usearch:
-  # paired end merging
+  # paired end merging (currently done by USEARCH)
+  # TODO: should be configurable
   merge:
     overlap_ident: 75  # percent
     # max. nucleotide differences
     # by default, we don't care about this, only rely on overlap identity
     max_diffs: 1000
-    # how long is the amplicon expected on average? Only used to calculate expected errors
-    # for pipelines not accepting maximum error rates
+    # How long is the merged amplicon expected on average? 
+    # Only used to calculate expected errors for pipelines not accepting
+    # error rates for quality filtering (only absolute number of expected errors)
     expected_length: 400
 
   # read filtering before denoising
+  # (done by VSEARCH)
   filter:
-    # maximum per-base errors
-    # (e.g. 0.002 per bp gives 0.8 errors per 400 bp)
+    # Maximum per-base error rate
+    # (e.g. 0.002 per bp means 0.8 errors per 400 bp)
     max_error_rate: 0.002
 
   # UNOISE3 options
@@ -147,6 +216,7 @@ usearch:
     program: vsearch  # { vsearch, usearch }
 
   # mapping options for creation of OTU table
+  # (done by VSEARCH)
   otutab:
     maxaccepts: 64
     maxrejects: 64
@@ -162,33 +232,6 @@ dada2:
   chimera_method: consensus  # { consensus, per-sample, pooled }
   pooling_method: independent  # { independent, pseudo, pooled }
   merge_maxdiffs: 1
-
-# Taxonomic assignment methods
-taxonomy_methods:
-  # SINTAX (USEARCH)
-  sintax_90:
-    method: sintax_usearch  # { sintax_usearch, qiime_sklearn }
-    confidence: 0.9
-  sklearn_90:
-    # classify-sklearn plugin in QIIME2 with Naive Bayes classifier
-    # note: the creation of the database and the taxonomy assignment use
-    #   a lot of memory with the UNITE database.
-    method: qiime_sklearn  # { sintax_usearch, qiime_sklearn }
-    confidence: 0.9
-
-# Definition of all taxonomic databases
-# with optional filters allowing to only keep
-# entries defined at specific taxonomic ranks
-# These filters may be more elaborate in the future.
-taxonomy_dbs:
-  ITS:
-    # UNITE including global and 97% singletons (doi.org/10.15156/BIO/1264861)
-    unite:
-      db: unite_eukarya_all  # defined in taxonomy.yaml
-    unite_species:
-      db: unite_eukarya_all  # defined in taxonomy.yaml
-      # only keep references with known species annotation
-      defined: species
 
 # ITS recognition (fungi)
 ITSx:
