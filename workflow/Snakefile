@@ -115,6 +115,8 @@ rule cmp:
         expand("{prefix}/cmp/{db}.bam", prefix=results_dirs, db=cfg.cmp_files),
 
 
+# commands for cleaning up
+
 rule clean:
     shell:
         "rm -Rf input processing"
@@ -125,6 +127,21 @@ rule clean_all:
         "rm -Rf results input processing logs"
 
 
-rule clean_tax:
+rule clean_taxdb:
     shell:
         "rm -Rf refdb"
+
+
+rule clean_tax:
+    shell:
+        "rm -Rf results/*/pipeline_*/*/*/taxonomy"
+
+
+rule clean_itsx:
+    shell:
+        "rm -Rf results/*/pipeline_*/*/*/ITSx"
+
+
+rule clean_cmp:
+    shell:
+        "rm -Rf results/*/pipeline_*/*/*/cmp"

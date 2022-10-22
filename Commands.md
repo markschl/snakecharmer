@@ -19,4 +19,5 @@ Finally, there are commands for cleaning up:
 
 - **clean**: Removes the working directories `input` and `processing`. The `results` and `logs` directories are retained.
 - **clean_all**: Cleans up everything (including the pipeline output), except for taxonomic reference databases. This is only used to completely remove all output from a target directory.
-- **clean_tax**: Removes the `refdb` directory
+- **clean_taxdb**: Removes the `refdb` directory
+- **clean_tax**, **clean_cmp**, **clean_itsx**: Removes the `taxonomy`, `cmp` or `ITSx` directories in all results directories.
