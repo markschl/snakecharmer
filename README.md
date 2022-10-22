@@ -56,7 +56,7 @@ The following command runs the test pipeline (FASTQ files from sequencing fungal
 
 ```sh
 conda activate snakemake
-snakemake -j 6 --use-conda --conda-prefix ~/conda -d test denoise cmp taxonomy ITS
+snakemake -c6 --use-conda --conda-prefix ~/conda -d test denoise cmp taxonomy ITS
 ```
 
 Note that the `~/conda` directory is used for the installation of all additional necessary software. This allows reusing the installed software across analyzes of different datasets.
@@ -68,7 +68,7 @@ A complete denoising run of a dataset on a HPCC may look like this (using SLURM 
 ```sh
 outdir=~/path/to/analysis  # must contain a config directory
 conda activate snakemake
-snakemake -j 10 -c20 \
+snakemake -j10 -c20 \
     --use-conda --conda-prefix ~/conda \
     --profile slurm \
     -d $outdir \

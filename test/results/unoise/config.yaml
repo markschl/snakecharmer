@@ -62,6 +62,7 @@ taxonomy:
       marker: ITS
       method: sintax_usearch
       method_name: sintax_70
+      program: vsearch
       reference: 10.15156/BIO/1264861
       type: unite_otus
       url: https://files.plutof.ut.ee/public/orig/1D/31/1D31FA3A308BDC2FB2750D62C0AA40C5058C15405A3CC5C626CC3A3F5E3903ED.tgz

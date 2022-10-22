@@ -15,20 +15,21 @@ snakemake -c6 --use-conda --conda-prefix ~/conda -d test denoise ITS
 # TODO: couldn't yet figure out why adding '--rerun-incomplete --rerun-triggers mtime' is necessary
 snakemake -c1 --use-conda --conda-prefix ~/conda -d test cmp taxonomy --rerun-incomplete --rerun-triggers mtime
 # (optional) remove working directories (but not logs)
-snakemake -j1 -d test clean
+snakemake -c1 -d test clean
 # run a general comparison script (useful for any pipeline comparison)
 # (creates Excel file in test/cmp)
 scripts/compare_results.sh test
 # compare obtained ASVs with mixed gDNA concentrations (see test/mock_cmp/...)
-cd test
-scripts/compare_mock.R
-# this command will remove everything (including the results/ directory)
-# snakemake -j1 -d test clean_all
+(cd test && scripts/compare_mock.R)
+# the following command will remove everything (including the results/ directory)
+# snakemake -c1 -d test clean_all
+## render the example Rmd (requires pandoc in PATH or RSTUDIO_PANDOC set, here for Ubuntu)
+# RSTUDIO_PANDOC=/usr/lib/rstudio/bin/quarto/bin/tools Rscript -e "rmarkdown::render('test/R_example/example.Rmd', 'github_document')"
 ```
 
 The results of the comparison are found in `test/mock_cmp`. If rerunning the pipeline several times (with code modifications), consider supplying `--rerun-incomplete --rerun-triggers mtime` to snakemake. The mock community is fairly well represented by the UNOISE, Amptk/UNOISE and Amptk/Dada2 pipelines, while QIIME2 looses many reads due to quality filtering. Using this pipeline with variable-length ITS reads seems difficult.
 
-![mock comparison](mock_cmp/ITS3-KYO2...ITS4/mock.png)
+![mock comparison](mock_cmp/ITS__ITS3-KYO2...ITS4/mock.png)
 
 
 ## Reference

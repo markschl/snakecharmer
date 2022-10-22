@@ -55,7 +55,7 @@ head(res_unoise$itsx_results)
 *Note*: Every taxonomy data frame has a 'ranks' attribute. This can be useful and is also needed later by `make_phyloseq`.
 
 ```{r}
-attr(res_unoise$taxonomy$`unite_all-sintax_70`, 'ranks')
+attr(res_unoise$taxonomy$`unite-sintax_70`, 'ranks')
 ```
 
 
@@ -121,7 +121,7 @@ physeq
 Since there can be several taxonomic assignments, `make_phyloseq` just chooses the first one. To choose a specific one, supply the taxonomy table using the `taxonomy` argument. In this example, we modify the taxonomy by removing the `def_rank` column first.
 
 ```{r}
-tax <- res_unoise$taxonomy$`unite_all-sintax_70` %>%
+tax <- res_unoise$taxonomy$`unite-sintax_70` %>%
   select(-def_rank)
 physeq <- make_phyloseq(res_unoise, meta = meta, taxonomy = tax)
 ```

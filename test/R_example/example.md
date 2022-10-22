@@ -23,15 +23,15 @@ res_unoise <- read_pipeline_results(file.path(res_base, "unoise", "data"))
 ```
 
 The result of `read_pipeline_results` is a list with different
-components: *otutab, taxonomy, refseq, cmp, itsx_results*.
+components:
 
 -   `otutab`: Count matrix with ASVs/OTUs in rows and samples in
     columns.
 -   `taxonomy`: List of data frames, one per taxonomic assignment method
-    (here, only one was used: unite_all-sintax_70) with OTU, taxonomic
-    ranks and a `def_rank` column specifying the rank, at which the
-    names are defined. The taxonomic table should never have any `NA`
-    values. Unknown names were auto-filled based on the known names,
+    (here, only one was used: unite-sintax_70) with OTU, taxonomic ranks
+    and a `def_rank` column specifying the rank, at which the names are
+    defined. The taxonomic table should never have any `NA` values.
+    Unknown names were auto-filled based on the known names,
     e.g. `Ascomycota_ord_unknown`. At the species level, taxa re named
     `Saccharomyces sp.` (if genus known) or `Ascomycota clone` (genus
     unknown). These name patterns can be configured in
@@ -39,14 +39,14 @@ components: *otutab, taxonomy, refseq, cmp, itsx_results*.
     see documentation of `replace_missing_taxa`). Example with shortened
     names:
 
-| OTU    | kingdom | phylum | class  | order  | family | genus           | species             | def_rank |
-|:-------|:--------|:-------|:-------|:-------|:-------|:----------------|:--------------------|:---------|
-| Zotu1  | Fungi   | Basidi | Cystob | Erythr | Erythr | Erythrobasidium | Erythrobasidium sp. | genus    |
-| Zotu5  | Fungi   | Basidi | Agaric | Boleta | Coniop | Coniophora      | Coniophora puteana  | species  |
-| Zotu3  | Fungi   | Ascomy | Saccha | Saccha | Saccha | Saccharomyces   | Saccharomyces sp.   | genus    |
-| Zotu6  | Fungi   | Ascomy | Dothid | Pleosp | Didyme | Didymellaceae_g | Didymellaceae clone | family   |
-| Zotu7  | Fungi   | Ascomy | Euroti | Euroti | Asperg | Penicillium     | Penicillium sp.     | genus    |
-| Zotu10 | Fungi   | Basidi | Agaric | Boleta | Coniop | Coniophora      | Coniophora puteana  | species  |
+| OTU   | kingdom | phylum | class  | order  | family | genus            | species             | def_rank |
+|:------|:--------|:-------|:-------|:-------|:-------|:-----------------|:--------------------|:---------|
+| Zotu1 | Fungi   | Basidi | Cystob | Erythr | Erythr | Erythrobasidium  | Erythrobasidium sp. | genus    |
+| Zotu2 | Fungi   | Basidi | Agaric | Agaric | Agaric | Agaricales_gen\_ | Agaricales clone    | order    |
+| Zotu3 | Fungi   | Ascomy | Saccha | Saccha | Saccha | Saccharomyces    | Saccharomyces sp.   | genus    |
+| Zotu4 | Fungi   | Ascomy | Sordar | Diapor | Diapor | Diaporthe        | Diaporthe sp.       | genus    |
+| Zotu5 | Fungi   | Basidi | Agaric | Boleta | Coniop | Coniophora       | Coniophora puteana  | species  |
+| Zotu6 | Fungi   | Ascomy | Dothid | Pleosp | Didyme | Didymellaceae_g  | Didymellaceae clone | family   |
 
 -   `refseq`: OTU/ASV sequences as `Biostrings::DNAStringSet` object.
 -   `tree`: tree object (not present in this case since the ITS region
@@ -58,11 +58,11 @@ components: *otutab, taxonomy, refseq, cmp, itsx_results*.
 | query | target            | ident |
 |:------|:------------------|------:|
 | Zotu1 | E_hasegawianum    |   100 |
-| Zotu6 | Boeremia_sp_2     |   100 |
-| Zotu3 | S_cerevisiae      |   100 |
-| Zotu7 | Penicillium_sp    |   100 |
 | Zotu2 | H_crustiliniforme |   100 |
+| Zotu3 | S_cerevisiae      |   100 |
 | Zotu4 | D_eres            |   100 |
+| Zotu5 | C_puteana         |   100 |
+| Zotu6 | Boeremia_sp_2     |   100 |
 
 -   `itsx_results`: Finally, the rDNA domains were searched using ITSx,
     since these are fungal ITS sequences. The `ITSx_cat` contains
@@ -83,7 +83,7 @@ components: *otutab, taxonomy, refseq, cmp, itsx_results*.
 useful and is also needed later by `make_phyloseq`.
 
 ``` r
-attr(res_unoise$taxonomy$`unite_all-sintax_70`, 'ranks')
+attr(res_unoise$taxonomy$`unite-sintax_70`, 'ranks')
 ```
 
     ## [1] "kingdom" "phylum"  "class"   "order"   "family"  "genus"   "species"
@@ -161,7 +161,7 @@ meta <- data.frame(sample = c("mock1", "mock2"))
 physeq <- make_phyloseq(res_unoise, meta = meta)
 ```
 
-    ## Warning in make_phyloseq(res_unoise, meta = meta): taxonomy supplied as list to make_phyloseq, using first item (unite_all-sintax_70)
+    ## Warning in make_phyloseq(res_unoise, meta = meta): taxonomy supplied as list to make_phyloseq, using first item (unite-sintax_70)
 
 ``` r
 physeq
@@ -179,7 +179,7 @@ table using the `taxonomy` argument. In this example, we modify the
 taxonomy by removing the `def_rank` column first.
 
 ``` r
-tax <- res_unoise$taxonomy$`unite_all-sintax_70` %>%
+tax <- res_unoise$taxonomy$`unite-sintax_70` %>%
   select(-def_rank)
 physeq <- make_phyloseq(res_unoise, meta = meta, taxonomy = tax)
 ```
