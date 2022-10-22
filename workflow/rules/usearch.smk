@@ -52,10 +52,10 @@ rule trim_primers_paired:
         rprimers_rev="processing/primers/reverse_rev.fasta",
         seq="processing/{name}/usearch/paired/1_merged/{sample}/{sample}.fastq.zst",
     output:
-        "processing/{name}/usearch/paired/2_trim/{sample}/merged/{sample}_fwd.log",
-        "processing/{name}/usearch/paired/2_trim/{sample}/merged/{sample}_rev.log",
-        "processing/{name}/usearch/paired/2_trim/{sample}/merged/{sample}_stats.txt",
-        expand(
+        fwd_log="processing/{name}/usearch/paired/2_trim/{sample}/merged/{sample}_fwd.log",
+        rev_log="processing/{name}/usearch/paired/2_trim/{sample}/merged/{sample}_rev.log",
+        stats="processing/{name}/usearch/paired/2_trim/{sample}/merged/{sample}_stats.txt",
+        by_primers=expand(
             "processing/{{name}}/usearch/paired/2_trim/{{sample}}/merged/{primers}.fastq.zst",
             primers=cfg.primer_combinations_flat,
         ),
@@ -74,13 +74,17 @@ rule trim_primers_paired:
             --minimum-length {params.minlen} \
              2> {log}
         # create empty zstd archives if file does not exist
-        $PIPELINE_DIR/workflow/scripts/utils/create_if_not_exists.sh {output} 2>> {log}
         # rename output to contain marker name
         # TODO: kind of complicated procedure
         prefix=processing/{wildcards.name}/usearch/paired/2_trim/{wildcards.sample}/merged
         for marker_comb in {params.primer_comb}; do
             comb=${{marker_comb##*__}}
-            mv "$prefix/$comb.fastq.zst" "$prefix/$marker_comb.fastq.zst"
+            if [ ! -f "$prefix/$comb.fastq.zst" ]; then
+                echo "No sequences with both forward and reverse primer ($marker_comb) were found in sample {wildcards.sample}" >&2
+                echo -n | zstd -cq > "$prefix/$marker_comb.fastq.zst" 2>> {log}
+            else
+                mv "$prefix/$comb.fastq.zst" "$prefix/$marker_comb.fastq.zst" 2>> {log}
+            fi
         done
         """
 
@@ -367,6 +371,7 @@ rule usearch_stats_paired:
                     out[key(f)] = [int(n) for n in next(csv.reader(h, delimiter="\t"))]
             return out
 
+        percent = lambda x, y: round(100 * x / y, 2) if y > 0 else 0.
 
         with file_logging(log):
             # read data
@@ -387,15 +392,14 @@ rule usearch_stats_paired:
                 for p in cfg.primer_combinations_flat:
                     header += [p, "filtered", "(%)"]
                 writer.writerow(header)
-                percent = lambda x: round(100 * x, 2)
                 for sample in merge:
                     raw, m = merge[sample]
                     m2, tf, tr = trim[sample]
                     assert m == m2, "Number of sequences in logfiles from read merging and primer trimming does not match: {} vs. {}".format(m, m2)
-                    row = [sample, raw, m, percent(m/raw), tf, percent(tf/m), tr, percent(tr/m)]
+                    row = [sample, raw, m, percent(m, raw), tf, percent(tf, m), tr, percent(tr, m)]
                     f = flt2[sample]
                     for p in cfg.primer_combinations_flat:
                         kept, removed = f[p]
                         total = kept + removed
-                        row += [total, kept, percent(kept / total)]
+                        row += [total, kept, percent(kept, total)]
                     writer.writerow(row)
