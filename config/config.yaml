@@ -54,16 +54,18 @@ pipelines:
   unoise_usearch:
     cluster: usearch_unoise3  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
     taxonomy:
-      dbs:  # overrides 'taxonomy_dbs' (below)
+      dbs:  # chooses specific 'taxonomy_dbs' (below)
         ITS: [unite_species]
-      methods:  # overrides 'taxonomy_methods' (below)
+      methods:  # chooses specific 'taxonomy_methods' (below)
         - sintax_90
     # Here, we choose USEARCH for denoising instead of VSEARCH.
-    # The below settings simply overwrite the settings found
-    # below the pipelines definition in this file. The settings
-    # hierarchy needs to be exactly the same as below, best
-    # check results/<pipeline>/config.yaml to see if the settings
-    # override was correctly specified.
+    # These settings simply overwrite the default settings found below
+    # in this file. 
+    # The settings hierarchy needs to be exactly the same as below,
+    # if not the options here will be ignored. It is recommended to
+    # run the 'config' rule first and then check the file 
+    # `results/<pipeline>/config.yaml` to see if the settings were 
+    # correctly overridden.
     settings:
       usearch:
         unoise: { program: usearch }
