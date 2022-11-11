@@ -52,12 +52,6 @@ head(res_unoise$cmp$mock)
 head(res_unoise$itsx_results)
 ```
 
-*Note*: Every taxonomy data frame has a 'ranks' attribute. This can be useful and is also needed later by `make_phyloseq`.
-
-```{r}
-attr(res_unoise$taxonomy$`unite-sintax_70`, 'ranks')
-```
-
 
 ## Mixed vs. amplified frequencies
 

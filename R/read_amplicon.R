@@ -2,14 +2,15 @@
 
 #' Reads the amplicon pipeline results from a directory
 #' 
+#' @param input_dir: path of the input directory
 #' @param ...: Additional parameters are passed on to `read_qiime_taxonomy()`
-read_pipeline_results = function(INPUT,
-                                 OTUTAB = file.path(INPUT, 'denoised_otutab.txt.gz'),
-                                 TAX_DIR = file.path(INPUT, 'taxonomy'),
-                                 OTU_SEQS = file.path(INPUT, 'denoised.fasta'),
-                                 CMP_DIR = file.path(INPUT, 'cmp'),
-                                 TREE_FILE = file.path(INPUT, 'denoised_tree.tre'),
-                                 ITSX_PREFIX = file.path(INPUT, 'ITSx', 'out'),
+read_pipeline_results = function(input_dir,
+                                 otutab_dir = file.path(input_dir, 'denoised_otutab.txt.gz'),
+                                 taxonomy_dir = file.path(input_dir, 'taxonomy'),
+                                 denoised_seqs = file.path(input_dir, 'denoised.fasta'),
+                                 cmp_dir = file.path(input_dir, 'cmp'),
+                                 tree_file = file.path(input_dir, 'denoised_tree.tre'),
+                                 itsx_prefix = file.path(input_dir, 'ITSx', 'out'),
                                  verbose = F,
                                  ...) {
   out = list()
@@ -27,15 +28,15 @@ read_pipeline_results = function(INPUT,
   # OTU table
   if (verbose)
     cat('Reading OTU table...\n', file = stderr())
-  OTUTAB = maybe_gz(OTUTAB, stop='OTU table not found.')
-  out$otutab = read_otutab(OTUTAB)
+  otutab_dir = maybe_gz(otutab_dir, stop='OTU table not found.')
+  out$otutab = read_otutab(otutab_dir)
   
   # read taxonomy
   if (verbose)
     cat('Reading OTU taxonomy...\n', file = stderr())
   out$taxonomy = list()
-  for (tax_file in list.files(TAX_DIR, '\\.txt(\\.gz)?')) {
-    tax_file = maybe_gz(file.path(TAX_DIR, tax_file))
+  for (tax_file in list.files(taxonomy_dir, '\\.txt(\\.gz)?')) {
+    tax_file = maybe_gz(file.path(taxonomy_dir, tax_file))
     stopifnot(!is.null(tax_file))
     name = basename(gsub('\\.txt(\\.gz)?$', '', tax_file))
     s = strsplit(name, '-')[[1]]
@@ -54,26 +55,26 @@ read_pipeline_results = function(INPUT,
   # OTU sequences
   if (verbose)
     cat('Reading OTU sequences...\n', file = stderr())
-  OTU_SEQS = maybe_gz(OTU_SEQS, stop='Denoised sequences not found')
-  out$refseq = Biostrings::readDNAStringSet(OTU_SEQS)
+  denoised_seqs = maybe_gz(denoised_seqs, stop='Denoised sequences not found')
+  out$refseq = Biostrings::readDNAStringSet(denoised_seqs)
   
   # Phylogenetic tree
-  TREE_FILE = maybe_gz(TREE_FILE)
-  if (!is.null(TREE_FILE)) {
+  tree_file = maybe_gz(tree_file)
+  if (!is.null(tree_file)) {
     if (verbose)
       cat('Reading phylogenetic tree...\n', file = stderr())
-    out$tree = ape::ladderize(ape::read.tree(TREE_FILE))
+    out$tree = ape::ladderize(ape::read.tree(tree_file))
   }
   
   # comparisons to OTU sequences
-  cmp_files = list.files(CMP_DIR, '\\.txt(\\.gz)?$')
+  cmp_files = list.files(cmp_dir, '\\.txt(\\.gz)?$')
   out$cmp = list()
   if (length(cmp_files) > 0) {
     if (verbose)
       cat(paste('Comparisons to OTU sequences found:',
                 paste(cmp_files, collapse=', '), '\n'), file = stderr())
     for (f in cmp_files) {
-      f = maybe_gz(file.path(CMP_DIR, f))
+      f = maybe_gz(file.path(cmp_dir, f))
       name = gsub('\\.txt$', '', basename(f))
       out$cmp[[name]] = read.delim(f, header=F,
                                    col.names=c('query', 'target', 'ident'),
@@ -82,16 +83,16 @@ read_pipeline_results = function(INPUT,
   }
 
   # ITSx
-  if (dir.exists(dirname(ITSX_PREFIX))) {
+  if (dir.exists(dirname(itsx_prefix))) {
     if (verbose)
       cat('ITSx directory found, reading...\n', file = stderr())
-    posfile = paste0(ITSX_PREFIX, '.positions.txt.gz')
+    posfile = paste0(itsx_prefix, '.positions.txt.gz')
     posfile = maybe_gz(posfile, stop=paste('ITSx positions file not found: ', posfile))
     out$itsx_results = read_itsx_pos(posfile)
-    nd = paste0(ITSX_PREFIX, '_no_detections.txt')
+    nd = paste0(itsx_prefix, '_no_detections.txt')
     if (!file.exists(nd)) {
       # if file is missing, then there should be no non-detected sequences
-      stopifnot(file.info(paste0(ITSX_PREFIX, '_no_detections.fasta'))$size == 0)
+      stopifnot(file.info(paste0(itsx_prefix, '_no_detections.fasta'))$size == 0)
     } else {
       no_detections = read.delim(nd, stringsAsFactors=F, header=F)[, 1]
       out$itsx_results = rbind(
@@ -131,10 +132,13 @@ print_list = function(x, n) {
 #' @param refseq: (optional) `Biostrings::XStringSet` of OTU sequences
 #' @param itsx_results: (optional) data frame with at least an OTU and ITSx_cat column, 
 #'     will be added to the right of the taxonomy table
+#' @param missing_empty: Add samples present in the metadata but not in the
+#'     OTU table as empty samples without reads. Useful for negative controls,
+#'     but be careful with activating...
 #
 # It is possible to specify a named list containing all these objects as first arguments.
 # All further provided arguments, if named according to one above, will override the data in this list.
-make_phyloseq = function(...) {
+make_phyloseq = function(..., missing_empty=F) {
   library(phyloseq)
   data = list(...)
   
@@ -175,7 +179,7 @@ make_phyloseq = function(...) {
   otus_only = setdiff(colnames(otutab), rownames(meta))
   meta_only = setdiff(rownames(meta), colnames(otutab))
   if (length(otus_only) > 0) {
-    warning(
+    stop(
       sprintf(
         'Some samples were only found in OTU table, but not the metadata: %s\n',
         paste(otus_only, collapse = ', ')
@@ -183,12 +187,20 @@ make_phyloseq = function(...) {
     )
   }
   if (length(meta_only) > 0) {
-    warning(
-      sprintf(
-        'Some samples were only found in metadata, but not the OTU table: %s\n',
-        paste(meta_only, collapse = ', ')
-      )
+    msg = sprintf(
+      'Some samples were only found in metadata, but not the OTU table: %s.\n',
+      paste(meta_only, collapse = ', ')
     )
+    if (!missing_empty) {
+      stop(paste(msg, 'If they are negative controls that should be empty, consider missing_empty=TRUE\n'))
+    } else {
+      warning(paste(msg, 'Adding them as empty samples (since missing_empty=TRUE).\n'))
+      empty = matrix(rep(0, length(meta_only)*nrow(otutab)),
+                     ncol=length(meta_only),
+                     dimnames=list(rownames(otutab), meta_only))
+      stopifnot(rownames(otutab) == rownames(empty))
+      otutab = cbind(otutab, empty)
+    }
   }
   
   # taxonomy
@@ -207,9 +219,12 @@ make_phyloseq = function(...) {
   # obtain taxonomic ranks
   ranks = attr(tax, 'ranks')
   if (is.null(ranks)) {
-    ranks = get_data(data, 'tax_ranks')
+    ranks = get_data(data, 'tax_ranks', required=F)
     if (is.null(ranks)) {
-      stop("No 'ranks' attribute found in taxonomy. Please specify taxonomic ranks with a 'tax_ranks' argument.")
+      ranks = setdiff(colnames(tax), c('OTU', 'def_rank'))
+      warning(sprintf(paste("No 'ranks' attribute found in taxonomy and 'tax_ranks' ",
+                      "not specified. Assuming these to be taxonomic ranks: %s.\n"),
+                      paste(ranks, collapse=', ')))
     }
   }
   
@@ -217,20 +232,20 @@ make_phyloseq = function(...) {
   otus_only = setdiff(rownames(otutab), tax$OTU)
   tax_only = setdiff(tax$OTU, rownames(otutab))
   if (length(otus_only) > 0) {
-    warning(sprintf(
+    stop(sprintf(
       'Some OTUs were only found in OTU table, but not the taxonomy: %s\n',
       paste(otus_only, collapse = ', ')
     ))
   }
   if (length(tax_only) > 0) {
-    warning(sprintf(
+    stop(sprintf(
       'Some OTUs were only found in taxonomy, but not the OTU table: %s\n',
       paste(tax_only, collapse = ', ')
     ))
   }
   
   # add optional ITSx data
-  itsx = get_data(data, 'itsx_results', required = F)
+  itsx = get_data(data, 'itsx_results', required=F)
   if (!is.null(itsx)) {
     n = nrow(tax)
     tax = merge(tax, itsx[,c('OTU', 'ITSx_cat')], by='OTU', all.x=T)
@@ -245,6 +260,7 @@ make_phyloseq = function(...) {
     }
   }
   
+  # convert taxonomy to matrix
   tax = as.matrix(tax)
   if ('OTU' %in% colnames(tax)) {
     rownames(tax) = tax[, 'OTU']
@@ -254,33 +270,46 @@ make_phyloseq = function(...) {
   col_order = c(intersect(ranks, colnames(tax)), setdiff(colnames(tax), ranks))
   tax = tax[, col_order]
   
-  physeq = phyloseq::phyloseq(otu_table(otutab, taxa_are_rows = T),
-                              tax_table(tax),
-                              sample_data(meta))
+  # OTU sequences
+  seq = get_data(data, 'refseq', required=F)
+  if (!is.null(seq)) {
+    otus_only = setdiff(rownames(otutab), names(seq))
+    seq_only = setdiff(names(seq), rownames(otutab))
+    if (length(otus_only) > 0) {
+      stop(sprintf(
+        'Some OTUs were only found in OTU table, but not the OTU sequences: %s\n',
+        paste(otus_only, collapse = ', ')
+      ))
+    }
+    if (length(seq_only) > 0) {
+      stop(sprintf(
+        'Some OTUs were only found in the sequence set, but not the OTU table: %s\n',
+        paste(tax_only, collapse = ', ')
+      ))
+    }
+    seq = refseq(seq)
+  } else {
+    seq = NULL
+  }
   
-  # add optional data
+  # optional data
   tree = get_data(data, 'tree', required = F)
   if (!is.null(tree)) {
-    physeq2 = physeq
-    phy_tree(physeq2) = tree
-    if (phyloseq::ntaxa(physeq2) < phyloseq::ntaxa(physeq)) {
-      warning('The phylogenetic tree contains less OTUs than the OTU table. Not added.\n')
-    } else {
-      physeq = physeq2
+    tree = phy_tree(tree)
+    if (nrow(otutab) != ntaxa(tree)) {
+      warning('The phylogenetic does not match the OTU table. Not added.\n')
+      tree = NULL
     }
   }
-  
-  seq = get_data(data, 'refseq', required = F)
-  if (!is.null(seq)) {
-    physeq2 = merge_phyloseq(physeq, refseq(seq))
-    if (ntaxa(physeq2) < ntaxa(physeq)) {
-      warning('There are less OTU sequences than OTUs in the count table. Not added.\n')
-    } else {
-      physeq = physeq2
-    }
-  }
-  
-  physeq
+
+  # create the object
+  phyloseq::phyloseq(
+    otu_table(otutab, taxa_are_rows = T),
+    tax_table(tax),
+    sample_data(meta),
+    seq,
+    tree
+  )
 }
 
 

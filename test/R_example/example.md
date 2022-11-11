@@ -79,15 +79,6 @@ components:
 | Zotu5 | NA  | NA   | 107-367 | 368-407 | partial_5.8S |
 | Zotu6 | NA  | NA   | 106-259 | 260-299 | partial_5.8S |
 
-*Note*: Every taxonomy data frame has a ‘ranks’ attribute. This can be
-useful and is also needed later by `make_phyloseq`.
-
-``` r
-attr(res_unoise$taxonomy$`unite-sintax_70`, 'ranks')
-```
-
-    ## [1] "kingdom" "phylum"  "class"   "order"   "family"  "genus"   "species"
-
 ## Mixed vs. amplified frequencies
 
 As an example, we compare the relative mixed amounts (genomic DNA) of
@@ -145,7 +136,7 @@ ggplot(mock_data, aes(rel_abund_m1, n_reads)) +
   theme(strip.text.y = element_text(angle = 0))
 ```
 
-![](example_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](example_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 ## Make phyloseq object
 
@@ -189,4 +180,4 @@ plot_bar(physeq, fill = "species") +
   guides(fill = guide_legend(ncol = 2))
 ```
 
-![](example_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](example_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
