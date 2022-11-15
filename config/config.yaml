@@ -27,7 +27,7 @@ input:
   # However, it is necessary to specify the correct name pattern to obtain
   # sample names from the file names.
   # Options are:
-  # - sample_read: e.g. Sample_Name_R1.fasta.gz
+  # - sample_read: e.g. Sample_Name_R1.fastq.gz
   # - illumina: e.g. Sample_Name_S276_L001_R1_001.fastq.gz
   # - regular expression with two groups, the first one matches the sample name
   #     and the second one the read number (1 = forward, 2 = reverse).
