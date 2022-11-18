@@ -322,7 +322,7 @@ properties:
       complement:
         type: string
         enum: [T, F]
-        default: T  # ITSx uses T (true) as default, but we know the orientation of our amplicon
+        default: F  # ITSx uses T (true) as default, but we know the orientation of our amplicon
       heuristics:
         type: string
         enum: [T, F]

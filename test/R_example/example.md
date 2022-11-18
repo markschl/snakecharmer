@@ -25,19 +25,18 @@ res_unoise <- read_pipeline_results(file.path(res_base, "unoise", "data"))
 The result of `read_pipeline_results` is a list with different
 components:
 
--   `otutab`: Count matrix with ASVs/OTUs in rows and samples in
-    columns.
--   `taxonomy`: List of data frames, one per taxonomic assignment method
-    (here, only one was used: unite-sintax_70) with OTU, taxonomic ranks
-    and a `def_rank` column specifying the rank, at which the names are
-    defined. The taxonomic table should never have any `NA` values.
-    Unknown names were auto-filled based on the known names,
-    e.g. `Ascomycota_ord_unknown`. At the species level, taxa re named
-    `Saccharomyces sp.` (if genus known) or `Ascomycota clone` (genus
-    unknown). These name patterns can be configured in
-    `read_pipeline_results` (`unknown_fmt` and `unknown_species_fmt`,
-    see documentation of `replace_missing_taxa`). Example with shortened
-    names:
+- `otutab`: Count matrix with ASVs/OTUs in rows and samples in columns.
+- `taxonomy`: List of data frames, one per taxonomic assignment method
+  (here, only one was used: unite-sintax_70) with OTU, taxonomic ranks
+  and a `def_rank` column specifying the rank, at which the names are
+  defined. The taxonomic table should never have any `NA` values.
+  Unknown names were auto-filled based on the known names,
+  e.g. `Ascomycota_ord_unknown`. At the species level, taxa re named
+  `Saccharomyces sp.` (if genus known) or `Ascomycota clone` (genus
+  unknown). These name patterns can be configured in
+  `read_pipeline_results` (`unknown_fmt` and `unknown_species_fmt`, see
+  documentation of `replace_missing_taxa`). Example with shortened
+  names:
 
 | OTU   | kingdom | phylum | class  | order  | family | genus            | species             | def_rank |
 |:------|:--------|:-------|:-------|:-------|:-------|:-----------------|:--------------------|:---------|
@@ -48,12 +47,12 @@ components:
 | Zotu5 | Fungi   | Basidi | Agaric | Boleta | Coniop | Coniophora       | Coniophora puteana  | species  |
 | Zotu6 | Fungi   | Ascomy | Dothid | Pleosp | Didyme | Didymellaceae_g  | Didymellaceae clone | family   |
 
--   `refseq`: OTU/ASV sequences as `Biostrings::DNAStringSet` object.
--   `tree`: tree object (not present in this case since the ITS region
-    is too variable for creating a phylogenetic tree)
--   `cmp`: List of sequence comparisons with OTUS/ASVs. In this case,
-    the ITS2 sequences of the mixed species in the mock communities were
-    compared. The first few rows:
+- `refseq`: OTU/ASV sequences as `Biostrings::DNAStringSet` object.
+- `tree`: tree object (not present in this case since the ITS region is
+  too variable for creating a phylogenetic tree)
+- `cmp`: List of sequence comparisons with OTUS/ASVs. In this case, the
+  ITS2 sequences of the mixed species in the mock communities were
+  compared. The first few rows:
 
 | query | target            | ident |
 |:------|:------------------|------:|
@@ -64,11 +63,11 @@ components:
 | Zotu5 | C_puteana         |   100 |
 | Zotu6 | Boeremia_sp_2     |   100 |
 
--   `itsx_results`: Finally, the rDNA domains were searched using ITSx,
-    since these are fungal ITS sequences. The `ITSx_cat` contains
-    (shortened) messages from ITSx. *partial_5.8S* means that not the
-    whole 5.8S region was found, which is not surprising since the
-    forward primer is located on the 5.8S region. The first few rows:
+- `itsx_results`: Finally, the rDNA domains were searched using ITSx,
+  since these are fungal ITS sequences. The `ITSx_cat` contains
+  (shortened) messages from ITSx. *partial_5.8S* means that not the
+  whole 5.8S region was found, which is not surprising since the forward
+  primer is located on the 5.8S region. The first few rows:
 
 | OTU   | SSU | ITS1 | ITS2    | LSU     | ITSx_cat     |
 |:------|:----|:-----|:--------|:--------|:-------------|
