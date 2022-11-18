@@ -19,7 +19,7 @@ This pipeline system uses [Snakemake](https://snakemake.github.io/) to create an
 
 The pipeline is tested using amplicon data from a fungal mock community ([`test` directory](test/)) and the results of the different pipelines can be compared [using a script](#comparison-of-denoisingclustering-pipelines).
 
-The current rule graph:
+The current rule graph (see also [description of target rules](Commands.md)):
 
 ![rule graph](rulegraph.png)
 
