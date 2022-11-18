@@ -10,7 +10,7 @@ localrules:
 rule qiime_make_manifest_paired:
     input:
         expand(
-            "input/paired/{sample}/{sample}_R{read}.fastq.gz",
+            "input/grouped/paired/{sample}/{sample}_R{read}.fastq.gz",
             sample=cfg.sample_names["paired"],
             read=[1, 2],
         ),
@@ -28,7 +28,7 @@ rule qiime_make_manifest_paired:
             for sample in cfg.sample_names["paired"]:
                 paths = [
                     abspath(
-                        "input/paired/{sample}/{sample}_R{read}.fastq.gz".format(
+                        "input/grouped/paired/{sample}/{sample}_R{read}.fastq.gz".format(
                             sample=sample, read=read
                         )
                     )
@@ -48,7 +48,7 @@ rule qiime_import:
     input:
         manifest="processing/{name}/qiime/{strategy}/manifest.txt",
         seq=lambda w: expand(
-            "input/paired/{sample}/{sample}_R{read}.fastq.gz",
+            "input/grouped/paired/{sample}/{sample}_R{read}.fastq.gz",
             sample=cfg.sample_names[w.strategy],
             read=[1, 2] if w.strategy == "paired" else [1],
         ),

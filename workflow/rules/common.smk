@@ -1,51 +1,27 @@
-import logging
-import gzip
-import shutil
-from collections import OrderedDict
-from sys import stderr
-from os.path import splitext, dirname, join
 import os
+from os.path import *
+import shutil
 import lib
+
 
 
 localrules:
     dump_samples,
     dump_config,
-    setup_project,
+    link_samples,
+    make_primer_fasta,
+    link_data_dirs,
 
 
 #### Functions ####
 
 
-def get_link_paths(samples, outdir):
-    link_paths = []
-    combine_samples = {}
-    for sample_name, by_read in samples:
-        sample_dir = join(outdir, sample_name)
-        for read_num, files in by_read:
-            if len(files) == 1:
-                root, f = next(iter(files))
-                f = join(root, f)
-                out = join(sample_dir, "{}_R{}.fastq.gz".format(sample_name, read_num))
-                link_paths.append((f, out))
-            else:
-                files = sorted(files)
-                files = [join(root, f) for root, f in files]
-                file_i = list(range(1, len(files) + 1))
-                names = [
-                    "{}_s{}_R{}.fastq.gz".format(sample_name, i, read_num)
-                    for f, i in zip(files, file_i)
-                ]
-                link_paths.extend(
-                    (f, join(sample_dir, "_multiple", name))
-                    for f, name in zip(files, names)
-                )
-                assert not (sample_name, read_num) in combine_samples
-                combine_samples[(sample_name, read_num)] = file_i
-    return link_paths, combine_samples
-
-
 def combine_primers(primers_by_marker):
+    """
+    Combines primers from different markers (in a nested dictionary structure)
+    together (still grouped by forward/reverse), making sure that if the same
+    primer name occurs in different markers, the primer sequences are the same
+    """
     out = {"forward": {}, "reverse": {}}
     for marker, primers_by_dir in primers_by_marker.items():
         for dir_, primers in primers_by_dir.items():
@@ -63,90 +39,174 @@ def combine_primers(primers_by_marker):
 cfg = lib.Config(config)
 
 
-# determine paths to link
-sample_data = {
-    strategy: get_link_paths(cfg.samples[strategy], strategy)
-    for strategy in ("single", "paired")
-}
-link_paths = [p for paths, _ in sample_data.values() for p in paths]
-combine_samples = {strategy: data[1] for strategy, data in sample_data.items()}
+# Assemble dict with paths to link:
+#  dict keys are the unique samples
+#    - source file path
+#    - nested output dir (strategy -> sample [ -> "_multiple" if duplicate names]
+#    - unique output name [with optional suffix to make name unique]
+link_paths = OrderedDict()
+
+for strategy, samples in cfg.samples.items():
+    for sample_name, paths in samples.items():
+        sample_dir = join(strategy, sample_name)
+        if len(paths) == 1:
+            # sample name is unique -> link files directly
+            # **note**: R2 will become R1 here if only R2 was supplied
+            link_paths[sample_name] = [(
+                    p,
+                    sample_dir,
+                    "{}_R{}.fastq.gz".format(sample_name, i + 1)
+                )
+                for i, p in enumerate(paths[0])]
+        else:
+            # sample name is duplicated -> add a suffix number
+            # and put them into the "_multiple" directory, from where they can be
+            # combined
+            for sample_i, read_paths in enumerate(paths):
+                unique_name = "{}_{}".format(sample_name, sample_i + 1)
+                link_paths[unique_name] = [(
+                        p,
+                        join(sample_dir, '_multiple'),
+                        "{}_R{}.fastq.gz".format(unique_name, i + 1)
+                    )
+                    for i, p in enumerate(read_paths)]
+
+# flat version of link_paths without grouping by sample
+link_paths_flat = [p for paths in link_paths.values() 
+                   for p in paths]
 
 
 #### Configuration ####
 
 
 rule dump_samples:
+    params:
+        # make sure the command is rerun if settings change
+        pool = cfg.config['input']['pool_duplicates'],
+        samples = cfg.samples,
+        link_paths = link_paths,
     output:
-        samples="results/samples.yaml",
+        yml="results/samples.yaml",
+        tsv="results/samples.tsv"
+    log:
+        "logs/dump_sampes.log"
     run:
         import os
         import yaml
+        import csv
+        import yaml
 
-        samples = {
-            strategy: {
-                sample: {
-                    "R{}".format(r): [
-                        os.path.relpath(join(prefix, fname)) for prefix, fname in files
-                    ]
-                    if len(files) > 1
-                    else os.path.relpath(join(*list(files)[0]))
-                    for r, files in sdata
-                }
-                for sample, sdata in s
-            }
-            for strategy, s in cfg.samples.items()
-        }
-        with open(output.samples, "w") as o:
-            yaml.dump(samples, o)
+        # dict representation of OrderedDict in YAML
+        from collections import OrderedDict
+        
+        class OrderedDumper(yaml.SafeDumper):
+            def __init__(self, *args, **kwargs):
+                super(OrderedDumper, self).__init__(*args, **kwargs)
+                r = lambda self, data:  self.represent_mapping(
+                    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, data.items()
+                )
+                self.add_representer(OrderedDict, r)
+
+
+        with lib.file_logging(log):
+            # YAML file
+            # Even though dicts have ordered keys since Python 3.7 we
+            # make sure that data is always written in the input order
+            # by using OrderedDict            
+            samples = OrderedDict((
+                strategy, OrderedDict((
+                    sample, OrderedDict((
+                        "R{}".format(i + 1), [
+                            relpath(path) for path in read_paths
+                        ]
+                        if len(read_paths) > 1
+                        else relpath(read_paths[0]))
+                        for i, read_paths in enumerate(zip(*sample_paths))
+                    ))
+                    for sample, sample_paths in strategy_paths.items()
+                ))
+                for strategy, strategy_paths in params.samples.items()
+            )
+            with open(output.yml, "w") as o:
+                yaml.dump(samples, o, Dumper=OrderedDumper)
+            
+            # TSV file
+            with open(output.tsv, "w") as o:
+                w = csv.writer(o, delimiter="\t")
+                w.writerow(["sample", "strategy", "read_1_orig", "read_2_orig", "read_1", "read_2"])
+                for unique_name, paths in params.link_paths.items():
+                    orig_files = [relpath(f, os.getcwd()) for f, _, _ in paths]
+                    files = [f for _, _, f in paths]
+                    assert len(files) <= 2
+                    if len(files) == 1:
+                        w.writerow([unique_name, 'single', orig_files[0], '', files[0], ''])
+                    else:
+                        w.writerow([unique_name, 'paired'] + orig_files + files)
 
 
 rule dump_config:
+    params:
+        # make sure the command is rerun if any setting changes
+        pipeline_cfg = cfg.pipelines
     output:
         c="results/{name}/config.yaml",
+    log:
+        "logs/{name}/dump_config.log"
     run:
         import os
         import yaml
         from copy import deepcopy
 
-        with open(output.c, "w") as o:
-            c = deepcopy(cfg[wildcards.name])
-            del c["settings"]["input"]
-            del c["settings"]["primers"]
-            del c["settings"]["taxonomy_db_sources"]
-            del c["settings"]["taxonomy_dbs"]
-            del c["settings"]["taxonomy_methods"]
-            c["taxonomy"] = {
-                marker: {"-".join(name): config for name, config in tax.items()}
-                for marker, tax in c["taxonomy"].items()
-            }
-            yaml.dump(c, o)
+        with lib.file_logging(log):
+            with open(output.c, "w") as o:
+                c = deepcopy(params.pipeline_cfg[wildcards.name])
+                del c["settings"]["input"]
+                del c["settings"]["primers"]
+                del c["settings"]["taxonomy_db_sources"]
+                del c["settings"]["taxonomy_dbs"]
+                del c["settings"]["taxonomy_methods"]
+                c["taxonomy"] = {
+                    marker: {"-".join(name): config for name, config in tax.items()}
+                    for marker, tax in c["taxonomy"].items()
+                }
+                yaml.dump(c, o)
 
 
 #### Sample handling ####
 
 
-rule setup_project:
+rule make_primer_fasta:
+    params:
+        # make sure the command is rerun if settings change
+        primers = cfg.primers,
+        primers_rev = cfg.primers_rev
     output:
-        fprimers="processing/primers/forward.fasta",
-        rprimers="processing/primers/reverse.fasta",
-        rprimers_rev="processing/primers/reverse_rev.fasta",
-        simple_sym=[
+        f_primer_file="processing/primers/forward.fasta",
+        r_primer_file="processing/primers/reverse.fasta",
+        rprimer_rev_f="processing/primers/reverse_rev.fasta"
+    log:
+        "logs/make_primer_fasta.log",
+    run:
+        with lib.file_logging(log) as out:
+            primers = combine_primers(params.primers)
+            primers_rev = combine_primers(params.primers_rev)
+            lib.make_primer_fasta(primers["forward"].items(), output.f_primer_file)
+            lib.make_primer_fasta(primers["reverse"].items(), output.r_primer_file)
+            lib.make_primer_fasta(primers_rev["reverse"].items(), output.rprimer_rev_f)
+
+
+rule link_data_dirs:
+    output:
+        [
             directory("results/{name}/data".format(**p))
             for p in cfg.pipelines.values()
             if p["is_simple"]
         ],
     log:
-        "logs/setup_project.log",
+        "logs/link_data_dirs.log",
     run:
         with lib.file_logging(log) as out:
-            # primer FASTA
-            primers = combine_primers(cfg.primers)
-            primers_rev = combine_primers(cfg.primers_rev)
-            lib.make_primer_fasta(primers["forward"], output.fprimers)
-            lib.make_primer_fasta(primers["reverse"], output.rprimers)
-            lib.make_primer_fasta(primers_rev["reverse"], output.rprimers_rev)
-            # symlink dirs
-            for sym_dir in output.simple_sym:
+            for sym_dir in output:
                 p = cfg.pipelines[os.path.basename(dirname(sym_dir))]
                 res_dir = join(
                     dirname(sym_dir),
@@ -154,41 +214,50 @@ rule setup_project:
                     p["single_primercomb"],
                     p["single_strategy"],
                 )
-                if not os.path.exists(res_dir):
+                if not exists(res_dir):
                     os.makedirs(res_dir)
-                if os.path.exists(sym_dir):
+                if exists(sym_dir):
                     os.remove(sym_dir)
-                os.symlink(os.path.relpath(res_dir, os.path.dirname(sym_dir)), sym_dir)
+                os.symlink(relpath(res_dir, os.path.dirname(sym_dir)), sym_dir)
 
 
 rule link_samples:
     output:
-        [join("input", p) for _, p in link_paths],
+        grouped = [join("input", "grouped", path, name)
+                   for _, path, name in link_paths_flat],
+        unique = [join("input", "unique_samples", name)
+                  for _, path, name in link_paths_flat]
     log:
         "logs/link_samples.log",
     run:
         with lib.file_logging(log) as out:
-            for source, target in link_paths:
-                target = join("input", target)
-                if os.path.exists(target):
+            # remove "input" dir if already present
+            if exists("input"):
+                shutil.rmtree("input")
+            grouped = [(orig, join("input", "grouped", path, name))
+                        for orig, path, name in link_paths_flat]
+            unique = [(orig, join("input", "unique_samples", name))
+                    for orig, path, name in link_paths_flat]
+            for source, target in grouped + unique:
+                if exists(target):
                     os.remove(target)
-                outdir = os.path.dirname(target)
-                if not os.path.exists(outdir):
+                outdir = dirname(target)
+                if not exists(outdir):
                     os.makedirs(outdir)
-                os.symlink(os.path.abspath(source), os.path.abspath(target))
-                source = os.path.relpath(source, ".")
-                target = os.path.relpath(target, ".")
+                os.symlink(abspath(source), abspath(target))
+                source = relpath(source, ".")
+                target = relpath(target, ".")
                 print("{} > {}".format(source, target), file=out)
 
 
 rule combine_multiple_samples:
     input:
         lambda w: expand(
-            "input/{{strategy}}/{{sample}}/_multiple/{{sample}}_s{file_i}_R{{read}}.fastq.gz",
-            file_i=combine_samples[w.strategy][(w.sample, int(w.read))],
+            "input/grouped/{{strategy}}/{{sample}}/_multiple/{{sample}}_{file_i}_R{{read}}.fastq.gz",
+            file_i=[i + 1 for i in range(len(cfg.samples[w.strategy][w.sample]))]
         ),
     output:
-        "input/{strategy}/{sample}/{sample}_R{read}.fastq.gz",
+        "input/grouped/{strategy}/{sample}/{sample}_R{read}.fastq.gz",
     log:
         "logs/combine_collected/{strategy}/{sample}_R{read}.log",
     group:
@@ -207,7 +276,7 @@ rule combine_multiple_samples:
 
 rule fastqc:
     input:
-        "input/{strategy}/{sample}/{prefix}.fastq.gz",
+        "input/grouped/{strategy}/{sample}/{prefix}.fastq.gz",
     output:
         html="results/_validation/fastqc/{strategy,[^/]+}/{sample,[^/]+}/{prefix}_fastqc.html",
         zip="results/_validation/fastqc/{strategy,[^/]+}/{sample,[^/]+}/{prefix}_fastqc.zip",
@@ -225,8 +294,8 @@ rule fastqc:
 
 rule multiqc_fastqc:
     input:
-        [join("results", "_validation", "fastqc", splitext(splitext(p)[0])[0] + "_fastqc.html")
-        for _, p in link_paths],
+        [join("results", "_validation", "fastqc", splitext(splitext(join(path, name))[0])[0] + "_fastqc.html")
+        for _, path, name in link_paths_flat],
     output:
         "results/_validation/multiqc/multiqc_report.html",
     log:

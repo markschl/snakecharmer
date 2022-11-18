@@ -1,12 +1,12 @@
+single: {}
 paired:
   mock1:
     R1:
-    - gz/mock1_more/mock1_R1.fastq.gz
     - gz/mock1_R1.fastq.gz
+    - gz/mock1_more/mock1_R1.fastq.gz
     R2:
-    - gz/mock1_more/mock1_R2.fastq.gz
     - gz/mock1_R2.fastq.gz
+    - gz/mock1_more/mock1_R2.fastq.gz
   mock2:
     R1: gz/mock2_R1.fastq.gz
     R2: gz/mock2_R2.fastq.gz
-single: {}

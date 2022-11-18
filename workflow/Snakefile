@@ -71,7 +71,7 @@ from itertools import chain
 
 rule config:
     input:
-        "results/samples.yaml",
+        rules.dump_samples.output,
         expand("results/{name}/config.yaml", name=cfg.pipelines),
 
 

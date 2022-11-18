@@ -9,23 +9,28 @@ qiime:
 
 input:
   # Lists of directories and/or glob patterns can be specified.
-  # It is no problem if some files are matched by both, they will only
+  # There is no problem if some files are matched by both, they will only
   # be included once.
-  # However, multiple files with the same name in different directories are
-  # currently pooled together before processing. Which files were chosen
-  # and which ones were pooled is listed in 'results/samples.yaml' after
-  # running the 'config' or other commands.
   directories:
     - test/gz
   patterns:
     - path/to/other/files/**/Abc*.gz
   # recursive: true causes directories to be searched recursively, and
   # glob patterns can contain /**/ to match unknown/unlimited directory depth
+  # (like the globstar option in Bash)
   recursive: true
-  # Name patterns for determining sample names: This pipeline does not
-  # require any metadata file specifying sample names and corresponding input files.
-  # However, it is necessary to specify the correct name pattern to obtain
-  # sample names from the file names.
+  # Multiple files with the same name in different directories are
+  # either pooled together before processing (if pool_duplicates is true)
+  # or a suffix number (_1, _2, etc.) is added to make the sample names
+  # unique (if pool_duplicates is false).
+  # Which samples were pooled is listed in 'results/samples.yaml' after
+  # running the 'config' or other commands.
+  pool_duplicates: false
+  # The name pattern is an important setting that should be correctly
+  # specified.
+  # While no metadata file specifying sample names and corresponding input files
+  # is required (such as with QIIME), it is necessary to specify the correct 
+  # name pattern to obtain sample names from the file names.
   # Options are:
   # - sample_read: e.g. Sample_Name_R1.fasta.gz
   # - illumina: e.g. Sample_Name_S276_L001_R1_001.fastq.gz

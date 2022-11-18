@@ -16,7 +16,7 @@ rule usearch_merge_paired:
         par=lambda w: cfg[w.name]["settings"]["usearch"]["merge"],
     input:
         expand(
-            "input/paired/{{sample}}/{{sample}}_R{read}.fastq.gz",
+            "input/grouped/paired/{{sample}}/{{sample}}_R{read}.fastq.gz",
             read=[1, 2],
         ),
     output:

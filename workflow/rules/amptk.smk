@@ -11,13 +11,13 @@ localrules:
 rule amptk_collect:
     input:
         expand(
-            "input/paired/{sample}/{sample}_R{read}.fastq.gz",
+            "input/grouped/paired/{sample}/{sample}_R{read}.fastq.gz",
             sample=cfg.sample_names["paired"],
             read=[1, 2],
         ),
     output:
         expand(
-            "processing/{{name}}/amptk/input/paired/{sample}_R{read}.fastq.gz",
+            "processing/{{name}}/amptk/input/grouped/paired/{sample}_R{read}.fastq.gz",
             sample=cfg.sample_names["paired"],
             read=[1, 2],
         ),
@@ -55,7 +55,7 @@ rule amptk_trim_merge:
         min_len=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
     input:
         expand(
-            "processing/{{name}}/amptk/input/paired/{sample}_R{read}.fastq.gz",
+            "processing/{{name}}/amptk/input/grouped/paired/{sample}_R{read}.fastq.gz",
             sample=cfg.sample_names["paired"],
             read=[1, 2],
         ),
@@ -77,7 +77,7 @@ rule amptk_trim_merge:
         prefix="${{prefix%.demux.fq.gz}}"
         outdir=$(dirname $prefix)
         mkdir -p "$outdir"
-        (   indir=$(realpath --relative-to=$outdir processing/{wildcards.name}/amptk/input/paired)
+        (   indir=$(realpath --relative-to=$outdir processing/{wildcards.name}/amptk/input/grouped/paired)
             cd $outdir
             amptk illumina -i $indir -o $(basename $prefix) \
                 -f {params.f_primer_seq} -r {params.r_primer_seq} \

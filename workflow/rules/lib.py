@@ -1,19 +1,19 @@
-import traceback
-from contextlib import contextmanager
-from snakemake.io import Log
-from collections import defaultdict
-from copy import deepcopy
 import glob
-from itertools import product
+import os
 import re
 import sys
-import os
-import glob
+import traceback
+from collections import defaultdict
+from contextlib import contextmanager
+from copy import deepcopy
+from itertools import product, zip_longest
+from os.path import dirname, basename
+from typing import *
+
 from seq import FastaIO, seq
 from seq.alignment import consensus
-
+from snakemake.io import Log
 from snakemake.workflow import srcdir
-from os.path import dirname
 
 # Set environment variable of pipeline root dir to allow post-deploy
 # scripts to run other scripts stored in that directory
@@ -24,7 +24,7 @@ os.environ['PIPELINE_DIR'] = dirname(dirname(dirname(srcdir('.'))))
 #### Configuration ####
 
 
-def collect_samples(name_pattern, *args, **kwargs):
+def collect_samples(name_pattern: str, *args, **kwargs) -> Tuple[str, str, str, int]:
     _name_pat = re.compile(parse_pattern(name_pattern))
     for f in collect_sample_files(*args, **kwargs):
         root, fname = os.path.split(os.path.abspath(f))
@@ -32,7 +32,11 @@ def collect_samples(name_pattern, *args, **kwargs):
         yield sample_name, root, fname, read
 
 
-def collect_sample_files(directories=None, patterns=None, recursive=False):
+def collect_sample_files(
+        directories: Iterable[str] = None,
+        patterns: Iterable[str] = None,
+        recursive: bool = False
+) -> Generator[str, None, None]:
     if directories is None and patterns is None:
         raise Exception(
             'At least one of "directories" and "patterns" must be defined in "input"')
@@ -52,7 +56,7 @@ def collect_sample_files(directories=None, patterns=None, recursive=False):
                     yield os.path.join(root, f)
 
 
-def parse_pattern(name_pattern):
+def parse_pattern(name_pattern: str) -> str:
     pat = name_pattern.lower()
     if pat == 'illumina':
         name_pattern = r"(.+?)_S\d+_L\d+_R([12])_\d{3}\.fastq\.gz"
@@ -61,7 +65,7 @@ def parse_pattern(name_pattern):
     return name_pattern
 
 
-def parse_sample(f, pattern):
+def parse_sample(f, pattern: Pattern[str]) -> Tuple[str, int]:
     m = pattern.match(f)
     if m is None:
         raise Exception(
@@ -73,7 +77,7 @@ def parse_sample(f, pattern):
     sample_name = m.group(1)
     read = m.group(2)
     assert (sample_name is not None and read is not None), \
-        'Regular expression in "name_pattern" needs to have exactly two groups, '  \
+        'Regular expression in "name_pattern" needs to have exactly two groups, ' \
         'the first for the sample name and the second for the read number.'
     assert (read in ('1', '2')), \
         'Read number in file name must be 1 or 2, found instead "{}". ' \
@@ -84,49 +88,109 @@ def parse_sample(f, pattern):
     return sample_name, int(read)
 
 
-def group_samples(**collect_args):
-    # group by sample -> read
+def group_samples(
+        allow_duplicates=True,
+        **collect_args
+) -> Dict[
+    str,  # single / paired
+    Dict[
+        str,  # sample name
+        List[  # list of paths with same sample name (may be > 1)
+            Tuple[str]  # read file paths: first = forward; [second = reverse]
+        ]
+    ]
+]:
+    # we assume unordered input from collect_samples(), so we first
+    # group by sample and read
     d = defaultdict(lambda: defaultdict(set))
-    for sample_name, root, fname, read in collect_samples(**collect_args):
-        d[sample_name][read].add((root, fname))
-    # group by forward only / paired end
-    by_strategy = {'single': [], 'paired': []}
-    for sample_name, by_read in d.items():
-        # make sure that sample files are sorted
-        by_read = sorted((read, list(files)) for read, files in by_read.items())
-        n = len(by_read)
-        assert n > 0
-        if n > 2:
-            raise Exception(
-                'More than 2 read files for sample {}'.format(sample_name)
-            )
-        elif n == 2:
-            if len(by_read[0][1]) != len(by_read[1][1]):
-                raise Exception(
-                    'Read file number mismatch for sample {}'.format(
-                        sample_name)
+    for sample_name, base, filename, read in collect_samples(**collect_args):
+        d[sample_name][read].add((base, filename))
+
+    # Then we convert the nested dicts and sets to nested lists and 
+    # sort by sample name, sequencing read, and file paths (sorted separately by directory and file name)
+    # This order will remain stable from now on (important if pooling sequences)
+    d = sorted(
+        (
+            sample_name,
+            sorted(
+                (
+                    read_num,
+                    # join directory and file name back after sorting
+                    [os.path.join(*p) for p in sorted(iter(files))]
                 )
-            by_strategy['paired'].append((sample_name, by_read))
-        elif n == 1:
-            by_strategy['single'].append((sample_name, by_read))
+                for read_num, files in by_read.items())
+        )
+        for sample_name, by_read in d.items()
+    )
+
+    # then we group by 
+    # -> sequencing strategy (single/paired) 
+    # -> sample
+    # -> list of sequence files with same name (will obtain an unique name and be pooled later)
+    # -> list of sequencing read files [forward, reverse]
+    by_strategy = {'single': OrderedDict(), 'paired': OrderedDict()}
+    for sample_name, by_read in d:
+        # split into read indices and read paths
+        read_idx, by_read = zip(*by_read)
+        # obtain sequencing strategy (single/paired) and validate
+        # read numbers
+        n_reads = len(read_idx)
+        assert n_reads > 0
+        assert n_reads <= 2, 'More than 2 read files for sample {}'.format(sample_name)
+        if n_reads == 2:
+            # paired-end
+            assert read_idx == (1, 2), \
+                'Two read files present for sample {}, but read numbers are {} and {} instead of 1 and 2' \
+                .format(sample_name, *read_idx)
+            strategy = 'paired'
+        elif n_reads == 1:
+            # single-end
+            assert read_idx[0] in (1, 2), 'Invalid read number found for sample {}: {}'.format(
+                sample_name, read_idx[0]
+            )
+            if read_idx[0] == 2:
+                print('Only reverse read file (No. 2) present for sample {}, is this correct?'.format(sample_name),
+                      file=sys.stderr)
+            strategy = 'single'
+        # now, group R1 and R2 from same sample path together
+        by_sample = list(zip_longest(*by_read))
+        # there can be > 1 sample files with the same name in different directories
+        if len(by_sample) > 1 and not allow_duplicates:
+            # make their name unique by adding a suffix number
+            for i, paths in enumerate(by_sample):
+                unique_name = '{}_{}'.format(sample_name, i + 1)
+                by_strategy[strategy][unique_name] = by_sample = [paths]
+        else:
+            # keep a list of multiple files, which will be pooled later
+            by_strategy[strategy][sample_name] = by_sample = list(zip_longest(*by_read))
+        # some extra checks
+        for paths in by_sample:
+            assert len(paths) == n_reads
+            assert all(r is not None for r in paths), \
+                'The number of samples with forward and reverse reads is not the same for sample {}'.format(sample_name)
+            assert len(set(dirname(f) for f in paths)) == 1, \
+                'Forward and reverse reads not found in same directory: {} and {}'.format(
+                    *(os.path.join(*p) for p in paths)
+                )
+            assert all(sample_name in basename(f) for f in paths)
     return by_strategy
 
 
-def parse_primers(primers):
+def parse_primers(primers: Iterable[Dict[str, str]]) -> Generator[Tuple[str, List[str]], None, None]:
     for p in primers:
         assert isinstance(p, dict), \
             "Primers must be defined in the form: 'name: sequence1,sequence2,...'"
-        id = next(iter(p.keys()))
+        _id = next(iter(p.keys()))
         seqs = next(iter(p.values()))
         seqs = [s.strip() for s in seqs.split(',')]
-        yield id, seqs
+        yield _id, seqs
 
 
-def make_primer_fasta(primers, outfile):
+def make_primer_fasta(primers: Iterable[Tuple[str, Iterable[str]]], outfile: str):
     with open(outfile, 'w') as f:
-        for id, seqs in primers.items():
+        for _id, seqs in primers:
             for s in seqs:
-                FastaIO.write(seq.SeqRecord(id, s), f)
+                FastaIO.write(seq.SeqRecord(_id, s), f)
 
 
 def recursive_update(target, other):
@@ -141,7 +205,7 @@ def recursive_update(target, other):
 #### Setup ####
 
 class Config(object):
-    #strategy_names = ['merged', 'notmerged_R1', 'notmerged_R2']
+    # strategy_names = ['merged', 'notmerged_R1', 'notmerged_R2']
     workding_dir = 'processing'
     read_num_map = {'single': [1], 'paired': [1, 2]}
 
@@ -158,21 +222,16 @@ class Config(object):
     def _read_samples(self):
         _cfg = self.config['input']
         self.samples = group_samples(
+            allow_duplicates = self.config['input']['pool_duplicates'],
             directories=_cfg.get('directories', None),
             patterns=_cfg.get('patterns', None),
             name_pattern=_cfg['name_pattern'],
             recursive=_cfg.get('recursive', False)
         )
-        self.sample_names = {strategy: [s for s, _ in samples]
+        self.sample_names = {strategy: [s for s, _ in samples.items()]
                              for strategy, samples in self.samples.items()}
         self.sequencing_strategies = [
             name for name, samples in self.samples.items() if samples
-        ]
-        self.strategy_sample_read = [
-            (strategy, sample, read)
-            for strategy, samples in self.samples.items()
-            for sample, _ in samples
-            for read in self.read_num_map[strategy]
         ]
 
     def _read_cmp_files(self):
@@ -262,7 +321,7 @@ class Config(object):
         for dbs in self.config['taxonomy_dbs'].values():
             for db in dbs.values():
                 # complete optional values
-                if not 'defined' in db:
+                if 'defined' not in db:
                     db['defined'] = '_all'
                 db.update(self.config['taxonomy_db_sources'][db['db']])
 
@@ -297,8 +356,8 @@ class Config(object):
                 }
             else:
                 assert (isinstance(p['taxonomy'], dict)), \
-                    "'taxonomy' definition of pipeline {} needs to be 'default' or " \
-                    "{'dbs': [db1, db2, ...], methods: [method1, method2, ...]}".format(name)
+                    ("'taxonomy' definition of pipeline {} needs to be 'default' or "
+                     "{'dbs': [db1, db2, ...], methods: [method1, method2, ...]}").format(name)
                 assert ('dbs' in p['taxonomy']), \
                     "'dbs' option missing in 'taxonomy' definition of pipeline {}.".format(name)
                 assert ('methods' in p['taxonomy']), \
@@ -316,13 +375,14 @@ class Config(object):
                 db_cfg = settings['taxonomy_dbs'][marker]
                 assert not set(db_names).difference(db_cfg)
                 tax[marker] = {
-                    (db, method): {'marker': marker, 'db_name': db, 'method_name': method, **db_cfg[db], **method_cfg[method]}
+                    (db, method): {'marker': marker, 'db_name': db, 'method_name': method, **db_cfg[db],
+                                   **method_cfg[method]}
                     for db, method in product(db_names, method_names)
                 }
             # finally, replace the initial taxonomy configuration by the parsed one
             p['taxonomy'] = tax
 
-            # is it a 'simple' pipeline (with only one results dir, see setup_project())?
+            # is it a 'simple' pipeline (with only one results dir, see link_data_dirs())?
             p['is_simple'] = len(p["sequencing_strategies"]) == 1 and len(
                 self.primer_combinations_flat) == 1
             # simplify path generation
@@ -345,6 +405,6 @@ def file_logging(f):
     with open(f, "w") as handle:
         try:
             yield handle
-        except Exception as e:
+        except Exception:
             traceback.print_exc(file=handle)
             raise
