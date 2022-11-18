@@ -79,6 +79,7 @@ rule config:
 
 rule collect_input:
     input:
+        rules.dump_samples.output,
         rules.link_samples.output
 
 
