@@ -128,7 +128,7 @@ def group_samples(
     # -> sample
     # -> list of sequence files with same name (will obtain an unique name and be pooled later)
     # -> list of sequencing read files [forward, reverse]
-    by_strategy = {'single': OrderedDict(), 'paired': OrderedDict()}
+    by_strategy = OrderedDict((('single', OrderedDict()), ('paired', OrderedDict())))
     for sample_name, by_read in d:
         # split into read indices and read paths
         read_idx, by_read = zip(*by_read)

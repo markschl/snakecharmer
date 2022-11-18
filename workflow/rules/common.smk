@@ -44,7 +44,7 @@ cfg = lib.Config(config)
 #    - source file path
 #    - nested output dir (strategy -> sample [ -> "_multiple" if duplicate names]
 #    - unique output name [with optional suffix to make name unique]
-link_paths = OrderedDict()
+link_paths = []
 
 for strategy, samples in cfg.samples.items():
     for sample_name, paths in samples.items():
@@ -52,27 +52,26 @@ for strategy, samples in cfg.samples.items():
         if len(paths) == 1:
             # sample name is unique -> link files directly
             # **note**: R2 will become R1 here if only R2 was supplied
-            link_paths[sample_name] = [(
-                    p,
-                    sample_dir,
-                    "{}_R{}.fastq.gz".format(sample_name, i + 1)
-                )
+            link_paths.append((
+                (sample_name, sample_name),
+                [(p, sample_dir, "{}_R{}.fastq.gz".format(sample_name, i + 1))
                 for i, p in enumerate(paths[0])]
+            ))
         else:
             # sample name is duplicated -> add a suffix number
             # and put them into the "_multiple" directory, from where they can be
             # combined
             for sample_i, read_paths in enumerate(paths):
                 unique_name = "{}_{}".format(sample_name, sample_i + 1)
-                link_paths[unique_name] = [(
-                        p,
-                        join(sample_dir, '_multiple'),
-                        "{}_R{}.fastq.gz".format(unique_name, i + 1)
-                    )
+                link_paths.append((
+                    (sample_name, unique_name),
+                    [(p, join(sample_dir, '_multiple'),
+                      "{}_R{}.fastq.gz".format(unique_name, i + 1))
                     for i, p in enumerate(read_paths)]
+                ))
 
 # flat version of link_paths without grouping by sample
-link_paths_flat = [p for paths in link_paths.values() 
+link_paths_flat = [p for _, paths in link_paths 
                    for p in paths]
 
 
@@ -132,15 +131,16 @@ rule dump_samples:
             # TSV file
             with open(output.tsv, "w") as o:
                 w = csv.writer(o, delimiter="\t")
-                w.writerow(["sample", "strategy", "read_1_orig", "read_2_orig", "read_1", "read_2"])
-                for unique_name, paths in params.link_paths.items():
+                w.writerow(["sample", "unique_sample", "strategy", "read_1_orig", "read_2_orig", "read_1", "read_2"])
+                for names, paths in params.link_paths:
+                    sample_name, unique_name = names
                     orig_files = [relpath(f, os.getcwd()) for f, _, _ in paths]
                     files = [f for _, _, f in paths]
                     assert len(files) <= 2
                     if len(files) == 1:
-                        w.writerow([unique_name, 'single', orig_files[0], '', files[0], ''])
+                        w.writerow([sample_name, unique_name, 'single', orig_files[0], '', files[0], ''])
                     else:
-                        w.writerow([unique_name, 'paired'] + orig_files + files)
+                        w.writerow([sample_name, unique_name, 'paired'] + orig_files + files)
 
 
 rule dump_config:
