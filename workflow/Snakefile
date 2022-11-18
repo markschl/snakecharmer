@@ -1,4 +1,5 @@
 from snakemake.utils import min_version
+from snakemake.utils import validate
 
 ##### set minimum snakemake version #####
 
@@ -9,7 +10,7 @@ min_version("6.1.4")
 
 configfile: "config/config.yaml"
 configfile: "config/taxonomy.yaml"
-
+validate(config, "config.schema.yaml")
 
 ##### load rules #####
 

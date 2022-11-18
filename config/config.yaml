@@ -242,14 +242,22 @@ dada2:
   merge_maxdiffs: 1
 
 # ITS recognition (fungi)
+# for options see https://microbiology.se/publ/itsx_users_guide.pdf
 ITSx:
-  # most important settings
+  # Taxonomic groups to include or "all" (which is the slowest
+  # setting, but probably best as well unless you are sure that
+  # there are only sequences from certain groups.
   organism_groups: all  # -t setting
-  e-value: 1e-5
-  # commonly used search options
+  # Domain E-value cutoff in HMMER search for sequence to be included
+  # in the output (ITSx default: 1.0e-5)
+  # note: 1e-5 does not work, only 1.e-5 or 1.0e-5 (otherwise validator will fail)
+  e-value: 1.0e-5
+  #
+  # All the following options are *optional*, we just show the defaults
+  # here (sometimes different from ITSx defaults)
   allow_single_domain: 1e-9,0
   complement: F  # ITSx uses T (true) as default, but we know the orientation of our amplicon
-  heuristics: F,
+  heuristics: F
   # common output options
   graphical: F  # ITSx has T as default
   fasta: T

@@ -96,7 +96,6 @@ Lots of things could still be done. A list of possible next steps includes:
 - Integrate more pipelines / clustering methods
 - Integrate more taxonomy databases
 - Better handling of configuration defaults
-- Better documentation of configuration options, clear error messages in case of problems with the config files.
 - Testing deployment on different systems
 - Improve configuration of job resources (memory, CPUs)
 - ...

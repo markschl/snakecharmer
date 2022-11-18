@@ -1,0 +1,371 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+description: an entry in the sample sheet
+properties:
+  software:
+    type: object
+    properties:
+      qiime:
+        type: object
+        properties:
+          conda_env:
+            type: string
+            description: Name of QIIME2 conda environment to use, e.g. qiime2-2022.8
+        additionalProperties: false
+        description: QIIME2 software settings (optional, only required if QIIME2 is used)
+      amptk:
+        type: object
+        properties:
+          conda_env:
+            type: string
+            description: Name of Amptk conda environment to use, e.g. "amptk"
+        description: Amptk software settings (optional, only required if Amptk is used)
+        additionalProperties: false
+    additionalProperties: false
+
+  input:
+    type: object
+    properties:
+      directories:
+        type: array
+        items: { type: string }
+        description: >
+          List of directories to search (recursively or not, depending on 
+          recursive setting)
+      patterns:
+        type: array
+        items: { type: string }
+        description: >
+          List of glob patterns that should collectively match input files
+          (in conjunction with "directories"). Unlimited directory depth matching
+          with /**/ can be done if "recursive" is true
+      recursive:
+        type: boolean
+        description: >
+          Activate/deactivate recursive search in directories or pattern search
+          in directories at unlimited depth using /**/ (see "directories" and 
+          "patterns")
+      pool_duplicates:
+        type: boolean
+        description: >
+          Should duplicate files (samples with same name, but in different directory) 
+          be pooled, or should a suffix number be added to make the samples unique?
+      name_pattern:
+        type: string
+        description: >
+          Naming pattern for input files (required to recognize sample name and
+          read number)
+    allOf:
+      -
+        anyOf:
+          - { required: [directories] }
+          - { required: [patterns] }
+      - required: [recursive, pool_duplicates, name_pattern]
+    additionalProperties: false
+
+  pipelines:
+    type: object
+    patternProperties:
+      r"^(\w+)$":
+        type: object
+        properties:
+          cluster:
+            type: string
+            enum: [usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2]
+          taxonomy:
+            oneOf:
+              - { type: string, enum: [default], default: default }
+              - 
+                type: object
+                properties:
+                  dbs:
+                    type: object
+                    patternProperties: 
+                      r"^(\w+)$":
+                        type: array
+                        items: { type: string }
+                        minItems: 1
+                  methods:
+                    type: array
+                    items: { type: string }
+                    minItems: 1
+                required: [dbs, methods]
+                additionalProperties: false
+                description: >
+                  If "default", all taxonomy databases (defined in taxonomy_dbs)
+                  and assignment methods (see taxonomy_methods) are used. 
+                  Alternatively, a subset can be specified
+                  (dbs: marker: [list of databases], and methods: [list of metods])
+          settings:
+            type: object
+            properties:
+              compare: { "$ref": "#/compare" }
+              primers: { "$ref": "#/primers" }
+              filter: { "$ref": "#/filter" }
+              usearch: { "$ref": "#/usearch" }
+              dada2: { "$ref": "#/dada2" }
+              ITSx: { "$ref": "#/ITSx" }
+            additionalProperties: false
+            description: >
+              Pipeline-specific settings that should override different default
+              settings specified below (compare, primers, filter, usearch, dada2
+              and ITSx)
+        required: [cluster, taxonomy]
+        additionalProperties: false
+
+  compare:
+    type: object
+    patternProperties:
+      default_settings:
+        type: object
+        properties:
+          ident_threshold: { type: number, minimum: 0, maximum: 1 }
+          maxhits: { type: integer, minimum: 1 }
+          maxaccepts: { type: integer, minimum: 1 }
+          maxrejects: { type: integer, minimum: 1 }
+      r"^(\w+)$":
+        type: object
+        properties:
+          file:
+            type: string
+          "$ref": "#/compare/default_settings"
+        additionalProperties: false
+      required: [default_settings]
+      minProperties: 1
+      
+  primers:
+    type: object
+    patternProperties:
+      r"^(\w+)$":
+        type: object
+        properties:
+          forward:
+            type: array
+            items:
+              type: string
+              required: [type]
+            minItems: 1
+          reverse:
+            type: array
+            items:
+              type: string
+              required: [type]
+            minItems: 1
+          combinations:
+            oneOf:
+              - { type: string, enum: [default], default: default }
+              - 
+                type: array
+                items: { type: string }
+                minItems: 1
+        required: [forward, reverse, combinations]
+        additionalProperties: false
+      trim_settings:
+        type: object
+        properties:
+          min_overlap:
+            type: integer
+            minimum: 5
+          max_error_rate:
+            type: number
+            exclusiveMinimum: 0
+            maximum: 1
+        required: [min_overlap, max_error_rate]
+        additionalProperties: false
+    required: [trim_settings]
+    minProperties: 2
+
+  taxonomy_dbs:
+    type: object
+    patternProperties:
+      r"^(\w+)$":
+        type: object
+        patternProperties:
+          r"^(\w+)$":
+            type: object
+            properties:
+              db: { type: string }
+              defined: { type: string }
+              required: [ db ]
+            additionalProperties: false
+
+  taxonomy_methods:
+    type: object
+    patternProperties:
+      r"^(\w+)$":
+        type: object
+        properties:
+          method:
+            type: string
+            enum: [sintax_usearch, qiime_sklearn]
+          confidence:
+            type: number
+            minimum: 0
+            maximum: 1
+          program:
+            type: string
+            enum: [usearch, vsearch]
+        required: [method, confidence, program]
+        additionalProperties: false
+
+  filter:
+    type: object
+    properties:
+      min_length:
+        type: integer
+        minimum: 1
+    required: [min_length]
+    additionalProperties: false
+
+  usearch:
+    type: object
+    properties:
+      merge:
+        type: object
+        properties:
+          overlap_ident:
+            type: integer
+            minimum: 0
+            maximum: 100
+          max_diffs:
+            type: integer
+            minimum: 0
+          expected_length:
+            type: integer
+            minimum: 1
+        required: [overlap_ident, max_diffs, expected_length]
+        additionalProperties: false
+      filter:
+        type: object
+        properties:
+          max_error_rate:
+            type: number
+            minimum: 0
+            maximum: 1
+        required: [max_error_rate]
+        additionalProperties: false
+      unoise:
+        type: object
+        properties:
+          min_size:
+            type: number
+            minimum: 1
+          program:
+            type: string
+            enum: [vsearch, usearch]
+        required: [min_size, program]
+        additionalProperties: false
+      otutab:
+        type: object
+        properties:
+          maxaccepts:
+            type: integer
+            minimum: 1
+          maxrejects:
+            type: integer
+            minimum: 1
+          ident_threshold:
+            type: number
+            minimum: 0
+            maximum: 1
+        required: [maxaccepts, maxrejects, ident_threshold]
+        additionalProperties: false
+    additionalProperties: false
+    
+  dada2:
+    type: object
+    properties:
+      trim_max_err:
+        type: number
+        minimum: 0
+      max_err_fwd:
+        type: number
+        minimum: 0
+      max_err_rev:
+        type: number
+        minimum: 0
+      trunc_fwd:
+        type: integer
+        minimum: 0
+      trunc_rev:
+        type: integer
+        minimum: 0
+      chimera_method:
+        type: string
+        enum: [consensus, per-sample, pooled]
+      pooling_method:
+        type: string
+        enum: [independent, pseudo, pooled]
+      merge_maxdiffs:
+        type: integer
+        minimum: 0
+    required: [trim_max_err, max_err_fwd, max_err_rev, trunc_fwd, trunc_rev, chimera_method, pooling_method, merge_maxdiffs]
+    additionalProperties: false
+
+  ITSx:
+    type: object
+    properties:
+      organism_groups:
+        type: string
+        description: >
+          Taxonomic groups to include (see ITSx manual) or "all". "all" is
+          the slowest setting but may be best unless you are sure that there
+          are only sequences from certain groups.
+      "e-value":
+        type: number
+        exclusiveMinimum: 0.0
+        description: >
+          Domain E-value cutoff in HMMER search for sequence to be included
+          in the output (ITSx default: 1.0e-5)
+      allow_single_domain:
+        type: string
+        default: 1e-9,0
+      complement:
+        type: string
+        enum: [T, F]
+        default: T  # ITSx uses T (true) as default, but we know the orientation of our amplicon
+      heuristics:
+        type: string
+        enum: [T, F]
+        default: F
+      graphical:
+        type: string
+        enum: [T, F]
+        default: F  # ITSx has T as default
+      fasta:
+        type: string
+        enum: [T, F]
+        default: T
+      preserve:
+        type: string
+        enum: [T, F]
+        default: F
+      save_regions:
+        type: string
+        enum: [SSU, ITS1, 5.8S, ITS2, LSU, all, none]
+        default: all  # ITSx has only ITS1,ITS2 as default
+      partial:
+        type: integer
+        minimum: 0
+        default: 50  # ITSx has 0 as default
+    required: [organism_groups, e-value]
+    additionalProperties: false
+  # taxonomy.yaml
+  taxonomy_db_sources:
+    type: object
+    patternProperties:
+      r"^(\w+)$":
+        type: object
+        properties:
+          type:
+            type: string
+            enum: [unite_otus, midori]
+          reference:
+            type: string
+          url:
+            type: string
+        required: [type, url]
+        additionalProperties: false
+additionalProperties: false
+required: [software, input, pipelines, compare, primers,
+           taxonomy_dbs, taxonomy_methods, filter, usearch, dada2,
+           taxonomy_db_sources]

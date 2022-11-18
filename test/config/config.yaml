@@ -116,12 +116,5 @@ dada2:
 # ITS recognition (fungi)
 ITSx:
   organism_groups: all  # -t setting
-  e-value: 1e-5
+  e-value: 1.0e-5
   allow_single_domain: 1e-9,0
-  complement: F
-  heuristics: F,
-  graphical: F
-  fasta: T
-  preserve: F
-  save_regions: all
-  partial: 50
