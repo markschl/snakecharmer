@@ -21,7 +21,7 @@ The pipeline is tested using amplicon data from a fungal mock community ([`test`
 
 The current rule graph (see also [description of target rules](Commands.md)):
 
-![rule graph](rulegraph.png)
+![rule graph](https://raw.githubusercontent.com/markschl/env-diversity/main/rulegraph.png)
 
 
 ## Installing
