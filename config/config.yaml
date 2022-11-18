@@ -1,9 +1,17 @@
 #### Software options ####
 
-# For QIIME, it is possible to configure the exact version
-# (must be installed in a Conda environment with the given name)
-qiime:
-  version: qiime2-2022.8
+# For QIIME and Amptk, it is possible to configure the
+# Conda environment, where the software is installed,
+# allowing to switch between different versions.
+# Note: qiime or amptk entries can be missing if clustering/
+#  taxonomy assignment methods from these pipelines are
+#  not used in the pipelines definition below.
+software:
+  qiime:
+    conda_env: qiime2-2022.8
+  amptk:
+    conda_env: amptk
+
 
 #### Input files ####
 

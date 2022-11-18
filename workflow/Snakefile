@@ -16,8 +16,10 @@ configfile: "config/taxonomy.yaml"
 
 include: "rules/common.smk"
 include: "rules/usearch.smk"
-include: "rules/qiime.smk"
-include: "rules/amptk.smk"
+if "qiime" in config["software"]:
+    include: "rules/qiime.smk"
+if "amptk" in config["software"]:
+    include: "rules/amptk.smk"
 include: "rules/taxonomy.smk"
 include: "rules/other.smk"
 

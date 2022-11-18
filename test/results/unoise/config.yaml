@@ -34,8 +34,11 @@ settings:
     trunc_rev: 250
   filter:
     min_length: 100
-  qiime:
-    version: qiime2-2022.8
+  software:
+    amptk:
+      conda_env: amptk
+    qiime:
+      conda_env: qiime2-2022.8
   usearch:
     filter:
       max_error_rate: 0.002

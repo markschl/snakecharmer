@@ -1,6 +1,9 @@
-# Software versions
-qiime:
-  version: qiime2-2022.8
+# Settings for different software
+software:
+  qiime:
+    conda_env: qiime2-2022.8
+  amptk:
+    conda_env: amptk
 
 # Input files
 input:

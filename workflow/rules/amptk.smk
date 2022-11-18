@@ -66,7 +66,7 @@ rule amptk_trim_merge:
     log:
         "logs/{name}/amptk/paired/{marker}__{f_primer}...{r_primer}/trim_merge.log",
     conda:
-        "amptk"
+        config["software"]["amptk"]["conda_env"]
     threads: workflow.cores
     resources:
         mem_mb=10000,
@@ -140,7 +140,7 @@ rule amptk_denoise:
     log:
         "logs/{name}/amptk/paired/{primers}/{method}.log",
     conda:
-        "amptk"
+        config["software"]["amptk"]["conda_env"]
     group:
         "denoise"
     threads: workflow.cores  # max(4, workflow.cores)  # dereplication/clustering only use one core, only mapping uses all -> don't claim too much (will be slower, though)

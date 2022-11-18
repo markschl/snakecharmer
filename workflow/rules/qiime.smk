@@ -59,7 +59,7 @@ rule qiime_import:
     resources:
         runtime=12 * 60,
     conda:
-        config["qiime"]["version"]
+        config["software"]["qiime"]["conda_env"]
     shell:
         """
         qiime tools import \
@@ -91,7 +91,7 @@ rule qiime_trim_paired:
     log:
         "logs/{name}/qiime/paired/{marker}__{f_primer}...{r_primer}/trim.log",
     conda:
-        config["qiime"]["version"]
+        config["software"]["qiime"]["conda_env"]
     threads: workflow.cores
     resources:
         runtime=12 * 60,
@@ -137,7 +137,7 @@ rule qiime_denoise_paired:
     log:
         "logs/{name}/qiime/paired/{primers}/dada2.log",
     conda:
-        config["qiime"]["version"]
+        config["software"]["qiime"]["conda_env"]
     group:
         "denoise"
     threads: workflow.cores
@@ -176,7 +176,7 @@ rule qiime_denoised_convert:
     log:
         "logs/{name}/qiime/paired/{primers}/denoised_convert.log",
     conda:
-        config["qiime"]["version"]
+        config["software"]["qiime"]["conda_env"]
     group:
         "denoise"
     threads: workflow.cores
@@ -232,7 +232,7 @@ rule qiime_taxdb_import:
         seq="refdb/taxonomy/{db}/formatted/qiime_qza/{defined}.qza",
         tax="refdb/taxonomy/{db}/formatted/qiime_qza/{defined}-taxonomy.qza",
     conda:
-        config["qiime"]["version"]
+        config["software"]["qiime"]["conda_env"]
     log:
         "logs/taxdb/convert/{db}/qiime_import/{defined}.log",
     shell:
@@ -259,7 +259,7 @@ rule qiime_taxdb_train_nb:
     output:
         "refdb/taxonomy/{db}/formatted/qiime_nb/{defined}.qza",
     conda:
-        config["qiime"]["version"]
+        config["software"]["qiime"]["conda_env"]
     log:
         "logs/taxdb/convert/{db}/qiime_nb/{defined}.log",
     resources:
@@ -292,7 +292,7 @@ rule assign_taxonomy_qiime_sklearn:
     log:
         "logs/{name}/{pipeline}/{strategy}/taxonomy_sklearn/{marker}__{primers}/{db_name}-{tax_method}.log",
     conda:
-        config["qiime"]["version"]
+        config["software"]["qiime"]["conda_env"]
     threads: 1  # needs a LOT of memory depending on the database
     resources:
         mem_mb=50000,
