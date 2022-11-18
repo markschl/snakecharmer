@@ -1,4 +1,4 @@
-sample	unique_sample	strategy	read_1_orig	read_2_orig	read_1	read_2
-mock1	mock1_1	paired	gz/mock1_R1.fastq.gz	gz/mock1_R2.fastq.gz	mock1_1_R1.fastq.gz	mock1_1_R2.fastq.gz
-mock1	mock1_2	paired	gz/mock1_more/mock1_R1.fastq.gz	gz/mock1_more/mock1_R2.fastq.gz	mock1_2_R1.fastq.gz	mock1_2_R2.fastq.gz
-mock2	mock2	paired	gz/mock2_R1.fastq.gz	gz/mock2_R2.fastq.gz	mock2_R1.fastq.gz	mock2_R2.fastq.gz
+sample	unique_sample	strategy	read_1_orig	read_2_orig	read_1	read_2	read_1_md5	read_2_md5
+mock1	mock1_1	paired	gz/mock1_R1.fastq.gz	gz/mock1_R2.fastq.gz	mock1_1_R1.fastq.gz	mock1_1_R2.fastq.gz	b791eee6dd113b9d140eb01ed85bee9e	39343098d0601257a9adb59f8edd4a36
+mock1	mock1_2	paired	gz/mock1_more/mock1_R1.fastq.gz	gz/mock1_more/mock1_R2.fastq.gz	mock1_2_R1.fastq.gz	mock1_2_R2.fastq.gz	3c5d450aff1da5c8a3865b5fae63166e	754102ff48e04028186ced41ddc44bc2
+mock2	mock2	paired	gz/mock2_R1.fastq.gz	gz/mock2_R2.fastq.gz	mock2_R1.fastq.gz	mock2_R2.fastq.gz	e2d3fe7fd59ecb7e7e0461dc3fa23257	98372464fa14de1483f77faef8b5c285

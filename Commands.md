@@ -8,8 +8,8 @@
 
 ### Initial checks
 
-- **config**: Allows checking the pipeline configuration, creates the files `results/samples.yaml`, `results/samples.tsv` and `<pipeline>/config.yaml`
-- **collect_input**: Creates links (symlinks) of the input files to the `input` directory. This is a fast operation since the files are not actually copied over. The sample files in the resulting `input/unique_samples` directory can e.g. be used for upload to public SRA databases. Furthermore, the samples lists `results/samples.yaml` and `results/samples.tsv` are created, providing the necessary sample metadata (see *config* command).
+- **config**: Allows checking the pipeline configuration, creates the files `results/samples.yaml` and `<pipeline>/config.yaml`
+- **samples**: Creates links (symlinks) of the input files to the `input` directory. The sample files in the resulting `input/unique_samples` directory can e.g. be used for upload to public SRA databases. Furthermore, the samples lists `results/samples.yaml` and `results/samples.tsv` are created, providing the necessary sample metadata (see *config* command).
 - **quality**: Runs [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc) and [MultiQC](https://multiqc.info) (output in `results/_validation`). This can be done in a first step before deciding on the quality filtering/trimming options in `config/config.yaml`.
 
 ### Denoising (clustering)

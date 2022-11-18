@@ -1,6 +1,7 @@
 import glob
 import os
 import re
+import hashlib
 import sys
 import traceback
 from collections import defaultdict
@@ -408,3 +409,12 @@ def file_logging(f):
         except Exception:
             traceback.print_exc(file=handle)
             raise
+
+
+def file_md5(filename):
+    md5 = hashlib.md5()
+    with open(filename,"rb") as f:
+        # Read and update hash in chunks of 4K
+        for chunk in iter(lambda: f.read(4096), b""):
+            md5.update(chunk)
+        return md5.hexdigest()

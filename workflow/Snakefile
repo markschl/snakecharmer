@@ -74,13 +74,14 @@ from itertools import chain
 
 rule config:
     input:
-        rules.dump_samples.output,
+        rules.dump_samples_yaml.output,
         expand("results/{name}/config.yaml", name=cfg.pipelines),
 
 
-rule collect_input:
+rule samples:
     input:
-        rules.dump_samples.output,
+        rules.dump_samples_yaml.output,
+        rules.dump_samples_tsv.output,
         rules.link_samples.output
 
 

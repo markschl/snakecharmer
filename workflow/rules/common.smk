@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 
 localrules:
-    dump_samples,
+    dump_samples_yaml,
     dump_config,
     link_samples,
     make_primer_fasta,
@@ -78,7 +78,7 @@ link_paths_flat = [p for _, paths in link_paths
 #### Configuration ####
 
 
-rule dump_samples:
+rule dump_samples_yaml:
     params:
         # make sure the command is rerun if settings change
         pool = cfg.config['input']['pool_duplicates'],
@@ -86,12 +86,9 @@ rule dump_samples:
         link_paths = link_paths,
     output:
         yml="results/samples.yaml",
-        tsv="results/samples.tsv"
     log:
-        "logs/dump_sampes.log"
+        "logs/dump_sampes_yaml.log"
     run:
-        import os
-        import csv
         import yaml
 
         # dict representation of OrderedDict in YAML
@@ -127,20 +124,37 @@ rule dump_samples:
             )
             with open(output.yml, "w") as o:
                 yaml.dump(samples, o, Dumper=OrderedDumper)
-            
+
+
+
+rule dump_samples_tsv:
+    params:
+        # make sure the command is rerun if settings change
+        pool = cfg.config['input']['pool_duplicates'],
+        samples = cfg.samples,
+        link_paths = link_paths,
+    output:
+        tsv="results/samples.tsv"
+    log:
+        "logs/dump_sampes_tsv.log"
+    run:
+        with lib.file_logging(log):
+            import os
+            import csv
             # TSV file
             with open(output.tsv, "w") as o:
                 w = csv.writer(o, delimiter="\t")
-                w.writerow(["sample", "unique_sample", "strategy", "read_1_orig", "read_2_orig", "read_1", "read_2"])
+                w.writerow(["sample", "unique_sample", "strategy", "read_1_orig", "read_2_orig", "read_1", "read_2", "read_1_md5", "read_2_md5"])
                 for names, paths in params.link_paths:
                     sample_name, unique_name = names
                     orig_files = [relpath(f, os.getcwd()) for f, _, _ in paths]
                     files = [f for _, _, f in paths]
                     assert len(files) <= 2
+                    md5 = [lib.file_md5(p) for p, _, _ in paths]
                     if len(files) == 1:
-                        w.writerow([sample_name, unique_name, 'single', orig_files[0], '', files[0], ''])
+                        w.writerow([sample_name, unique_name, 'single', orig_files[0], '', files[0], '', md5[0], ''])
                     else:
-                        w.writerow([sample_name, unique_name, 'paired'] + orig_files + files)
+                        w.writerow([sample_name, unique_name, 'paired'] + orig_files + files + md5)
 
 
 rule dump_config:
