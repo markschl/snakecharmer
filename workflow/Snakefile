@@ -131,7 +131,7 @@ rule clean:
 
 rule clean_all:
     shell:
-        "rm -Rf results input processing logs"
+        "rm -Rf results input/grouped processing logs"
 
 
 rule clean_taxdb:
