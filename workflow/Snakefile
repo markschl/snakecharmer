@@ -77,6 +77,11 @@ rule config:
         expand("results/{name}/config.yaml", name=cfg.pipelines),
 
 
+rule collect_input:
+    input:
+        rules.link_samples.output
+
+
 rule quality:
     input:
         rules.multiqc_fastqc.output,
