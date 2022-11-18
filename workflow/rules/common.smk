@@ -2,7 +2,7 @@ import os
 from os.path import *
 import shutil
 import lib
-
+from collections import OrderedDict
 
 
 localrules:
@@ -92,7 +92,6 @@ rule dump_samples:
         "logs/dump_sampes.log"
     run:
         import os
-        import yaml
         import csv
         import yaml
 

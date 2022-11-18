@@ -1,4 +1,6 @@
+import os
 from os.path import basename
+import lib
 
 
 localrules:
@@ -24,7 +26,7 @@ rule amptk_collect:
     log:
         "logs/{name}/amptk/collect.log",
     run:
-        with file_logging(log) as out:
+        with lib.file_logging(log) as out:
             for source, target in zip(input, output):
                 assert basename(source) == basename(target)
                 if os.path.exists(target):
@@ -126,7 +128,7 @@ def amptk_denoise_params(method, settings):
         elif p == "pseudo":
             out.append("--pseudopool")
         return " ".join(out)
-    raise Exception("Unknown / unimplemented Amptk command " + cmd)
+    raise Exception("Unknown / unimplemented Amptk command " + method)
 
 
 rule amptk_denoise:
