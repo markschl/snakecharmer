@@ -51,7 +51,7 @@ read_pipeline_results = function(input_dir,
     }
     out$taxonomy[[name]] = read_qiime_taxonomy(tax_file, ...)
   }
-
+  
   # OTU sequences
   if (verbose)
     cat('Reading OTU sequences...\n', file = stderr())
@@ -81,7 +81,7 @@ read_pipeline_results = function(input_dir,
                                    colClasses=c('character', 'character', 'numeric'))
     }
   }
-
+  
   # ITSx
   if (dir.exists(dirname(itsx_prefix))) {
     if (verbose)
@@ -99,12 +99,6 @@ read_pipeline_results = function(input_dir,
         out$itsx_results,
         data.frame(OTU=no_detections, SSU=NA, ITS1=NA, ITS2=NA, LSU=NA, ITSx_cat='no_ITS', stringsAsFactors=F)
       )
-    }
-    otus_only = setdiff(out$itsx_results$OTU, rownames(out$otutab))
-    itsx_only = setdiff(rownames(out$otutab), out$itsx_results$OTU)
-    if (length(c(otus_only, itsx_only)) > 0) {
-      stop(sprintf('Mismatch between taxa in ITSx directory, some files may not be up to date. Missing in ITSx: %s. Missing in OTU table: %s',
-                   paste(otus_only, collapse=','), paste(itsx_only, collapse=',')))
     }
   }
   
@@ -135,10 +129,15 @@ print_list = function(x, n) {
 #' @param missing_empty: Add samples present in the metadata but not in the
 #'     OTU table as empty samples without reads. Useful for negative controls,
 #'     but be careful with activating...
+#' @param otutab_missing_threshold: In some cases it can happen that clustered/denoised
+#'     sequences do not show up in the OTU table (e.g. with USEARCH-based pipelines).
+#'     `otutab_missing_threshold` configure the proportion of OTUs (ASVs), which
+#'     are allowed to be missing in the OTU table without triggering a hard error.
+#'     Below this threshold, only a warning will be issued.
 #
 # It is possible to specify a named list containing all these objects as first arguments.
 # All further provided arguments, if named according to one above, will override the data in this list.
-make_phyloseq = function(..., missing_empty=F) {
+make_phyloseq = function(..., missing_empty=F, otutab_missing_threshold=0.01) {
   library(phyloseq)
   data = list(...)
   
@@ -147,7 +146,7 @@ make_phyloseq = function(..., missing_empty=F) {
       if (name %in% names(data[[1]])) {
         return(data[[1]][[name]])
       } else if (required) {
-        stop(sprintf("'%s' not supplied to make_phyloseq", name))
+        stop(sprintf("'%s' not supplied to make_phyloseq\n", name))
       } else {
         return(NULL)
       }
@@ -223,41 +222,54 @@ make_phyloseq = function(..., missing_empty=F) {
     if (is.null(ranks)) {
       ranks = setdiff(colnames(tax), c('OTU', 'def_rank'))
       warning(sprintf(paste("No 'ranks' attribute found in taxonomy and 'tax_ranks' ",
-                      "not specified. Assuming these to be taxonomic ranks: %s.\n"),
+                            "not specified. Assuming these to be taxonomic ranks: %s.\n"),
                       paste(ranks, collapse=', ')))
     }
   }
   
   # compare OTU tab and taxonomy
   otus_only = setdiff(rownames(otutab), tax$OTU)
-  tax_only = setdiff(tax$OTU, rownames(otutab))
+  not_in_otus = setdiff(tax$OTU, rownames(otutab))
   if (length(otus_only) > 0) {
     stop(sprintf(
       'Some OTUs were only found in OTU table, but not the taxonomy: %s\n',
       paste(otus_only, collapse = ', ')
     ))
   }
-  if (length(tax_only) > 0) {
-    stop(sprintf(
+  if (length(not_in_otus) > 0) {
+    msg = sprintf(
       'Some OTUs were only found in taxonomy, but not the OTU table: %s\n',
-      paste(tax_only, collapse = ', ')
-    ))
+      paste(not_in_otus, collapse = ', ')
+    )
+    if (length(not_in_otus) / nrow(tax) < otutab_missing_threshold) {
+      msg = paste(msg, 'This can happen in some cases, and since there are only a few',
+                  '(< otutab_missing_threshold), everything is assumed to be ok.\n')
+      warning(msg)
+    } else {
+      stop(paste0(msg, '\n'))
+    }
   }
   
   # add optional ITSx data
   itsx = get_data(data, 'itsx_results', required=F)
   if (!is.null(itsx)) {
+    # compare with OTUs
+    itsx_only = setdiff(itsx$OTU, rownames(otutab))
+    otus_only = setdiff(rownames(otutab), itsx$OTU)
+    if (length(itsx_only) > 0 && 
+        length(union(not_in_otus, itsx_only)) != length(not_in_otus)) {
+      stop(paste('Mismatch between taxa names in taxonomy and in ITSx analysis.',
+                 'One of the analyses seems to be outdated.\n'))
+    } 
+    if (length(otus_only) > 0) {
+      stop(sprintf('Some OTUs are only present in the OTU table, not in the ITSx analysis: %s\n',
+                   paste(otus_only, collapse=',')))
+    }
+    # merge with taxonomy
     n = nrow(tax)
     tax = merge(tax, itsx[,c('OTU', 'ITSx_cat')], by='OTU', all.x=T)
     stopifnot(nrow(tax) == n)
-    if (any(is.na(tax$ITSx_cat))) {
-      stop(
-        sprintf(
-          'ITSx category not defined for some OTUs, is there an OTU label mismatch? OTUs: %s',
-          paste(tax$OTU[is.na(tax$ITSx_cat)], collapse = ', ')
-        )
-      )
-    }
+    stopifnot(!is.na(tax$ITSx_cat))  # given above checks, NAs should not occur
   }
   
   # convert taxonomy to matrix
@@ -275,16 +287,15 @@ make_phyloseq = function(..., missing_empty=F) {
   if (!is.null(seq)) {
     otus_only = setdiff(rownames(otutab), names(seq))
     seq_only = setdiff(names(seq), rownames(otutab))
+    if (length(seq_only) > 0 && 
+        length(union(not_in_otus, seq_only)) != length(not_in_otus)) {
+      stop(paste('Mismatch between taxa names in FASTA sequence file and in taxonomy.',
+                 'One of the two seems to be outdated.\n'))
+    }
     if (length(otus_only) > 0) {
       stop(sprintf(
-        'Some OTUs were only found in OTU table, but not the OTU sequences: %s\n',
+        'Some OTUs were only found in the OTU table, but not in the FASTA sequence file: %s\n',
         paste(otus_only, collapse = ', ')
-      ))
-    }
-    if (length(seq_only) > 0) {
-      stop(sprintf(
-        'Some OTUs were only found in the sequence set, but not the OTU table: %s\n',
-        paste(tax_only, collapse = ', ')
       ))
     }
     seq = refseq(seq)
@@ -296,12 +307,12 @@ make_phyloseq = function(..., missing_empty=F) {
   tree = get_data(data, 'tree', required = F)
   if (!is.null(tree)) {
     tree = phy_tree(tree)
-    if (nrow(otutab) != ntaxa(tree)) {
-      warning('The phylogenetic does not match the OTU table. Not added.\n')
+    if (nrow(tax) != ntaxa(tree)) {
+      warning('The phylogenetic does not match the OTU sequences Not added.\n')
       tree = NULL
     }
   }
-
+  
   # create the object
   phyloseq::phyloseq(
     otu_table(otutab, taxa_are_rows = T),
@@ -499,13 +510,13 @@ expand_lineage = function(x,
 #' @param not_def_rank: Value to fill in `def_rank` if the whole lineage 
 #'   consists of `NA`s
 replace_missing_taxa = function(tax_tab,
-                           ranks = colnames(tax_tab),
-                           top_unknown = 'Unknown',
-                           unknown_species_fmt = '%s clone',
-                           unknown_fmt = '%s_%s_unknown',
-                           genus_name = ifelse('genus' %in% ranks, 'genus', NULL),
-                           species_name = ifelse('species' %in% ranks, 'species', NULL),
-                           not_def_rank = '<none>') {
+                                ranks = colnames(tax_tab),
+                                top_unknown = 'Unknown',
+                                unknown_species_fmt = '%s clone',
+                                unknown_fmt = '%s_%s_unknown',
+                                genus_name = ifelse('genus' %in% ranks, 'genus', NULL),
+                                species_name = ifelse('species' %in% ranks, 'species', NULL),
+                                not_def_rank = '<none>') {
   stopifnot(!is.null(top_unknown))
   # prepare species completion
   do_fill_spec = F
@@ -513,7 +524,7 @@ replace_missing_taxa = function(tax_tab,
     stopifnot(species_name %in% ranks)
     stopifnot(genus_name %in% ranks)
     if (length(regmatches(unknown_species_fmt, gregexpr('%s', unknown_species_fmt, fixed=T))[[1]]) != 1)
-      stop('replace_missing_taxa: unknown_species_fmt needs exactly one "%s" wildcard')
+      stop('replace_missing_taxa: unknown_species_fmt needs exactly one "%s" wildcard\n')
     # normalize species names: replace underscores by spaces
     tax_tab[, species_name] = gsub('_', ' ', tax_tab[, species_name], fixed=T)
     fill_ranks = ranks[ranks != species_name[1]]
@@ -523,7 +534,7 @@ replace_missing_taxa = function(tax_tab,
   }
   # prepare filling of other ranks
   if (length(regmatches(unknown_fmt, gregexpr('%(\\d+\\$)?s', unknown_fmt, perl=T))[[1]]) != 2)
-    stop('replace_missing_taxa: unknown_fmt needs exactly two "%s" wildcards')
+    stop('replace_missing_taxa: unknown_fmt needs exactly two "%s" wildcards\n')
   short_fill_ranks = substr(fill_ranks, 1, 3)
   n_fill = length(fill_ranks)
   # iterate through taxonomy
