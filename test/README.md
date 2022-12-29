@@ -22,7 +22,8 @@ scripts/compare_results.sh test
 # compare obtained ASVs with mixed gDNA concentrations (see test/mock_cmp/...)
 (cd test && scripts/compare_mock.R)
 ## render the example Rmd (requires pandoc in PATH or RSTUDIO_PANDOC set, here for Ubuntu)
-RSTUDIO_PANDOC=/usr/lib/rstudio/bin/quarto/bin/tools Rscript -e "rmarkdown::render('test/R_example/example.Rmd', 'github_document')"
+# If this doesn't work, you can still directly run the document in RStudio
+RSTUDIO_PANDOC=/usr/lib/rstudio/resources/app/bin/quarto/bin/tools Rscript -e "rmarkdown::render('test/R_example/example.Rmd', 'github_document')"
 # the following command would remove everything (including the results/ directory)
 # snakemake -c1 -d test clean_all
 ```
