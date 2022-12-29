@@ -94,6 +94,7 @@ rule quality:
 rule denoise:
     input:
         rules.config.input,
+        rules.samples.input,
         simple_results_dirs,
         expand("{prefix}/denoised.fasta", prefix=results_dirs),
         expand("{prefix}/denoised_otutab.txt.gz", prefix=results_dirs),
