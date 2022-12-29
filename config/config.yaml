@@ -101,9 +101,15 @@ compare:
   my_comparison:
     file: path/to/seqs.fasta  # searched against denoised.fasta
     ident_threshold: 0.8  # min. identity (0 - 1)
-    maxhits: 1
+  # The following settings apply to all comparisons unless
+  # defined in the comparison settings.
   default_settings:
+    # the above ident_threshold overrides this setting, but if
+    # not specified there, the identity threshould would be 0.9
     ident_threshold: 0.9
+    # These settings are the defaults in 'default_settings'.
+    # Ultimately, the whole 'default_settings' section is not required
+    # if you are happy with these defaults.
     maxhits: 1
     maxaccepts: 64
     maxrejects: 64

@@ -239,7 +239,12 @@ class Config(object):
         # reads files that may be compared with ASVs/OTUS
         if 'compare' in self.config:
             self.cmp_files = deepcopy(self.config['compare'])
-            cfg = self.cmp_files.pop('default_settings', {})
+            cfg = self.cmp_files.pop('default_settings', {
+                # TODO: investigate, how default settings can be taken from config.schema.yaml
+                'maxaccepts': 64,
+                'maxrejects': 64,
+                'maxhits': 1,
+            })
             for d in self.cmp_files.values():
                 d.update(cfg)
         else:

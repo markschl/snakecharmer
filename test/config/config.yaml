@@ -42,12 +42,8 @@ pipelines:
 compare:
   mock:
     file: mock/mock_ITS2.fasta
-    maxhits: 1
     ident_threshold: 0.9
-  default_settings:
-    maxaccepts: 64
-    maxrejects: 64
-
+    
 # Primers
 primers:
   ITS:
@@ -91,7 +87,7 @@ usearch:
 
   # read filtering before denoising
   filter:
-    max_error_rate: 0.002
+    max_error_rate: 0.002  #  0.8 errors per 400 bp
 
   unoise:
     min_size: 8

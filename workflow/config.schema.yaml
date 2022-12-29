@@ -118,10 +118,22 @@ properties:
       default_settings:
         type: object
         properties:
-          ident_threshold: { type: number, minimum: 0, maximum: 1 }
-          maxhits: { type: integer, minimum: 1 }
-          maxaccepts: { type: integer, minimum: 1 }
-          maxrejects: { type: integer, minimum: 1 }
+          ident_threshold:
+            type: number
+            minimum: 0
+            maximum: 1
+          maxhits:
+            type: integer
+            minimum: 1
+            default: 1
+          maxaccepts:
+            type: integer
+            minimum: 1
+            default: 64
+          maxrejects:
+            type: integer
+            minimum: 1
+            default: 64
       r"^(\w+)$":
         type: object
         properties:

@@ -16,13 +16,9 @@ settings:
     preserve: F
     save_regions: all
   compare:
-    default_settings:
-      maxaccepts: 64
-      maxrejects: 64
     mock:
       file: mock/mock_ITS2.fasta
       ident_threshold: 0.9
-      maxhits: 1
   dada2:
     chimera_method: consensus
     max_err_fwd: 5
