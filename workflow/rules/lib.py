@@ -375,6 +375,11 @@ class Config(object):
             assert not strange_methods, \
                 "Pipeline {} has taxonomy method names that are not listed in 'taxonomy_methods'" \
                 "below in the config file: {}".format(name, ', '.join(strange_methods))
+            # set VSEARCH as default program if not already present
+            # TODO: Jsonschema should do this, but the default keyword has no effect
+            for cfg in method_cfg.values():
+                if not 'program' in cfg:
+                    cfg['program'] = 'vsearch'
             # then, for every marker, assemble the combinations
             tax = {}
             for marker, db_names in p['taxonomy']['dbs'].items():

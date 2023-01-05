@@ -215,8 +215,9 @@ properties:
             maximum: 1
           program:
             type: string
-            enum: [usearch, vsearch]
-        required: [method, confidence, program]
+            enum: [vsearch, usearch]
+            default: vsearch
+        required: [method, confidence]
         additionalProperties: false
 
   filter:
@@ -264,7 +265,8 @@ properties:
           program:
             type: string
             enum: [vsearch, usearch]
-        required: [min_size, program]
+            default: vsearch
+        required: [min_size]
         additionalProperties: false
       otutab:
         type: object

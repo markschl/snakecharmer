@@ -186,6 +186,7 @@ taxonomy_methods:
   sintax_90:
     method: sintax_usearch  # { sintax_usearch, qiime_sklearn }
     confidence: 0.9
+    # The program to use (optional; default: vsearch)
     program: vsearch
   sklearn_90:
     # classify-sklearn plugin in QIIME2 with Naive Bayes classifier
@@ -227,6 +228,7 @@ usearch:
   # UNOISE3 options
   unoise:
     min_size: 8
+    # The program to use (optional; default: vsearch)
     program: vsearch  # { vsearch, usearch }
 
   # mapping options for creation of OTU table

@@ -67,7 +67,6 @@ taxonomy_methods:
   sintax_70:
     method: sintax_usearch
     confidence: 0.7
-    program: vsearch
   # # be careful with activating on PC (uses lots of memory)
   # sklearn_90:
   #   method: qiime_sklearn  # { sintax_usearch, qiime_sklearn }
@@ -91,7 +90,6 @@ usearch:
 
   unoise:
     min_size: 8
-    program: vsearch
 
   otutab:
     maxaccepts: 64
