@@ -1,0 +1,69 @@
+cluster: amptk_unoise3
+is_simple: true
+name: amptk_unoise
+sequencing_strategies:
+- paired
+settings:
+  ITSx:
+    allow_single_domain: 1e-9,0
+    complement: F
+    e-value: 1.0e-05
+    fasta: T
+    graphical: F
+    heuristics: F
+    organism_groups: all
+    partial: 50
+    preserve: F
+    save_regions: all
+  compare:
+    mock:
+      file: mock/mock_ITS2.fasta
+      ident_threshold: 0.9
+  dada2:
+    chimera_method: consensus
+    max_err_fwd: 5
+    max_err_rev: 15
+    merge_maxdiffs: 1
+    pooling_method: independent
+    trim_max_err: 1.0
+    trunc_fwd: 280
+    trunc_rev: 250
+  filter:
+    min_length: 100
+  software:
+    amptk:
+      conda_env: amptk
+    qiime:
+      conda_env: qiime2-2022.8
+  usearch:
+    filter:
+      max_error_rate: 0.002
+    merge:
+      expected_length: 400
+      max_diffs: 1000
+      overlap_ident: 75
+    otutab:
+      ident_threshold: 0.98
+      maxaccepts: 64
+      maxrejects: 64
+    unoise:
+      min_size: 8
+      program: vsearch
+single_primercomb: ITS__ITS3-KYO2...ITS4
+single_strategy: paired
+taxonomy:
+  ITS:
+    unite-sintax_70:
+      confidence: 0.7
+      date: 2022-11-29
+      db: unite_eukarya_all
+      db_name: unite
+      defined: _all
+      marker: ITS
+      method: sintax_usearch
+      method_name: sintax_70
+      program: vsearch
+      reference: https://doi.org/10.15156/BIO/2483918
+      type: unite_otus
+      url: https://files.plutof.ut.ee/public/orig/71/E6/71E68A5DD3F5C311F913757F9E7CA2508430F9400C14413ADA08A0BB33169BB4.tgz
+      version: '9.0'

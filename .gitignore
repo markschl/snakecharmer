@@ -1,14 +1,13 @@
 input/
 processing/
-test/results/*/
 logs/
 refdb/
-!test/results/unoise/
 
-.*
 *~
+_*
 .snakemake/
 *.pyc
 *.swp
 .idea
 .Rhistory
+.DS_Store
