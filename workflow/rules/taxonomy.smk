@@ -85,5 +85,5 @@ rule make_tax_biom:
           -o /dev/stdout \
           --observation-metadata-fp {output.tax_tmp} \
           --sc-separated taxonomy --float-fields Confidence --output-as-json |
-          gzip -c > {output.biom}
+          gzip -nc > {output.biom}
         """

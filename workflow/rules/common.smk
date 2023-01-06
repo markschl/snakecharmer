@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 localrules:
     dump_samples_yaml,
+    dump_samples_tsv,
     dump_config,
     link_samples,
     make_primer_fasta,
@@ -274,7 +275,7 @@ rule combine_multiple_samples:
     log:
         "logs/combine_collected/{strategy}/{sample}_R{read}.log",
     group:
-        "sample"
+        "combine_samples"
     conda:
         "envs/basic.yaml"
     shell:

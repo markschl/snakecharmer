@@ -26,7 +26,7 @@ The current rule graph (see also [description of target rules](Commands.md)):
 
 ## Installing
 
-The pipeline makes use of the [Conda package manager](https://conda.io) ,installation is thus pretty straightforward ([see instructions here](INSTALL.md)).
+The pipeline makes use of the [Conda package manager](https://conda.io), the installation is thus pretty straightforward ([see instructions here](INSTALL.md)).
 
 ## Configuring
 

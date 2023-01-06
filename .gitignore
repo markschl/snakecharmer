@@ -6,6 +6,7 @@ refdb/
 *~
 _*
 .snakemake/
+.tests/
 *.pyc
 *.swp
 .idea

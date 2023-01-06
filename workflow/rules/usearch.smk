@@ -150,15 +150,18 @@ rule usearch_collect_derep:
         # This command combines the filtered and de-replicated
         # sample files and will serve as input for the clustering.
         # We therefore de-replicate it again, which is important since
-        # UNOISE relies on the size annotations for the -minsize filter
+        # UNOISE assumes unique sequneces with size annotations.
+        # TODO: the output is sorted by size (see vsearch docs).
+        #   -> Make sure that this stays the same when updating to
+        #      future versions.
         zstd -dcq {input.good} | 
           vsearch -derep_fulllength - -sizein -sizeout -output - 2> {log} |
           zstd -cq > {output.good}
 
         # Combine unfiltered (actually, length filtered after trimming)
         # and de-replicated sequences into one file. These will be used
-        # for mapping against the denoised sequences in order to create
-        # an OTU table. It is important *not* to de-replicate them again here,
+        # for mapping against the denoised sequences to create the OTU table.
+        # It is important *not* to de-replicate them again here,
         # otherwise many sample labels will be lost, leading to wrong results.
         zstd -dcq {input.all} | zstd -cq > {output.all}
         """
@@ -292,7 +295,7 @@ rule assign_taxonomy_sintax:
             -strand both \
             -sintax_cutoff {params.par[confidence]} \
             -threads {threads} \
-          &> {log}
+          2> {log}
         """
 
 
