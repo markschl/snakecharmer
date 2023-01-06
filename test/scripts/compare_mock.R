@@ -20,6 +20,8 @@ if (length(dirs) > 0) {
   for (primer_comb in names(s)) {
     outdir = file.path('mock_cmp', primer_comb)
     primer_dirs = s[[primer_comb]]
+  # remove validation workflows, which don't have a sequence comparison file
+    primer_dirs = primer_dirs[!grepl('_simple', primer_dirs, fixed=T)]
     seqs = file.path(primer_dirs, 'denoised.fasta')
     tabs = file.path(primer_dirs, 'denoised_otutab.txt.gz')
     mapping = file.path(primer_dirs, 'cmp', 'mock.txt')
@@ -98,12 +100,14 @@ if (length(dirs) > 0) {
       freezePane(wb, sample, firstRow=T, firstCol=T)
       setColWidths(wb, sample, 1, 15)
       addStyle(wb, sample, hs, 2, 1:(ncol(m)+2))
-      breaks = c(0.0001, 0.05, 0.5)
+      q = c(0, 0.5, 1)
       colors = c('#abdda4', '#ffffbf', '#fdae61')
-      conditionalFormatting(wb, sample, cols=2, rows=1:(nrow(m)+1), type='colourScale',
-                            style=colors,  rule=breaks*max(m[, 1]))
-      conditionalFormatting(wb, sample, cols=3:(ncol(m)+2), rows=1:(nrow(m)+1), type='colourScale',
-                            style=colors,  rule=breaks*max(m[, 3:ncol(m)]))
+      conditionalFormatting(wb, sample, cols=2, rows=3:(nrow(m)+1),
+                            type='colourScale', style=colors,
+                            rule=quantile(unlist(m[2:nrow(m), 1]), q))
+      conditionalFormatting(wb, sample, cols=3:(ncol(m)+2), rows=3:(nrow(m)+1),
+                            type='colourScale', style=colors,
+                            rule=quantile(unlist(m[2:nrow(m), 3:ncol(m)]), q))
     }
     saveWorkbook(wb, file=file.path(outdir, 'counts.xlsx'), overwrite=T)
   }    

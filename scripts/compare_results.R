@@ -97,13 +97,14 @@ if (length(dirs) > 0) {
       freezePane(wb, sample, firstRow=T, firstCol=T)
       setColWidths(wb, sample, 2, 24)
       addStyle(wb, sample, hs, 2, 1:(3*ncol(m)+3))
-      breaks = c(0.001, 0.05, 0.7)
       colors = c('#abdda4', '#ffffbf', '#fdae61')
-      conditionalFormatting(wb, sample, cols=3:(ncol(m)+2), rows=1:(nrow(m)+1),
-                            style=colors, rule=breaks*max(m[2:nrow(m),]), 
+      q = c(0, 0.5, 1)
+      conditionalFormatting(wb, sample, cols=3:(ncol(m)+2), rows=3:(nrow(m)+1),
+                            style=colors, rule=quantile(unlist(m[2:nrow(m),]), q), 
                             type='colourScale')
-      conditionalFormatting(wb, sample, cols=(ncol(m)+4):(2*ncol(m)+3), rows=1:(nrow(m)+1),
-                            style=colors, rule=breaks, type='colourScale')
+      conditionalFormatting(wb, sample, cols=(ncol(m)+4):(2*ncol(m)+3), rows=3:(nrow(m)+1),
+                            style=colors, rule=quantile(unlist(m_rel[2:nrow(m_rel),]), q),
+                            type='colourScale')
     }
     saveWorkbook(wb, file=file.path(pipeline_dir, 'cmp', paste0(primer_comb, '.xlsx')), 
                  overwrite=T)
