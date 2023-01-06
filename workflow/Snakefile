@@ -94,7 +94,8 @@ rule quality:
 rule denoise:
     input:
         rules.config.input,
-        rules.samples.input,
+        rules.dump_samples_yaml.output,
+        rules.dump_samples_tsv.output,
         simple_results_dirs,
         expand("{prefix}/denoised.fasta", prefix=results_dirs),
         expand("{prefix}/denoised_otutab.txt.gz", prefix=results_dirs),
@@ -128,30 +129,34 @@ rule cmp:
 
 # commands for cleaning up
 
+localrules:
+    clean,
+    clean_all,
+    clean_taxdb,
+    clean_tax,
+    clean_itsx,
+    clean_cmp,
+
+
 rule clean:
     shell:
-        "rm -Rf input processing"
-
+        "rm -Rf input/grouped processing"
 
 rule clean_all:
     shell:
         "rm -Rf results input/grouped processing logs"
 
-
 rule clean_taxdb:
     shell:
         "rm -Rf refdb"
-
 
 rule clean_tax:
     shell:
         "rm -Rf results/*/pipeline_*/*/*/taxonomy"
 
-
 rule clean_itsx:
     shell:
         "rm -Rf results/*/pipeline_*/*/*/ITSx"
-
 
 rule clean_cmp:
     shell:
