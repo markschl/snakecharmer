@@ -193,7 +193,7 @@ rule qiime_denoised_convert:
             -o $tab \
             --to-tsv --table-type "OTU table" &> {log}
         sed -i '1,1d' $tab
-        gzip -f $tab
+        gzip -nf $tab
 
         # export seqs
         qiime tools export \

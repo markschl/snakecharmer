@@ -163,7 +163,7 @@ rule amptk_denoise:
         # copy files
         mkdir -p $(dirname {output.denoised})
         cp $outdir/{wildcards.method}.ASVs.fa {output.denoised}
-        gzip -c $outdir/{wildcards.method}.otu_table.txt > {output.tab}
+        gzip -nc $outdir/{wildcards.method}.otu_table.txt > {output.tab}
         """
 
 

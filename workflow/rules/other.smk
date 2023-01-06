@@ -67,7 +67,7 @@ rule vsearch_global:
             -maxhits {params.maxhits} \
             -id {params.par[ident_threshold]} &> {log}
         # compress not-matched files
-        gzip -f $notmatched $denoised_notmatched 2> {log}
+        gzip -nf $notmatched $denoised_notmatched 2> {log}
         # make BAM file
         rm -f "$db.fai" $bam.bai
         samtools view -T "$db" -b $sam |

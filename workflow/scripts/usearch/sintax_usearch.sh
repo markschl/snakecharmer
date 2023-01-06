@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
-
+set -xeuo pipefail
 
 
 if [ $# -lt 3 ]; then
@@ -47,4 +46,4 @@ awk -v IFS="\t" -v OFS="\t" '{print $1, $4, 1}' "$sintax_out" |
   gzip -c >> "$outfile"
 
 # compress
-gzip -f "$sintax_out"
+gzip -fn "$sintax_out"
