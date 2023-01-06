@@ -3,7 +3,7 @@
 set -xeuo pipefail
 
 if [ $# -lt 4 ]; then
-    echo "usage: $0 <input_file> <fwd_primers> <rev_primers_rev> <outdir> [cutadapt options]" 1>&2
+    echo "usage: $0 <input_file> <fwd_primers> <rev_primers_rev> <outdir> <min_length> [cutadapt options]" 1>&2
     echo "Note: the reverse primers need to be reverse complemented..." 1>&2
     exit 1
 fi
@@ -12,8 +12,10 @@ input_file="$1" && shift
 forward="$1" && shift
 reverse_rev="$1" && shift
 outdir="$1" && shift
+min_length="$1" && shift
 
 sample=$(basename ${input_file%.fastq.zst})
+short_file="$outdir/too_short.fastq"
 # note: multiqc does not yet parse cutadapt.json, so we use simple log files
 
 # remove old files in case there are some
@@ -30,22 +32,25 @@ zstd -dcq "$input_file" |
   cutadapt - \
     -a "file:$reverse_rev" \
     --suffix ' rev={name}' \
+    --minimum-length $min_length \
+    --too-short-output "$short_file" \
     `# --json $outdir/"$sample"_rev.cutadapt.json` \
     "$@" 2> $outdir/"$sample"_rev.log |
   st split --fq -o "$outdir/{a:fwd}...{a:rev}.fastq"
 
 zstd -q --rm "$outdir/"*...*.fastq
+zstd -q --rm "$short_file"
 
 # add sample name to cutadapt logs: a hack needed for multiqc to recognize the sample
 sed -i -E "s/(Command line parameters[^$]+$)/\1 $sample.fastq.gz/g" $outdir/"$sample"_fwd.log
 sed -i -E "s/(Command line parameters[^$]+$)/\1 $sample.fastq.gz/g" $outdir/"$sample"_rev.log
 
 # parse logfiles to obtain total numbers
-log=$outdir/"$sample"_rev.log
-stats="$outdir/$sample"_stats.txt
-n=$(grep 'Total reads processed' $outdir/"$sample"_fwd.log | sed -E 's/[^0-9]+([0-9,]+)/\1/g' | tr -d ',')
-printf "$n" > $stats
-for dir in fwd rev; do
-  n_trimmed=$(grep 'Reads with adapters' $outdir/"$sample"_"$dir".log | sed -E 's/[^0-9]+([0-9,]+) *\(.+/\1/g' | tr -d ',')
-  printf "\t$n_trimmed" >> $stats
-done
+extract_num() {
+  sed -E 's/[^0-9]+([0-9,]+).*/\1/g' | tr -d ','
+}
+n=$(grep 'Total reads processed' "$outdir/$sample"_fwd.log | extract_num)
+n_trimmed_f=$(grep 'Reads with adapters' "$outdir/$sample"_fwd.log | extract_num)
+n_trimmed_r=$(grep 'Reads with adapters' "$outdir/$sample"_rev.log | extract_num)
+n_long=$(grep 'Reads written' "$outdir/$sample"_rev.log | extract_num)
+printf "$n\t$n_trimmed_f\t$n_trimmed_r\t$n_long" > "$outdir/$sample"_stats.txt

@@ -59,6 +59,7 @@ rule trim_primers_paired:
             "processing/{{name}}/usearch/paired/2_trim/{{sample}}/merged/{primers}.fastq.zst",
             primers=cfg.primer_combinations_flat,
         ),
+        short="processing/{name}/usearch/paired/2_trim/{sample}/merged/too_short.fastq.zst",
     log:
         "logs/{name}/usearch/paired/2_trim/{sample}.log",
     conda:
@@ -68,10 +69,10 @@ rule trim_primers_paired:
     shell:
         """
         $PIPELINE_DIR/workflow/scripts/trim_primers/trim_primers_paired.sh {input.seq} {input.fprimers} {input.rprimers_rev} \
-            $(dirname {output[0]}) \
+            $(dirname {output[stats]}) \
+            {params.minlen} \
             --error-rate {params.par[max_error_rate]} \
             --overlap {params.par[min_overlap]} \
-            --minimum-length {params.minlen} \
              2> {log}
         # create empty zstd archives if file does not exist
         # rename output to contain marker name
@@ -109,6 +110,7 @@ rule usearch_filter_derep_paired:
         mem_mb=2000,
     shell:
         """
+        # TODO: review posible defaults for fastq_qmax
         all={output.all}
         $PIPELINE_DIR/workflow/scripts/usearch/filter_derep.sh {input} {wildcards.sample} \
             ${{all%_all_uniques.fasta.zst}} \
@@ -366,15 +368,15 @@ rule usearch_stats_paired:
             # combine and write to output
             with open(output[0], 'w') as out:
                 writer = csv.writer(out, delimiter='\t')
-                header = ['sample', 'raw', 'merged', '(%)', 'fwd-primer', '(%)', 'rev-primer', '(%)']
+                header = ['sample', 'raw', 'merged', '(%)', 'fwd-primer', '(% of merged)', 'rev-primer', '(% of merged)', 'long enough', '(% of merged)']
                 for p in cfg.primer_combinations_flat:
-                    header += [p, "filtered", "(%)"]
+                    header += [p, "filtered", "(% of trimmed)"]
                 writer.writerow(header)
                 for sample in merge:
                     raw, m = merge[sample]
-                    m2, tf, tr = trim[sample]
+                    m2, tf, tr, ln = trim[sample]
                     assert (m == m2), "Number of sequences in logfiles from read merging and primer trimming does not match: {} vs. {}".format(m, m2)
-                    row = [sample, raw, m, percent(m, raw), tf, percent(tf, m), tr, percent(tr, m)]
+                    row = [sample, raw, m, percent(m, raw), tf, percent(tf, m), tr, percent(tr, m), ln, percent(ln, m)]
                     f = flt2[sample]
                     for p in cfg.primer_combinations_flat:
                         kept, removed = f[p]
