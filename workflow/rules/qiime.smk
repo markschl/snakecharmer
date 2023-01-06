@@ -173,7 +173,6 @@ rule qiime_denoised_convert:
         config["software"]["qiime"]["conda_env"]
     group:
         "denoise"
-    threads: workflow.cores
     shell:
         """
         # export table

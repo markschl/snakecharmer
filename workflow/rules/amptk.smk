@@ -148,7 +148,7 @@ rule amptk_denoise:
         config["software"]["amptk"]["conda_env"]
     group:
         "denoise"
-    threads: workflow.cores  # max(4, workflow.cores)  # dereplication/clustering only use one core, only mapping uses all -> don't claim too much (will be slower, though)
+    threads: max(10, workflow.cores)  # dereplication/clustering only use one core, only mapping uses all -> don't claim too much (will be slower, though)
     resources:
         mem_mb=30000,
         runtime=36 * 60,

@@ -180,6 +180,11 @@ rule usearch_unoise3:
         "envs/usearch-vsearch.yaml"
     group:
         "denoise"
+    threads:
+        # VSEARCH works in parallel (although cores seem to be used only ~50%) while
+        # USEARCH v11 does not appear to use more than 1 thread
+        # TODO: further validate VSEARCH threads setting
+        lambda w: int(workflow.cores*1.5) if cfg[w.name]["settings"]["usearch"]["unoise"]["program"] == "vsearch" else 1
     resources:
         mem_mb=10000,
         runtime=24 * 60,
@@ -189,14 +194,14 @@ rule usearch_unoise3:
             zstd -dqf {input}
             f={input}
             usearch -unoise3 ${{f%.zst}} \
-            -zotus {output} \
-            -minsize {params.par[min_size]} \
-            &> {log}
+                -zotus {output} \
+                -minsize {params.par[min_size]} \
+                &> {log}
             rm "$f"
         elif [[ "{params.par[program]}" == "vsearch" ]]; then
             # following code from https://github.com/torognes/vsearch/pull/283
             {{
-            zstd -dcqf {input} |
+              zstd -dcqf {input} |
                 stdbuf -eL vsearch --cluster_unoise - \
                     --minsize {params.par[min_size]} \
                     --sizein \
@@ -234,6 +239,8 @@ rule usearch_make_otutab:
         "logs/{name}/usearch/{strategy}/pipeline_usearch_{cluster}/{primers}/make_otutab.log",
     conda:
         "envs/vsearch-samtools.yaml"
+    group:
+        "denoise"
     resources:
         mem_mb=10000,
         runtime=24 * 60,
@@ -243,10 +250,10 @@ rule usearch_make_otutab:
         $PIPELINE_DIR/workflow/scripts/usearch/make_otutab.sh {params.par[program]} {threads} \
           "{input.uniques}" "{input.denoised}" \
           "{output.tab}" "{output.map}" "{output.bam}" "{output.notmatched}" \
-            -id {params.par[ident_threshold]} \
-            -maxaccepts {params.par[maxaccepts]} \
-            -maxrejects {params.par[maxrejects]} \
-            2> {log}
+         -id {params.par[ident_threshold]} \
+         -maxaccepts {params.par[maxaccepts]} \
+         -maxrejects {params.par[maxrejects]} \
+         2> {log}
         """
 
 
@@ -285,7 +292,10 @@ rule assign_taxonomy_sintax:
         "logs/{name}/other/{strategy}/{pipeline}/{marker}__{primers}/taxonomy_sintax/{db_name}-{tax_method}.log",
     conda:
         "envs/usearch-vsearch.yaml"
-    threads: workflow.cores
+    threads:
+        # VSEARCH works in parallel (although cores seem to be used only ~50%) while
+        # USEARCH v11 does not appear to use more than 1 thread
+        lambda w: workflow.cores if cfg[w.name]["taxonomy"][w.marker][(w.db_name, w.tax_method)]["program"] == "vsearch" else 1,
     resources:
         mem_mb=5000,
     shell:

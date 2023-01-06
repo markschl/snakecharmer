@@ -45,7 +45,7 @@ rule vsearch_global:
     log:
         "logs/{name}/other/{strategy}/{pipeline}/{primers}/search_{db}.log",
     # TODO: resources? usually pretty fast
-    threads: max(1, round(workflow.cores / 2))
+    threads: max(1, int(workflow.cores / 2))
     conda:
         "envs/vsearch-samtools.yaml"
     shell:
