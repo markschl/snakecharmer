@@ -26,21 +26,7 @@ The current rule graph (see also [description of target rules](Commands.md)):
 
 ## Installing
 
-The Conda package manager is the most important prerequisite. See here for [installation instructions in the Snakemake docs](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html#installation-via-conda-mamba).
-
-Qiime is installed using Conda according to [these instructions](https://docs.qiime2.org/2022.8/install/native/#install-qiime-2-within-a-conda-environment). Make sure that the correct QIIME version is set in [`config/config.yaml`](config/config.yaml).
-
-For Amptk, see [these instructions](https://amptk.readthedocs.io/en/latest/#install) (again using Conda). In addition, there is currently a [bug](https://github.com/nextgenusfs/amptk/issues/96) with UNOISE3 denoising. The code can be fixed like this:
-
-```sh
-conda activate amptk
-sed -i "s/--derep_fulllength', filter_out, '--relabel', 'Read_', '--sizeout', '--output/--fastx_uniques', filter_out, '--relabel', 'Read_', '--sizeout', '--fastaout/g" "$CONDA_PREFIX/lib/python3.10/site-packages/amptk/unoise3.py"
-```
-
-All further software is automatically installed when running the pipeline (make sure to specify `--use-conda`).
-
-An exception is *Usearch*. It can be [obtained here](https://www.drive5.com/usearch/download.html) and must be accessible as `usearch` in `$PATH`.
-
+The pipeline makes use of the [Conda package manager](https://conda.io) ,installation is thus pretty straightforward ([see instructions here](INSTALL.md)).
 
 ## Configuring
 
@@ -63,14 +49,14 @@ Note that the `~/conda` directory is used for the installation of all additional
 
 ### On a computer cluster
 
-A complete denoising run of a dataset on a HPCC may look like this (using SLURM with [this profile](https://github.com/Snakemake-Profiles/slurm#quickstart)):
+A complete denoising run of a dataset on a HPCC with the SLURM job scheduler may look like this:
 
 ```sh
 outdir=~/path/to/analysis  # must contain a config directory
 conda activate snakemake
 snakemake -j10 -c20 \
     --use-conda --conda-prefix ~/conda \
-    --profile slurm \
+    --slurm \
     -d $outdir \
     --rerun-incomplete \
     denoise cmp taxonomy ITS \
@@ -90,12 +76,12 @@ There is a separate bash script `scripts/compare_results.sh`, which creates an E
 
 ## Still not finished...
 
-Lots of things could still be done. A list of possible next steps includes:
+A list of possible next steps includes:
 
 - Enable single-end analyses and other platforms than Illumina
 - Integrate more pipelines / clustering methods
 - Integrate more taxonomy databases
-- Better handling of configuration defaults
 - Testing deployment on different systems
 - Improve configuration of job resources (memory, CPUs)
+- The USEARCH pipeline may be moved into an extra repository to be used independently. This repo has a strong focus on the comparison of a variety of different pipelines as well as handling complex cases (e.g. several primer combinations).
 - ...
