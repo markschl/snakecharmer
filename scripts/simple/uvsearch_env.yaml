@@ -1,0 +1,7 @@
+name: uvsearch
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - vsearch=2.21
+  - cutadapt=4.1
