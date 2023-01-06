@@ -29,11 +29,11 @@ mkdir -p $outdir/sintax
 # first, uncompress the database
 zstd -dqf "$refdb_compr" -o "$refdb"
 
-vsearch -sintax "$infile" -db "$refdb" \
+$program -sintax "$infile" -db "$refdb" \
   -tabbedout "$sintax_out" \
   -quiet \
   -log /dev/stdout \
-  "$@" 2>&1
+  "$@" 1>&2
 
 # remove the uncompressed database
 rm "$refdb"
