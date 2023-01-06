@@ -191,17 +191,23 @@ rule usearch_unoise3:
             &> {log}
             rm "$f"
         elif [[ "{params.par[program]}" == "vsearch" ]]; then
+            # following code from https://github.com/torognes/vsearch/pull/283
+            {{
             zstd -dcqf {input} |
-                vsearch -cluster_unoise - \
-                    -minsize {params.par[min_size]} \
-                    -sizeout \
-                    -threads {threads} \
-                    -centroids - 2> {log} |
-                  vsearch -uchime3_denovo - \
-                    -nonchimeras {output} \
-                    -sizein \
-                    -relabel Zotu \
-                    2> {log}
+                stdbuf -eL vsearch --cluster_unoise - \
+                    --minsize {params.par[min_size]} \
+                    --sizein \
+                    --sizeout \
+                    --threads {threads} \
+                    --centroids - |
+                  stdbuf -eL vsearch --sortbysize - --output - |
+                  stdbuf -eL vsearch --uchime3_denovo - \
+                    --nonchimeras - \
+                    --sizein \
+                    --relabel Zotu |
+                  st upper --wrap 80 `# convert masked letters to uppercase (alternative: use --qmask none)` \
+                  > {output}
+            }} 2> {log}
         else
             echo "unknown program: {params.par[program]}"
             exit 1
