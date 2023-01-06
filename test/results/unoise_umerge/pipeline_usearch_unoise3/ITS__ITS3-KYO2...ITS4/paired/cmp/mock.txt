@@ -13,6 +13,6 @@ Zotu12	Septoria_sp	100.0
 Zotu13	Xylariaceae_isolate	100.0
 Zotu14	H_annosum	100.0
 Zotu15	N_serpens	100.0
-Zotu16	H_fraxineus	100.0
-Zotu17	E_nigrum	100.0
+Zotu16	E_nigrum	100.0
+Zotu17	H_fraxineus	100.0
 Zotu18	A_pullulans	100.0

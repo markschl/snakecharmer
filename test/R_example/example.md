@@ -38,14 +38,14 @@ components:
   documentation of `replace_missing_taxa`). Example with shortened
   names:
 
-| OTU   | kingdom | phylum | class  | order  | family | genus            | species             | def_rank |
-|:------|:--------|:-------|:-------|:-------|:-------|:-----------------|:--------------------|:---------|
-| Zotu1 | Fungi   | Basidi | Cystob | Erythr | Erythr | Erythrobasidium  | Erythrobasidium sp. | genus    |
-| Zotu2 | Fungi   | Basidi | Agaric | Agaric | Agaric | Agaricales_gen\_ | Agaricales clone    | order    |
-| Zotu3 | Fungi   | Ascomy | Saccha | Saccha | Saccha | Saccharomyces    | Saccharomyces sp.   | genus    |
-| Zotu4 | Fungi   | Ascomy | Sordar | Diapor | Diapor | Diaporthe        | Diaporthe sp.       | genus    |
-| Zotu5 | Fungi   | Basidi | Agaric | Boleta | Coniop | Coniophora       | Coniophora puteana  | species  |
-| Zotu6 | Fungi   | Ascomy | Dothid | Pleosp | Didyme | Didymellaceae_g  | Didymellaceae clone | family   |
+| OTU   | kingdom | phylum | class  | order  | family | genus           | species                    | def_rank |
+|:------|:--------|:-------|:-------|:-------|:-------|:----------------|:---------------------------|:---------|
+| Zotu1 | Fungi   | Ascomy | Euroti | Euroti | Asperg | Penicillium     | Penicillium brevicompactum | species  |
+| Zotu2 | Fungi   | Basidi | Cystob | Erythr | Erythr | Erythrobasidium | Erythrobasidium sp.        | genus    |
+| Zotu3 | Fungi   | Ascomy | Sordar | Glomer | Glomer | Colletotrichum  | Colletotrichum sp.         | genus    |
+| Zotu4 | Fungi   | Basidi | Agaric | Agaric | Hymeno | Hebeloma        | Hebeloma incarnatulum      | species  |
+| Zotu5 | Fungi   | Ascomy | Dothid | Pleosp | Didyme | Didymellaceae_g | Didymellaceae clone        | family   |
+| Zotu6 | Fungi   | Basidi | Agaric | Boleta | Coniop | Coniophora      | Coniophora puteana         | species  |
 
 - `refseq`: OTU/ASV sequences as `Biostrings::DNAStringSet` object.
 - `tree`: tree object (not present in this case since the ITS region is
@@ -56,12 +56,12 @@ components:
 
 | query | target            | ident |
 |:------|:------------------|------:|
-| Zotu1 | E_hasegawianum    |   100 |
-| Zotu2 | H_crustiliniforme |   100 |
-| Zotu3 | S_cerevisiae      |   100 |
-| Zotu4 | D_eres            |   100 |
-| Zotu5 | C_puteana         |   100 |
-| Zotu6 | Boeremia_sp_2     |   100 |
+| Zotu1 | Penicillium_sp    |   100 |
+| Zotu2 | E_hasegawianum    |   100 |
+| Zotu3 | C_acutatum        |   100 |
+| Zotu4 | H_crustiliniforme |   100 |
+| Zotu5 | Boeremia_sp_2     |   100 |
+| Zotu6 | C_puteana         |   100 |
 
 - `itsx_results`: Finally, the rDNA domains were searched using ITSx,
   since these are fungal ITS sequences. The `ITSx_cat` contains
@@ -71,12 +71,12 @@ components:
 
 | OTU   | SSU | ITS1 | ITS2    | LSU     | ITSx_cat     |
 |:------|:----|:-----|:--------|:--------|:-------------|
-| Zotu1 | NA  | NA   | 106-328 | 329-368 | partial_5.8S |
-| Zotu2 | NA  | NA   | 106-320 | 321-360 | partial_5.8S |
-| Zotu3 | NA  | NA   | 106-338 | 339-378 | partial_5.8S |
-| Zotu4 | NA  | NA   | 106-265 | 266-305 | partial_5.8S |
-| Zotu5 | NA  | NA   | 107-367 | 368-407 | partial_5.8S |
-| Zotu6 | NA  | NA   | 106-259 | 260-299 | partial_5.8S |
+| Zotu1 | NA  | NA   | 106-265 | 266-305 | partial_5.8S |
+| Zotu2 | NA  | NA   | 106-328 | 329-368 | partial_5.8S |
+| Zotu3 | NA  | NA   | 106-260 | 261-300 | partial_5.8S |
+| Zotu4 | NA  | NA   | 106-320 | 321-360 | partial_5.8S |
+| Zotu5 | NA  | NA   | 106-259 | 260-299 | partial_5.8S |
+| Zotu6 | NA  | NA   | 107-367 | 368-407 | partial_5.8S |
 
 ## Mixed vs. amplified frequencies
 
@@ -110,14 +110,14 @@ mock_data <- read.delim(file.path("..", "mock", "mock_data.txt")) %>%
 head(mock_data)
 ```
 
-| name              | rel_abund_m1 | n_reads | ASVs                | n_asvs |
-|:------------------|-------------:|--------:|:--------------------|-------:|
-| E_hasegawianum    |       0.4000 |    2372 | Zotu1               |      1 |
-| H_crustiliniforme |       0.2400 |    1560 | Zotu2,Zotu20        |      2 |
-| C_puteana         |       0.1440 |    1268 | Zotu5,Zotu10,Zotu15 |      3 |
-| D_eres            |       0.0864 |     988 | Zotu4               |      1 |
-| F_tritinctum      |       0.0518 |     942 | Zotu18              |      1 |
-| Boeremia_sp_2     |       0.0311 |    1162 | Zotu6               |      1 |
+| name              | rel_abund_m1 | n_reads | ASVs  | n_asvs |
+|:------------------|-------------:|--------:|:------|-------:|
+| E_hasegawianum    |       0.4000 |    2366 | Zotu2 |      1 |
+| H_crustiliniforme |       0.2400 |    1561 | Zotu4 |      1 |
+| C_puteana         |       0.1440 |    1276 | Zotu6 |      1 |
+| D_eres            |       0.0864 |     979 | Zotu7 |      1 |
+| F_tritinctum      |       0.0518 |     929 | Zotu8 |      1 |
+| Boeremia_sp_2     |       0.0311 |    1163 | Zotu5 |      1 |
 
 ``` r
 ggplot(mock_data, aes(rel_abund_m1, n_reads)) +
@@ -158,10 +158,10 @@ physeq
 ```
 
     ## phyloseq-class experiment-level object
-    ## otu_table()   OTU Table:         [ 21 taxa and 2 samples ]
+    ## otu_table()   OTU Table:         [ 18 taxa and 2 samples ]
     ## sample_data() Sample Data:       [ 2 samples by 1 sample variables ]
-    ## tax_table()   Taxonomy Table:    [ 21 taxa by 9 taxonomic ranks ]
-    ## refseq()      DNAStringSet:      [ 21 reference sequences ]
+    ## tax_table()   Taxonomy Table:    [ 18 taxa by 9 taxonomic ranks ]
+    ## refseq()      DNAStringSet:      [ 18 reference sequences ]
 
 Since there can be several taxonomic assignments, `make_phyloseq` just
 chooses the first one. To choose a specific one, supply the taxonomy

@@ -42,10 +42,12 @@ settings:
       expected_length: 400
       max_diffs: 1000
       overlap_ident: 75
+      program: usearch
     otutab:
-      ident_threshold: 0.98
+      ident_threshold: 0.97
       maxaccepts: 64
       maxrejects: 64
+      program: usearch
     unoise:
       min_size: 8
       program: usearch
@@ -58,7 +60,7 @@ taxonomy:
       date: 2022-11-29
       db: unite_eukarya_all
       db_name: unite
-      defined: _all
+      defined: species
       marker: ITS
       method: sintax_usearch
       method_name: sintax_70

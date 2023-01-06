@@ -1,6 +1,6 @@
-cluster: amptk_unoise3
+cluster: usearch_unoise3
 is_simple: true
-name: amptk_unoise
+name: unoise_umerge
 sequencing_strategies:
 - paired
 settings:
@@ -42,7 +42,7 @@ settings:
       expected_length: 400
       max_diffs: 1000
       overlap_ident: 75
-      program: vsearch
+      program: usearch
     otutab:
       ident_threshold: 0.97
       maxaccepts: 64

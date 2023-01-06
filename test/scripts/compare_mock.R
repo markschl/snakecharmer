@@ -65,7 +65,7 @@ if (length(dirs) > 0) {
       geom_point(aes(size=as.factor(n)), pch=21, alpha=0.7) +
       geom_smooth(method='lm', formula='y~x', se=F, size=0.3) +
       scale_size_discrete(range=c(1, 2)) +
-      scale_colour_brewer(palette='Set1') +
+      scale_colour_brewer(palette='Paired') +
       scale_x_log10() +
       scale_y_log10() +
       labs(x='Mixed relative concentration',

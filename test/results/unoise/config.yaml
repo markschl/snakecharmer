@@ -42,10 +42,12 @@ settings:
       expected_length: 400
       max_diffs: 1000
       overlap_ident: 75
+      program: vsearch
     otutab:
-      ident_threshold: 0.98
+      ident_threshold: 0.97
       maxaccepts: 64
       maxrejects: 64
+      program: vsearch
     unoise:
       min_size: 8
       program: vsearch
@@ -55,13 +57,15 @@ taxonomy:
   ITS:
     unite-sintax_70:
       confidence: 0.7
+      date: 2022-11-29
       db: unite_eukarya_all
       db_name: unite
-      defined: _all
+      defined: species
       marker: ITS
       method: sintax_usearch
       method_name: sintax_70
       program: vsearch
-      reference: 10.15156/BIO/1264861
+      reference: https://doi.org/10.15156/BIO/2483918
       type: unite_otus
-      url: https://files.plutof.ut.ee/public/orig/1D/31/1D31FA3A308BDC2FB2750D62C0AA40C5058C15405A3CC5C626CC3A3F5E3903ED.tgz
+      url: https://files.plutof.ut.ee/public/orig/71/E6/71E68A5DD3F5C311F913757F9E7CA2508430F9400C14413ADA08A0BB33169BB4.tgz
+      version: '9.0'
