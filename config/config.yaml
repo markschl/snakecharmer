@@ -113,7 +113,7 @@ compare:
     # These settings are the defaults in 'default_settings'.
     # Ultimately, the whole 'default_settings' section is not required
     # if you are happy with these defaults.
-    maxhits: 1
+    maxhits: 1  # only one hit per query (there could be up to 'maxaccepts' hits)
     maxaccepts: 64
     maxrejects: 64
 
@@ -253,7 +253,7 @@ usearch:
   otutab:
     maxaccepts: 64
     maxrejects: 64
-    ident_threshold: 0.98
+    ident_threshold: 0.97
     # The program to use (optional; default: vsearch)
     program: vsearch  # { vsearch, usearch }
 
