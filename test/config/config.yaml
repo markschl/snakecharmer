@@ -19,13 +19,29 @@ pipelines:
   unoise:
     cluster: usearch_unoise3
     taxonomy: default
-  # UNOISE3 pipeline using USEARCH for denoising
+  # UNOISE3 pipeline using USEARCH for read merging
+  # Read merging is the one step which differs most
+  # between USEARCH and VSEARCH: VSEARCH is more conservative
+  # (https://groups.google.com/g/vsearch-forum/c/ojqZYbEyUw4/m/9RMhPQbXAwAJ).
+  # Using VSEARCH for denoising and OTU-tab construction leads
+  # to the same results as with USEARCH at least for the test
+  # dataset (just the OTU order is slightly different)
+  unoise_umerge:
+    cluster: usearch_unoise3
+    taxonomy: default
+    settings:
+      usearch:
+        merge: { program: usearch }
+  # UNOISE3 pipeline using USEARCH for all tasks
+  # (except for simple ones such as de-replication and quality filtering)
   unoise_usearch:
     cluster: usearch_unoise3
     taxonomy: default
     settings:
       usearch:
+        merge: { program: usearch }
         unoise: { program: usearch }
+        otutab: { program: usearch }
   # QIIME / DADA2
   qiime_dada2:
     cluster: qiime_dada2

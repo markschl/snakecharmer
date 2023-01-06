@@ -71,17 +71,20 @@ pipelines:
         ITS: [unite_species]
       methods:  # chooses specific 'taxonomy_methods' (below)
         - sintax_90
-    # Here, we choose USEARCH for denoising instead of VSEARCH.
+    # Here, we choose USEARCH for all relevant tasks instead of VSEARCH.
+    # *Note* that VSEARCH is still used for minor tasks such as sequence filtering,
+    # where the outcome should anyway be the same between the two programs.
     # These settings simply overwrite the default settings found below
     # in this file. 
-    # The settings hierarchy needs to be exactly the same as below,
-    # if not the options here will be ignored. It is recommended to
-    # run the 'config' rule first and then check the file 
+    # The settings hierarchy needs to be exactly the same as below.
+    # You may run the 'config' rule first and then check the file 
     # `results/<pipeline>/config.yaml` to see if the settings were 
     # correctly overridden.
     settings:
       usearch:
+        merge: { program: usearch }
         unoise: { program: usearch }
+        otutab: { program: usearch }
   # QIIME / DADA2
   qiime_dada2:
     cluster: qiime_dada2  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
@@ -187,7 +190,12 @@ taxonomy_methods:
     method: sintax_usearch  # { sintax_usearch, qiime_sklearn }
     confidence: 0.9
     # The program to use (optional; default: vsearch)
-    program: vsearch
+    program: vsearch  # {vsearch, usearch}
+  # SINTAX (USEARCH)
+  sintax_90_usearch:
+    method: sintax_usearch  # { sintax_usearch, qiime_sklearn }
+    confidence: 0.9
+    program: usearch  # {vsearch, usearch}
   sklearn_90:
     # classify-sklearn plugin in QIIME2 with Naive Bayes classifier
     # note: the creation of the database and the taxonomy assignment use
@@ -217,6 +225,13 @@ usearch:
     # Only used to calculate expected errors for pipelines not accepting
     # error rates for quality filtering (only absolute number of expected errors)
     expected_length: 400
+    # The program to use (optional; default: vsearch)
+    # Note that VSEARCH is more conservative regarding more reads of potentially
+    # bad quality will remain unmerged with the message
+    # "alignment score too low, or score drop too high" regardless of the options
+    # specified (overlap_ident, max_diffs)
+    # https://groups.google.com/g/vsearch-forum/c/ojqZYbEyUw4/m/9RMhPQbXAwAJ
+    program: vsearch  # { vsearch, usearch }
 
   # read filtering before denoising
   # (done by VSEARCH)
@@ -231,12 +246,16 @@ usearch:
     # The program to use (optional; default: vsearch)
     program: vsearch  # { vsearch, usearch }
 
-  # mapping options for creation of OTU table
-  # (done by VSEARCH)
+  # Mapping options for creation of OTU table
+  # These settings are very conservative, the default for U/VSEARCH
+  # would be maxaccepts and maxrejects = 1
+  # (see also https://www.drive5.com/usearch/manual/termination_options.html)
   otutab:
     maxaccepts: 64
     maxrejects: 64
     ident_threshold: 0.98
+    # The program to use (optional; default: vsearch)
+    program: vsearch  # { vsearch, usearch }
 
 # DADA2 specific settings
 dada2:

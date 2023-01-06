@@ -35,9 +35,9 @@ rule usearch_merge_paired:
         out={output.merged}
         $PIPELINE_DIR/workflow/scripts/usearch/merge_paired.sh \
             {input[0]} {input[1]} ${{out%.fastq.zst}} \
+            {params.par[program]} {params.par[overlap_ident]} \
             -threads 1 \
             -fastq_maxdiffs {params.par[max_diffs]} \
-            -fastq_pctid {params.par[overlap_ident]} \
             2> {log}
         """
 
@@ -228,37 +228,14 @@ rule usearch_make_otutab:
         runtime=24 * 60,
     shell:
         """
-        tab={output.tab}
-        map={output.map}
-        bam={output.bam}
-        sam=${{bam%.*}}
-        notmatched={output.notmatched}
-        notmatched=${{notmatched%.*}}
-        zstd -dcq {input.uniques} |
-          vsearch -usearch_global - -db {input.denoised} \
-            -otutabout ${{tab%.gz}} \
-            -userout ${{map%.gz}} \
-            -userfields query+target+id \
-            -maxhits 1 \
-            -strand plus \
-            -sizein \
+        # TODO: many arguments, eventually convert into native snakemake Bash/Python script
+        $PIPELINE_DIR/workflow/scripts/usearch/make_otutab.sh {params.par[program]} {threads} \
+          "{input.uniques}" "{input.denoised}" \
+          "{output.tab}" "{output.map}" "{output.bam}" "{output.notmatched}" \
             -id {params.par[ident_threshold]} \
             -maxaccepts {params.par[maxaccepts]} \
             -maxrejects {params.par[maxrejects]} \
-            -samout $sam \
-            -notmatched $notmatched \
             2> {log}
-
-        # compress
-        gzip ${{tab%.gz}} ${{map%.gz}} 2> {log}
-        zstd -qf $notmatched 2> {log}
-
-        # SAM -> BAM
-        rm -f {input.denoised}.fai $bam.bai
-        samtools view -T {input.denoised} -b $sam |
-          samtools sort -@ {threads} > $bam 2> {log}
-        rm $sam {input.denoised}.fai
-        samtools index $bam 2> {log}
         """
 
 

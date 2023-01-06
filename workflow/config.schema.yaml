@@ -245,6 +245,10 @@ properties:
           expected_length:
             type: integer
             minimum: 1
+          program:
+            type: string
+            enum: [vsearch, usearch]
+            default: vsearch
         required: [overlap_ident, max_diffs, expected_length]
         additionalProperties: false
       filter:
@@ -281,6 +285,10 @@ properties:
             type: number
             minimum: 0
             maximum: 1
+          program:
+            type: string
+            enum: [vsearch, usearch]
+            default: vsearch
         required: [maxaccepts, maxrejects, ident_threshold]
         additionalProperties: false
     additionalProperties: false

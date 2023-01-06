@@ -40,14 +40,15 @@ rule amptk_collect:
                 print("{} > {}".format(source, target), file=out)
 
 
-rule amptk_trim_merge:
+rule amptk_merge_trim:
     params:
         f_primer_seq=lambda w: cfg.primers_consensus[w.marker]["forward"][w.f_primer],
         r_primer_seq=lambda w: cfg.primers_consensus[w.marker]["reverse"][w.r_primer],
         # note: we limit the max. number of primer mismatches to 2.
-        # The reason is that Amptk rrently does another primer trimming after merging the 
-        # already trimmed reads. With too liberal mismatch thresholds, this will yield
-        # many unspecific primer matches, leading to unwanted trimming of reads.
+        # The reason is that Amptk apparently does **another** primer trimming after merging 
+        # the already trimmed reads.
+        # Too liberal mismatch thresholds lead to many unspecific primer matches
+        # and consequently to unwanted trimming of reads.
         pmismatch=lambda w: min(2, round((
                 len(cfg.primers_consensus[w.marker]['forward'][w.f_primer])
                 + len(cfg.primers_consensus[w.marker]['reverse'][w.r_primer])
@@ -55,6 +56,7 @@ rule amptk_trim_merge:
             * cfg[w.name]["settings"]["primers"]["trim_settings"]["max_error_rate"]
         )),
         min_len=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
+        program=lambda w: cfg[w.name]["settings"]["usearch"]["merge"]["program"],
     input:
         expand(
             "processing/{{name}}/amptk/input/grouped/paired/{sample}_R{read}.fastq.gz",
@@ -90,6 +92,7 @@ rule amptk_trim_merge:
                 --require_primer=on \
                 --rescue_forward=off \
                 --primer_mismatch {params.pmismatch} \
+                --merge_method {params.program} \
                 --usearch $(which usearch)  ) 2> {log} >/dev/null
         """
 
