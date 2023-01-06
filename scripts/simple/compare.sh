@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash
 
 # This script compares the test pipeline results with
 # simple example pipelines published by the pipeline authors
@@ -6,12 +6,16 @@
 
 set -xeuo pipefail
 
-threads=12
+# In order for results to be reproducible, we use only one core.
+# This is especially important for USEARCH, where the order of 
+# merged reads changes with multithreading (apparently not with VSEARCH).
+threads=1
 
-# this relies on the 'simple' env
-# conda env create -f scripts/simple_env.yaml
+# this relies on the 'uvsearch' env
+# conda env create -f scripts/simple/uvsearch_env.yaml
 
-#conda activate simple
+source $(conda info --base)/etc/profile.d/conda.sh
+conda activate uvsearch
 
 # prepare input files "manually"
 gz=test/gz
@@ -28,7 +32,9 @@ rprimers=$out/rprimers.fa
 printf ">ITS3_KYO2\nGGGATGAAGAACGYAGYRAA\n>ITS3_KYO2\nTCGATGAAGAMCGYWGCVAD\n" > $fprimers
 printf ">ITS4\nGCATATCAATAAGCGGAGGATT\n>ITS4\nGCATATTAWTCAGCGGAGGATT\n" > $rprimers
 
+# Run VSEARCH analysis
 scripts/simple/vsearch.sh test file:$fprimers file:$rprimers $threads $out/*_R1.fastq
+# Run USEARCH analysis
 scripts/simple/usearch.sh test file:$fprimers file:$rprimers $threads $out/*_R1.fastq
 
 scripts/compare_results.sh test
@@ -59,6 +65,6 @@ if ! cmp -s <(st . --to-tsv seq $ures/denoised.fasta | sort) <(st . --to-tsv seq
   exit 1
 fi
 
-# for comparing biom:
+# for comparing biom with Meld:
 # meld <(python -m json.tool $vres/denoised.biom) <(python -m json.tool $vsearch_res/denoised.biom)
 # meld <(python -m json.tool $ures/denoised.biom) <(python -m json.tool $usearch_res/denoised.biom)
