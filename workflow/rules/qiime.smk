@@ -199,7 +199,7 @@ rule qiime_denoised_convert:
         qiime tools export \
             --input-path {input.denoised0} \
             --output-path {output.tmp} &> {log}
-        mv {output.tmp}/dna-sequences.fasta {output.denoised}
+        cat {output.tmp}/dna-sequences.fasta > {output.denoised}
         """
 
 
