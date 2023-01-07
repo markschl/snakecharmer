@@ -143,14 +143,15 @@ rule qiime_denoise_paired:
         qiime dada2 denoise-paired \
             --i-demultiplexed-seqs {input.trim} \
             --p-n-threads {threads} \
-            --p-trunc-q {params.args[trim_max_err]:.0f} \
-            --p-trunc-len-f {params.args[trunc_fwd]:.0f} \
-            --p-trunc-len-r {params.args[trunc_rev]:.0f} \
+            --p-trunc-q {params.args[trunc_qual]:.0f} \
+            --p-trunc-len-f {params.args[trunclen_fwd]:.0f} \
+            --p-trunc-len-r {params.args[trunclen_rev]:.0f} \
             --p-max-ee-f {params.args[max_err_fwd]} \
             --p-max-ee-r {params.args[max_err_rev]} \
             --p-n-reads-learn 1000000 \
             --p-chimera-method {params.args[chimera_method]} \
             {params.extra} \
+            --verbose \
             --o-representative-sequences {output.denoised0} \
             --o-table {output.tab0} \
             --o-denoising-stats {output.stats} &> {log}

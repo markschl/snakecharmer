@@ -95,6 +95,14 @@ pipelines:
     taxonomy: default
   # Amptk with Dada2 clustering
   amptk_dada2:
+    # Note regarding the DADA2 settings: The Amptk DADA2 pipeline
+    # still does read merging with U/VSEARCH before the denoising, followed by
+    # a quality filtering step, which then forms the input for DADA2,
+    # which is run without the learnErrors() step (except for PacBio).
+    # It is thus a "hybrid" pipeline based on both U/VSEARCH and DADA2;
+    # the quality filtering therefore uses the 'max_error_rate' from the
+    # usearch -> filter and the 'expected_length' from the usearch -> merge
+    # sections.
     cluster: amptk_dada2
     taxonomy: default
 
@@ -257,15 +265,25 @@ usearch:
     # The program to use (optional; default: vsearch)
     program: vsearch  # { vsearch, usearch }
 
-# DADA2 specific settings
+# DADA2 specific settings (still incomplete)
+# for QIIME2 DADA2 plugin docs, see https://docs.qiime2.org/2022.8/plugins/available/dada2/denoise-paired/
 dada2:
-  trim_max_err: 1.0
+  # quality score at which sequences are truncated (--p-trunc-q)
+  # (if the result is shorter than trunclen_fwd/trunclen_rev, the read is discarded)
+  trunc_qual: 2.0
+  # QIIME2: --p-max-ee-f
   max_err_fwd: 1
+  # QIIME2: --p-max-ee-r
   max_err_rev: 15
-  trunc_fwd: 280
-  trunc_rev: 250
-  chimera_method: consensus  # { consensus, per-sample, pooled }
+  # QIIME2: --p-trunc-len-f
+  trunclen_fwd: 280
+  # QIIME2: --p-trunc-len-r
+  trunclen_rev: 250
+  # QIIME2: --p-pooling-method
   pooling_method: independent  # { independent, pseudo, pooled }
+  # QIIME2: --p-chimera-method
+  chimera_method: consensus  # { consensus, per-sample, pooled }
+  # QIIME2: --p-allow-one-off (values > 1 are set to 1)
   merge_maxdiffs: 1
 
 # ITS recognition (fungi)

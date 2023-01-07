@@ -296,7 +296,7 @@ properties:
   dada2:
     type: object
     properties:
-      trim_max_err:
+      trunc_qual:
         type: number
         minimum: 0
       max_err_fwd:
@@ -305,10 +305,10 @@ properties:
       max_err_rev:
         type: number
         minimum: 0
-      trunc_fwd:
+      trunclen_fwd:
         type: integer
         minimum: 0
-      trunc_rev:
+      trunclen_rev:
         type: integer
         minimum: 0
       chimera_method:
@@ -320,7 +320,7 @@ properties:
       merge_maxdiffs:
         type: integer
         minimum: 0
-    required: [trim_max_err, max_err_fwd, max_err_rev, trunc_fwd, trunc_rev, chimera_method, pooling_method, merge_maxdiffs]
+    required: [trunc_qual, max_err_fwd, max_err_rev, trunclen_fwd, trunclen_rev, pooling_method, chimera_method, merge_maxdiffs]
     additionalProperties: false
 
   ITSx:

@@ -100,10 +100,10 @@ if (length(dirs) > 0) {
       colors = c('#abdda4', '#ffffbf', '#fdae61')
       q = c(0, 0.5, 1)
       conditionalFormatting(wb, sample, cols=3:(ncol(m)+2), rows=3:(nrow(m)+1),
-                            style=colors, rule=quantile(unlist(m[2:nrow(m),]), q), 
+                            style=colors, rule=quantile(unlist(m[2:nrow(m),]), q, na.rm=T), 
                             type='colourScale')
       conditionalFormatting(wb, sample, cols=(ncol(m)+4):(2*ncol(m)+3), rows=3:(nrow(m)+1),
-                            style=colors, rule=quantile(unlist(m_rel[2:nrow(m_rel),]), q),
+                            style=colors, rule=quantile(unlist(m_rel[2:nrow(m_rel),]), q, na.rm=T),
                             type='colourScale')
     }
     saveWorkbook(wb, file=file.path(pipeline_dir, 'cmp', paste0(primer_comb, '.xlsx')), 

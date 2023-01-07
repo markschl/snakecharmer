@@ -104,10 +104,10 @@ if (length(dirs) > 0) {
       colors = c('#abdda4', '#ffffbf', '#fdae61')
       conditionalFormatting(wb, sample, cols=2, rows=3:(nrow(m)+1),
                             type='colourScale', style=colors,
-                            rule=quantile(unlist(m[2:nrow(m), 1]), q))
+                            rule=quantile(unlist(m[2:nrow(m), 1]), q, na.rm=T))
       conditionalFormatting(wb, sample, cols=3:(ncol(m)+2), rows=3:(nrow(m)+1),
                             type='colourScale', style=colors,
-                            rule=quantile(unlist(m[2:nrow(m), 3:ncol(m)]), q))
+                            rule=quantile(unlist(m[2:nrow(m), 3:ncol(m)]), q, na.rm=T))
     }
     saveWorkbook(wb, file=file.path(outdir, 'counts.xlsx'), overwrite=T)
   }    

@@ -115,13 +115,13 @@ usearch:
 
 # DADA2 specific settings
 dada2:
-  trim_max_err: 1.0
+  trunc_qual: 1.0
   max_err_fwd: 5
   max_err_rev: 15
-  trunc_fwd: 280
-  trunc_rev: 250
-  chimera_method: consensus  # { consensus, per-sample, pooled }
+  trunclen_fwd: 280
+  trunclen_rev: 250
   pooling_method: independent  # { independent, pseudo, pooled }
+  chimera_method: consensus  # { consensus, per-sample, pooled }
   merge_maxdiffs: 1
 
 # ITS recognition (fungi)

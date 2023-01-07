@@ -98,30 +98,26 @@ rule amptk_merge_trim:
 
 
 def amptk_denoise_params(method, settings):
-    # print(method)
-    # from pprint import pprint; pprint(settings)
+    upar = settings["usearch"]
+    maxee = upar["merge"]["expected_length"] * upar["filter"]["max_error_rate"]
     if method == "unoise3":
-        par = settings["usearch"]
         return " ".join(
             [
                 "--usearch",
                 "$(which usearch)",
                 "--maxee",
-                str(
-                    par["merge"]["expected_length"]
-                    * settings["usearch"]["filter"]["max_error_rate"]
-                ),
+                str(maxee),
                 "--method",
-                par["unoise"]["program"],
+                upar["unoise"]["program"],
                 "--minsize",
-                str(par["unoise"]["min_size"]),
+                str(upar["unoise"]["min_size"]),
             ]
         )
     if method == "dada2":
         par = settings["dada2"]
         out = [
             "--maxee",
-            str(par["trim_max_err"]),
+            str(maxee),
             "--chimera_method",
             par["chimera_method"],
         ]

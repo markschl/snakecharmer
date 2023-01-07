@@ -25,9 +25,9 @@ settings:
     max_err_rev: 15
     merge_maxdiffs: 1
     pooling_method: independent
-    trim_max_err: 1.0
-    trunc_fwd: 280
-    trunc_rev: 250
+    trunc_qual: 1.0
+    trunclen_fwd: 280
+    trunclen_rev: 250
   filter:
     min_length: 100
   software:
