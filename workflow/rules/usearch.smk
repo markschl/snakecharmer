@@ -199,7 +199,7 @@ rule usearch_unoise3:
                 -zotus {output} \
                 -minsize {params.par[min_size]} \
                 &> {log}
-            rm "$f"
+            rm "${{f%.zst}}"
         elif [[ "{params.par[program]}" == "vsearch" ]]; then
             # following code from https://github.com/torognes/vsearch/pull/283
             {{
