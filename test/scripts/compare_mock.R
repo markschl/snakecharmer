@@ -69,7 +69,7 @@ if (length(dirs) > 0) {
       scale_x_log10() +
       scale_y_log10() +
       labs(x='Mixed relative concentration',
-           y='Relative read abundance',
+           y='Read count',
            colour='Pipeline', size='Number of ASVs', shape='Pipeline') +
       guides(colour=leg, shape=leg, size=leg) +
       theme_bw() +

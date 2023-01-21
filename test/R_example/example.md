@@ -38,14 +38,14 @@ components:
   documentation of `replace_missing_taxa`). Example with shortened
   names:
 
-| OTU   | kingdom | phylum | class  | order  | family | genus           | species                    | def_rank |
-|:------|:--------|:-------|:-------|:-------|:-------|:----------------|:---------------------------|:---------|
-| Zotu1 | Fungi   | Ascomy | Euroti | Euroti | Asperg | Penicillium     | Penicillium brevicompactum | species  |
-| Zotu2 | Fungi   | Basidi | Cystob | Erythr | Erythr | Erythrobasidium | Erythrobasidium sp.        | genus    |
-| Zotu3 | Fungi   | Ascomy | Sordar | Glomer | Glomer | Colletotrichum  | Colletotrichum sp.         | genus    |
-| Zotu4 | Fungi   | Basidi | Agaric | Agaric | Hymeno | Hebeloma        | Hebeloma incarnatulum      | species  |
-| Zotu5 | Fungi   | Ascomy | Dothid | Pleosp | Didyme | Didymellaceae_g | Didymellaceae clone        | family   |
-| Zotu6 | Fungi   | Basidi | Agaric | Boleta | Coniop | Coniophora      | Coniophora puteana         | species  |
+| OTU   | kingdom | phylum | class  | order  | family | genus           | species                      | def_rank |
+|:------|:--------|:-------|:-------|:-------|:-------|:----------------|:-----------------------------|:---------|
+| Zotu1 | Fungi   | Ascomy | Euroti | Euroti | Asperg | Penicillium     | Penicillium brevicompactum   | species  |
+| Zotu2 | Fungi   | Basidi | Cystob | Erythr | Erythr | Erythrobasidium | Erythrobasidium proteacearum | species  |
+| Zotu3 | Fungi   | Ascomy | Sordar | Glomer | Glomer | Colletotrichum  | Colletotrichum sp.           | genus    |
+| Zotu4 | Fungi   | Basidi | Agaric | Agaric | Hymeno | Hebeloma        | Hebeloma incarnatulum        | species  |
+| Zotu5 | Fungi   | Ascomy | Dothid | Pleosp | Didyme | Didymellaceae_g | Didymellaceae clone          | family   |
+| Zotu6 | Fungi   | Basidi | Agaric | Boleta | Coniop | Coniophora      | Coniophora puteana           | species  |
 
 - `refseq`: OTU/ASV sequences as `Biostrings::DNAStringSet` object.
 - `tree`: tree object (not present in this case since the ITS region is

@@ -34,7 +34,7 @@ settings:
     amptk:
       conda_env: amptk
     qiime:
-      conda_env: qiime2-2022.8
+      conda_env: qiime2-2022.11
   usearch:
     filter:
       max_error_rate: 0.002
