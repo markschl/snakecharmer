@@ -9,6 +9,8 @@ rule itsx:
         pos="results/{name}/{pipeline}/ITS__{primers}/{strategy}/ITSx/out.positions.txt",
     log:
         "logs/{name}/other/{strategy}/{pipeline}/ITS__{primers}/ITSx.log",
+    group:
+        "ITS"
     conda:
         "envs/itsx.yaml"
     threads: min(workflow.cores, 8)  # too many does not make sense
@@ -44,6 +46,8 @@ rule vsearch_global:
         notmatched="results/{name}/{pipeline}/{primers}/{strategy}/cmp/{db}_notmatched.fasta.gz",
     log:
         "logs/{name}/other/{strategy}/{pipeline}/{primers}/search_{db}.log",
+    group:
+        "cmp"
     # TODO: resources? usually pretty fast
     threads: max(1, int(workflow.cores / 2))
     conda:

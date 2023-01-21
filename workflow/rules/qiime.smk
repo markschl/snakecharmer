@@ -5,6 +5,8 @@ from sys import stderr
 
 localrules:
     qiime_make_manifest_paired,
+    qiime_multiqc_paired,
+    qiime_stats_paired,
 
 
 rule qiime_make_manifest_paired:
@@ -56,6 +58,8 @@ rule qiime_import:
         "processing/{name}/qiime/{strategy}/demux.qza",
     log:
         "logs/{name}/qiime/import_{strategy}.log",
+    group:
+        "prepare"
     resources:
         runtime=12 * 60,
     conda:
@@ -84,6 +88,8 @@ rule qiime_trim_paired:
         "processing/{name}/qiime/paired/{marker}__{f_primer}...{r_primer}/trim.qza",
     log:
         "logs/{name}/qiime/paired/{marker}__{f_primer}...{r_primer}/trim.log",
+    group:
+        "prepare"
     conda:
         config["software"]["qiime"]["conda_env"]
     threads: workflow.cores
@@ -210,7 +216,7 @@ rule taxdb_extract_taxonomy:
     conda:
         "envs/basic.yaml"
     group:
-        "obtain_taxdb"
+        "taxonomy"
     shell:
         """
         zstd -dcqf {input} | st . --to-tsv id,desc | zstd -cq > {output}
@@ -229,6 +235,8 @@ rule qiime_taxdb_import:
         config["software"]["qiime"]["conda_env"]
     log:
         "logs/taxdb/convert/{db}/qiime_import/{defined}.log",
+    group:
+        "taxonomy"
     shell:
         """
         mkdir -p {output.tmp}

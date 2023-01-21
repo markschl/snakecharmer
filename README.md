@@ -38,31 +38,40 @@ As visible in the rulegraph above, there are a few Snakemake target rules, which
 
 ### On a local computer
 
-The following command runs the test pipeline (FASTQ files from sequencing fungal mock comunities in the [`test` directory](test/)) on a local computer.
+The following command runs the test pipeline (FASTQ files from sequencing fungal mock comunities in the [`test` directory](test/), specified with `-d test`) using 6 cores on a local computer. The  [target rules](Commands.md) to be run are `denoise`, `cmp`, `taxonomy` and `ITS`.
 
 ```sh
 conda activate snakemake
 snakemake -c6 --use-conda --conda-prefix ~/conda -d test denoise cmp taxonomy ITS
 ```
 
-Note that the `~/conda` directory is used for the installation of all additional necessary software. This allows reusing the installed software across analyzes of different datasets.
+Note that the `~/conda` directory is used for the installation of all additional necessary software (`--conda-prefix` argument). This allows reusing the installed software across analyzes of different datasets.
 
 ### On a computer cluster
 
-A complete denoising run of a dataset on a HPCC with the SLURM job scheduler may look like this:
+A complete denoising run of a dataset on a HPCC may look like this (using SLURM with [this profile](https://github.com/Snakemake-Profiles/slurm#quickstart)):
 
 ```sh
 outdir=~/path/to/analysis  # must contain a config directory
 conda activate snakemake
-snakemake -j10 -c20 \
+snakemake -d $outdir \
+    -j10 -c20 \
     --use-conda --conda-prefix ~/conda \
-    --slurm \
-    -d $outdir \
-    --rerun-incomplete \
+    --profile slurm \
+    --group-components sample=50 qc=100 \
     denoise cmp taxonomy ITS \
-    --default-resources runtime=180
+    --rerun-incomplete \
+    --default-resources runtime=180 \
+    --rerun-triggers mtime
 ```
 
+This command runs a maximum of 10 simultaneous jobs (`-j`), which may run on different nodes, each job with 20 cores (`-c`). 
+
+An important part is `--group-components sample=50 qc=100`. Let's assume that 300 samples should be analyzed. By default, the USEARCH-based pipeline will do the paired-end read merging, primer trimming and quality filtering for every of those samples separately on a single CPU core, submitting one job to the cluster for every sample. The same is true for the QC (FastQC) of the raw sequencing reads. In order to limit the number of submitted jobs, `group-components` [allows processing](https://snakemake.readthedocs.io/en/v7.19.1/executing/grouping.html#job-grouping) multiple samples together, in this case 50 of them (`sample=50`), resulting in only 6 sample processing jobs to be submitted instead of 300. Since the QC is done separately for forward and reverse reads, we group together 100 single read files (`qc=100`), which should also result in 6 QC jobs.
+
+After pre-processing, the sample files are combined for denoising, which can only run on a single node. However, if many pipelines/pipeline variants should be evaluated, component grouping can also be used (e.g. `--group-components denoise=4`). Other pipelines (currently QIIME and Amptk) don't allow processing every sample separately, these rules therefore belong to a group called `prepare`. Other groups are `otutab` (OTU table construction for USEARCH pipelines) `taxonomy` (taxonomy assignment), `ITS` (ITSx) and `cmp` (sequence comparisons). It is even possible to [assign single rules to custom groups](https://snakemake.readthedocs.io/en/v7.19.1/executing/grouping.html#job-grouping).
+
+Adding `--rerun-triggers mtime` at the end is currently recommended to avoid unnecessary re-running of QIIME/Amptk jobs.
 
 ## Analyzing in R
 

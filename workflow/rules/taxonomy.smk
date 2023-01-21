@@ -10,7 +10,7 @@ rule obtain_taxdb:
         "envs/basic.yaml"
     # cache: True
     group:
-        "obtain_taxdb"
+        "taxonomy"
     shell:
         """
         $PIPELINE_DIR/workflow/scripts/taxonomy/obtain_taxdb.sh {params.par[type]} {params.par[url]} {output} 2> {log}
@@ -27,7 +27,7 @@ rule filter_taxdb:
     conda:
         "envs/basic.yaml"
     group:
-        "obtain_taxdb"
+        "taxonomy"
     shell:
         """
         if [[ "{wildcards.defined}" == "_all" ]]; then
@@ -49,7 +49,7 @@ rule make_tax_fasta:
     conda:
         "envs/basic.yaml"
     group:
-        "assign_taxonomy"
+        "taxonomy"
     shell:
         """
         tax={input.tax}
@@ -74,7 +74,7 @@ rule make_tax_biom:
     conda:
         "envs/biom.yaml"
     group:
-        "assign_taxonomy"
+        "taxonomy"
     shell:
         """
         mkdir -p $(dirname {output.tax_tmp})

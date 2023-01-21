@@ -141,6 +141,8 @@ rule usearch_collect_derep:
         all="processing/{name}/usearch/{strategy}/4_unique/{primers}/all_uniques.fasta.zst",
     log:
         "logs/{name}/usearch/{strategy}/4_collect_derep/{primers}.log",
+    group:
+        "denoise"
     conda:
         "envs/usearch-vsearch.yaml"
     resources:
@@ -240,7 +242,7 @@ rule usearch_make_otutab:
     conda:
         "envs/vsearch-samtools.yaml"
     group:
-        "denoise"
+        "otutab"
     resources:
         mem_mb=10000,
         runtime=24 * 60,
@@ -270,7 +272,7 @@ rule convert_taxdb_utax:
     conda:
         "envs/basic.yaml"
     group:
-        "obtain_taxdb"
+        "taxonomy"
     shell:
         """
         $PIPELINE_DIR/workflow/scripts/usearch/convert_utax.sh {input} {output}
@@ -290,6 +292,8 @@ rule assign_taxonomy_sintax:
         sintax="results/{name}/{pipeline}/{marker}__{primers}/{strategy}/taxonomy/sintax/{db_name}-sintax_usearch-{tax_method}.txt.gz",
     log:
         "logs/{name}/other/{strategy}/{pipeline}/{marker}__{primers}/taxonomy_sintax/{db_name}-{tax_method}.log",
+    group:
+        "taxonomy"
     conda:
         "envs/usearch-vsearch.yaml"
     threads:

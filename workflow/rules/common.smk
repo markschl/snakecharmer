@@ -275,7 +275,7 @@ rule combine_multiple_samples:
     log:
         "logs/combine_collected/{strategy}/{sample}_R{read}.log",
     group:
-        "combine_samples"
+        "sample"
     conda:
         "envs/basic.yaml"
     shell:
@@ -296,6 +296,8 @@ rule fastqc:
         zip="results/_validation/fastqc/{strategy,[^/]+}/{sample,[^/]+}/{prefix}_fastqc.zip",
     log:
         "logs/fastqc/{strategy}/{sample}/{prefix}.log",
+    group:
+        "qc"
     conda:
         "envs/fastqc.yaml"
     shell:
@@ -330,6 +332,8 @@ rule make_biom:
         biom="results/{name}/pipeline_{cluster}/{primers}/{strategy}/denoised.biom",
     log:
         "logs/{name}/other/{strategy}/pipeline_{cluster}/{primers}/make_biom.log",
+    group:
+        "denoise"
     conda:
         "envs/biom.yaml"
     shell:

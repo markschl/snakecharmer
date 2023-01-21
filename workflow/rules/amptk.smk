@@ -5,6 +5,7 @@ import lib
 
 localrules:
     amptk_collect,
+    amptk_stats_paired,
 
 
 # TODO: usearch not checked in conda environment
@@ -69,6 +70,8 @@ rule amptk_merge_trim:
         log="processing/{name}/amptk/analysis/paired/{marker}__{f_primer}...{r_primer}/illumina.amptk-demux.log",
     log:
         "logs/{name}/amptk/paired/{marker}__{f_primer}...{r_primer}/trim_merge.log",
+    group:
+        "prepare"
     conda:
         config["software"]["amptk"]["conda_env"]
     threads: workflow.cores
