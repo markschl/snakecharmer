@@ -1,7 +1,7 @@
 # Settings for different software
 software:
   qiime:
-    conda_env: qiime2-2022.8
+    conda_env: qiime2-2022.11
   amptk:
     conda_env: amptk
 

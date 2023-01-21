@@ -8,7 +8,7 @@
 #  not used in the pipelines definition below.
 software:
   qiime:
-    conda_env: qiime2-2022.8
+    conda_env: qiime2-2022.11
   amptk:
     conda_env: amptk
 
@@ -51,7 +51,7 @@ input:
 
 ##### Pipeline definition ####
 
-# Each pipeline needs two options:
+# Each workflow needs two options:
 #  cluster: name of a clustering/denoising method
 #  taxonomy: either 'default' (all databases and methods listed
 #    below under the 'taxonomy_dbs' and 'taxonomy_methods' options,
@@ -266,7 +266,7 @@ usearch:
     program: vsearch  # { vsearch, usearch }
 
 # DADA2 specific settings (still incomplete)
-# for QIIME2 DADA2 plugin docs, see https://docs.qiime2.org/2022.8/plugins/available/dada2/denoise-paired/
+# for QIIME2 DADA2 plugin docs, see https://docs.qiime2.org/2022.11/plugins/available/dada2/denoise-paired/
 dada2:
   # quality score at which sequences are truncated (--p-trunc-q)
   # (if the result is shorter than trunclen_fwd/trunclen_rev, the read is discarded)
