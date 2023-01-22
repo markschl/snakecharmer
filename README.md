@@ -9,7 +9,7 @@ This software makes use of the workflow management system [Snakemake](https://sn
 - Simultaneous processing of multi-marker amplicons generated using different primer sets
 - Multiple taxonomic assignment methods can be applied to each denoised dataset using marker-specific reference databases; currently implemented: [UNITE](https://unite.ut.ee) for Eukaryote ITS and [Midori](http://www.reference-midori.info) for mitochondrial markers (more may follow)
 
-*Note:* To this date, a few workflows for paired-end Illumina data and taxonomic assignments for Eukaryote lineages have been implemented, but the software may be extended further (see [below](#still-not-finished)).
+*Note:* To this date, a few workflows for paired-end Illumina data and taxonomic assignments for Eukaryote lineages have been implemented, but the software may be extended further (see [below](#further-steps)).
 
 No snakes 🐍 were harmed in the process of creating this software
 
