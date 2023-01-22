@@ -87,7 +87,7 @@ The R source file [`R/read_amplicon.R`](R/read_amplicon.R) provides code for rea
 There is a separate bash script `scripts/compare_results.sh`, which creates an Excel file comparing the number of reads assigned to 98% clusters of the already denoised sequences by each pipeline. A separate workbook is created for each sample. The script requires VSEARCH, as well as R with the following packages: `ggplot2`, `tidyverse`, `data.table` and `openxlsx`.
 
 
-## Still not finished...
+## Further steps...
 
 A list of possible next steps includes:
 
