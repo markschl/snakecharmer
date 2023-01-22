@@ -11,6 +11,8 @@ This software makes use of the workflow management system [Snakemake](https://sn
 
 *Note:* To this date, a few workflows for paired-end Illumina data and taxonomic assignments for Eukaryote lineages have been implemented, but the software may be extended further (see [below](#still-not-finished)).
 
+No snakes 🐍 were harmed in the process of creating this software
+
 **Non-features**
 
 The software is mainly intended for the basic tasks of obtaining an OTU table, taxonomic assignments, sequence searches and basic validation of different workflows, even though the integrated pipelines often offer additional comprehensive downstream analyses. However, the output files are in commonly used formats (such as BIOM) and can serve as input for many analysis toolkits. There is also an [import script for R](#analyzing-in-r).
@@ -97,3 +99,4 @@ A list of possible next steps includes:
 - Improve configuration of job resources (memory, CPUs)
 - The USEARCH pipeline may be moved into an extra repository to be used independently
 - ...
+
