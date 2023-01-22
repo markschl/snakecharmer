@@ -9,7 +9,7 @@ This software makes use of the workflow management system [Snakemake](https://sn
 - Simultaneous processing of multi-marker amplicons generated using different primer sets
 - Multiple taxonomic assignment methods can be applied to each denoised dataset using marker-specific reference databases; currently implemented: [UNITE](https://unite.ut.ee) for Eukaryote ITS and [Midori](http://www.reference-midori.info) for mitochondrial markers (more may follow)
 
-*Note:* To this date, a few workflows for paired-end Illumina data and taxonomic assignments for Eukaryote lineages been implemented, but the software may be extended further (see [below](#still-not-finished)).
+*Note:* To this date, a few workflows for paired-end Illumina data and taxonomic assignments for Eukaryote lineages have been implemented, but the software may be extended further (see [below](#still-not-finished)).
 
 **Non-features**
 
@@ -73,7 +73,7 @@ This command runs a maximum of 10 simultaneous jobs (`-j`), which may run on dif
 
 For the USEARCH-based pipeline, it is recommended to use `--group-components` to limit the number of submitted jobs. Let's assume that 300 samples should be analyzed. By default, paired-end read merging, primer trimming and quality filtering is done separately for every of those samples on a single CPU core, meaning  that one job is submitted to the cluster for every sample. The same is true for the QC (FastQC) of the raw sequencing reads. However, `group-components` [allows processing](https://snakemake.readthedocs.io/en/v7.19.1/executing/grouping.html#job-grouping) multiple samples together; in the above example 50 of them (`sample=50`), resulting in only six sample processing jobs to be submitted instead of 300. Since the QC is done separately for forward and reverse reads, we group together 100 single read files (`qc=100`), which results in 6 QC jobs. After pre-processing, the sequences are combined for denoising, which can only run on a single node. However, if many pipelines/pipeline variants should be evaluated, component grouping can also be used (e.g. `--group-components denoise=4`).
 
-Other pipelines (currently QIIME and Amptk) don't processing samples in parallel on different nodes. For these, the pre-processing steps belong to another group called `prepare`. Furthermore, the following groups exist: `otutab` (OTU table construction for USEARCH pipelines), `taxonomy` (taxonomy assignment), `ITS` (ITSx) and `cmp` (sequence comparisons). It is also possible to [assign single rules to custom groups](https://snakemake.readthedocs.io/en/v7.19.1/executing/grouping.html#job-grouping).
+Other pipelines (currently QIIME and Amptk) don't support processing samples in parallel on different nodes. For these, the pre-processing steps belong to another group called `prepare`. Furthermore, the following groups exist: `otutab` (OTU table construction for USEARCH pipelines), `taxonomy` (taxonomy assignment), `ITS` (ITSx) and `cmp` (sequence comparisons). It is also possible to [assign single rules to custom groups](https://snakemake.readthedocs.io/en/v7.19.1/executing/grouping.html#job-grouping).
 
 ## Analyzing in R
 
@@ -82,7 +82,7 @@ The R source file [`R/read_amplicon.R`](R/read_amplicon.R) provides code for rea
 
 ## Comparison of denoising/clustering pipelines
 
-There is a separate bash script `scripts/compare_results.sh`, which creates an Excel file comparing the number of reads assigned to each 98% cluster by each pipeline. A separate workbook is created for each sample. The script requires VSEARCH, as well as R with the following packages: `ggplot2`, `tidyverse`, `data.table` and `openxlsx`.
+There is a separate bash script `scripts/compare_results.sh`, which creates an Excel file comparing the number of reads assigned to 98% clusters of the already denoised sequences by each pipeline. A separate workbook is created for each sample. The script requires VSEARCH, as well as R with the following packages: `ggplot2`, `tidyverse`, `data.table` and `openxlsx`.
 
 
 ## Still not finished...
@@ -92,7 +92,8 @@ A list of possible next steps includes:
 - Enable single-end analyses and other platforms than Illumina
 - Integrate more pipelines / clustering methods
 - Integrate more taxonomy databases
+- Offer more ways of comparing and validating pipelines and generally improve user experience
 - Testing deployment on different systems
 - Improve configuration of job resources (memory, CPUs)
-- The USEARCH pipeline may be moved into an extra repository to be used independently. This repo focuses on the comparison of a variety of different pipelines as well as handling complex cases (e.g. several primer combinations).
+- The USEARCH pipeline may be moved into an extra repository to be used independently
 - ...
