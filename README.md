@@ -1,4 +1,4 @@
-# Amplicon data processing for diversity analysis using different workflows
+# Amplicon data processing workflows for diversity analysis
 
 This software makes use of the workflow management system [Snakemake](https://snakemake.github.io/) to build and integrate different amplicon workflows and allows for the flexible processing of data from different markers.
 
