@@ -9,7 +9,7 @@ This software makes use of the workflow management system [Snakemake](https://sn
 - Simultaneous processing of multi-marker amplicons generated using different primer sets
 - Multiple taxonomic assignment methods can be applied to each denoised dataset using marker-specific reference databases; currently implemented: [UNITE](https://unite.ut.ee) for Eukaryote ITS and [Midori](http://www.reference-midori.info) for mitochondrial markers (more may follow)
 
-*Note:* To this date, a few workflows for paired-end Illumina data and taxonomic assignments for Eukaryote lineages have been implemented, but the software may be extended further (see [below](#further-steps)).
+*Note:* To this date, a few workflows for paired-end Illumina data and taxonomic assignments for Eukaryote lineages have been implemented, but the software will be extended further (see [below](#further-steps)).
 
 No snakes 🐍 were harmed in the process of creating this software
 
@@ -19,14 +19,14 @@ The software is mainly intended for the basic tasks of obtaining an OTU table, t
 
 **Integrated pipelines**
 
-- [USEARCH](https://www.drive5.com/usearch/manual)/[VSEARCH](https://github.com/torognes/vsearch)-based amplicon pipeline using UNOISE3 for obtaining ASVs (implemented here from scratch with Snakemake)
-- [QIIME2](https://qiime2.org) (DADA2 denoising)
+- [USEARCH](https://www.drive5.com/usearch/manual)/[VSEARCH](https://github.com/torognes/vsearch)-based amplicon pipeline using UNOISE3 for obtaining ASVs
+- [QIIME2](https://qiime2.org) (currently with DADA2 denoising)
 - [Amptk](https://github.com/nextgenusfs/amptk) (UNOISE3 and DADA2)
 - ... (more to follow)
 
 **Validation**
 
-Validation is currently done using amplicon data from a fungal mock community ([details in `test` directory](test/README.md)) and the results of the different pipelines can be compared [using a script](#comparison-of-denoisingclustering-pipelines).
+Validation is done using amplicon data from a fungal mock community ([details in `test` directory](test/README.md)) and a basic comparison of the different pipelines can be done [using a script](#comparison-of-denoisingclustering-pipelines).
 
 ## Installing
 
@@ -34,15 +34,15 @@ The pipeline makes use of the [Conda package manager](https://conda.io), the ins
 
 ## Configuring
 
-The easiest is to copy the contents of the [config](config/) directory into the future analysis directory and then modify the files according to your needs. [`config.yaml`](config/config.yaml) contains all settings, while the taxonomic databases can be configured in [`taxonomy.yaml`](config/taxonomy.yaml). Please refer to the comments in these config files.
+The easiest is to copy the contents of the [config](config/) directory (or [test/config](test/config)) into the future analysis directory and then modify the files according to your needs. [`config.yaml`](config/config.yaml) contains all settings, while the taxonomic databases can be configured in [`taxonomy.yaml`](config/taxonomy.yaml). For the time being, please refer to the comments in these config files.
 
 ## Running
 
-There are a few Snakemake target rules, which can be run independently (even though they also partly depend on each other). A complete list of commands is [found here](Commands.md).
+There are a few Snakemake target rules, which can be run independently (even though they also partly depend on each other). A complete list of commands is [found here](docs/rules.md).
 
 ### On a local computer
 
-The following command runs the test pipeline (FASTQ files from sequencing fungal mock comunities in the [`test` directory](test/), specified with `-d test`) using 6 cores on a local computer. The  [target rules](Commands.md) to be run are `denoise`, `cmp`, `taxonomy` and `ITS`.
+The following command runs the test pipeline (FASTQ files from sequencing fungal mock comunities in the [`test` directory](test/), specified with `-d test`) using 6 cores on a local computer. The  [target rules](docs/rules.md) to be run are `denoise`, `cmp`, `taxonomy` and `ITS`.
 
 ```sh
 conda activate snakemake
@@ -50,6 +50,46 @@ snakemake -c6 --use-conda --conda-prefix ~/conda -d test denoise cmp taxonomy IT
 ```
 
 Note that the `~/conda` directory is used for the installation of all additional necessary software (`--conda-prefix` argument). This allows reusing the installed software across analyzes of different datasets.
+
+### Output
+
+After running, a few additional directories will have appeared next to `config`. The most important one is the `results` directory, which roughly has the following structure ([more details here](docs/output.md)):
+
+```
+📦<my_analysis>
+ ├─ 📂 config
+ │  ├─ 🗋 config.yaml
+ │  └─ 🗋 taxonomy.yaml
+ │  (...)
+ ├─ 📂 results
+ │  ├─ 📂 <workflow name>
+ │  │  ├─ 📂 data
+ │  │  │  ├─ 🗋 denoised.fasta
+ │  │  │  ├─ 🗋 denoised_otutab.txt.gz
+ │  │  │  ├─ 🗋 denoised.biom
+ │  │  │  ├─ 🗋 denoised_search.txt.gz
+ │  │  │  ├─ 📂 taxonomy
+ │  │  │  │  ├─ 🗋 <database>-<method>-<name>..txt.gz
+ │  │  │  │  ├─ 🗋 <database>-<method>-<name>.biom.gz
+ │  │  │  │  │  (...)
+ │  │  │  ├─ 📂 cmp
+ │  │  │  │  ├─ 🗋 <my_seq_comparison>.txt
+ │  │  │  │  ├─ 🗋 <my_seq_comparison>_notmatched.fasta.gz
+ │  │  │  │  ├─ 🗋 <my_seq_comparison>_denoised_notmatched.fasta.gz
+ │  │  │  │  │  (...)
+ │  │  │  ├─ 📂 [ITSx]
+ │  │  │  │  ├─ 🗋 out.positions.txt
+ │  │  │  │  └─ (...)
+ │  │  ├─ 📂 pipeline_<type>
+ │  │  │  ├─ 📂 <marker>__<fwd-primer>...<rev-primer>
+ │  │  │  │  └─ 📂 <single/paired>
+ │  │  │  │     └─ (... same as in *data* directory, only relevant with 
+ │  │  │  │             multi-marker/workflow setups)
+```
+
+Whether the output are ASVs/ESVs or OTUs from a fixed threshold clustering (not yet implemented), the resulting FASTA file is always called `denoised.fasta`. The sample/OTU count matrix is returned both in the traditional tabular format (`denoised_otutab.txt.gz`) and [BIOM v1](https://biom-format.org/documentation/biom_format.html). The taxonomic annotations are named by taxonomy database and assignment method (multiple combinations possible) and returned in a QIIME-style tabular format as well as the BIOM format. Furthermore, there can be results of sequence comparisons (`cmp`) or marker-specific data such as ITSx results.
+
+With the most simple scenario (one workflow with one primer combination), the relevant results directory is `<my_analysis>/results/<pipeline_name>/data`. With multi-workflow/marker setups, the `data` directory will not be present, and the individual workflow results are placed in the nested directories.
 
 ### On a computer cluster
 
@@ -73,7 +113,7 @@ This command runs a maximum of 10 simultaneous jobs (`-j`), which may run on dif
 
 #### Job grouping
 
-For the USEARCH-based pipeline, it is recommended to use `--group-components` to limit the number of submitted jobs. Let's assume that 300 samples should be analyzed. By default, paired-end read merging, primer trimming and quality filtering is done separately for every of those samples on a single CPU core, meaning  that one job is submitted to the cluster for every sample. The same is true for the QC (FastQC) of the raw sequencing reads. However, `group-components` [allows processing](https://snakemake.readthedocs.io/en/v7.19.1/executing/grouping.html#job-grouping) multiple samples together; in the above example 50 of them (`sample=50`), resulting in only six sample processing jobs to be submitted instead of 300. Since the QC is done separately for forward and reverse reads, we group together 100 single read files (`qc=100`), which results in 6 QC jobs. After pre-processing, the sequences are combined for denoising, which can only run on a single node. However, if many pipelines/pipeline variants should be evaluated, component grouping can also be used (e.g. `--group-components denoise=4`).
+For the USEARCH-based pipeline, it is recommended to use `--group-components` to limit the number of submitted jobs. Let's assume that 300 paired-end samples should be analyzed. Specifying `--group-components sample=50` will make sure that paired-end read merging, primer trimming and quality filtering is done in batches of 50 samples, and thus only six sample processing jobs have to be submitted to the cluster instead of 300. The same can be done for QC jobs on individual read files by specifying `qc=100` (again to obtain six jobs). After pre-processing, the sequences are combined for denoising, which can only run on a single node. However, if many workflows should be evaluated simultaneously, component grouping can also be used (e.g. `--group-components denoise=4`).
 
 Other pipelines (currently QIIME and Amptk) don't support processing samples in parallel on different nodes. For these, the pre-processing steps belong to another group called `prepare`. Furthermore, the following groups exist: `otutab` (OTU table construction for USEARCH pipelines), `taxonomy` (taxonomy assignment), `ITS` (ITSx) and `cmp` (sequence comparisons). It is also possible to [assign single rules to custom groups](https://snakemake.readthedocs.io/en/v7.19.1/executing/grouping.html#job-grouping).
 
@@ -91,9 +131,9 @@ There is a separate bash script `scripts/compare_results.sh`, which creates an E
 
 A list of possible next steps includes:
 
-- Enable single-end analyses and other platforms than Illumina
-- Integrate more pipelines / clustering methods
-- Integrate more taxonomy databases
+- Integrate more pipelines / clustering methods and taxonomy databases
+- Integrate other platforms than Illumina and allow simultaneous analysis of multi-platform data
+- Allow for separate analysis of sequencing runs and result merging
 - Offer more ways of comparing and validating pipelines and generally improve user experience
 - Testing deployment on different systems
 - Improve configuration of job resources (memory, CPUs)

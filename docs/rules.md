@@ -29,7 +29,160 @@
 - **clean_taxdb**: Removes the `refdb` directory
 - **clean_tax**, **clean_cmp**, **clean_itsx**: Removes the `taxonomy`, `cmp` or `ITSx` directories in all results directories.
 
-## List of output directories / files
+## Output directories / files
+
+### Example file structure
+
+Usually the results are found in `<my analysis>/results/<workflow name>/data` within analysis directory. `data` is actually a symbolic link to another nested directory and is only present if each workflow in the `results` directory has only a single primer combination (marker) and paired/single-end data is not mixed. Here is a full example result of the `denoise`, `taxonomy`, `cmp` and `ITS` rules. The latter runs ITSx, but only for ITS amplicons.
+
+```
+📦my_analysis
+ ├ 📂 config
+ │ ├ 🗋 config.yaml
+ │ └ 🗋 taxonomy.yaml
+ ├ 📂 input
+ │ ├ 📂 grouped
+ │ │ └ ... (links or copies of input samples used internally)
+ │ └ 📂 unique_samples
+ │ │ ├ 🗋 sample1_R1.fastq.gz
+ │ │ ├ 🗋 sample1_R2.fastq.gz
+ │ │ ├ 🗋 sample2_R1.fastq.gz
+ │ │ ├ 🗋 sample2_R2.fastq.gz
+ │ │ └ ... (symlinks to all input files)
+ ├ 📂 logs
+ │ └ ... (log files for every step)
+ ├ 📂 processing
+ │ └ ... (temporary data, sometimes very large, remove with 'clean' rule)
+ ├ 📂 refdb
+ │ └ ... (reference databases grouped by marker)
+ ├ 📂 results
+ │ ├ 📂 unoise
+ │ │ ├ 📂 data  [symlink to -> 📂 paired directory]
+ │ │ ├ 📂 pipeline_usearch_unoise3
+ │ │ │ ├ 📂 ITS__ITS3-KYO2...ITS4ngsUni
+ │ │ │ │ └ 📂 paired
+ │ │ │ │ │ ├ 🗋 denoised.fasta
+ │ │ │ │ │ ├ 🗋 denoised.biom
+ │ │ │ │ │ ├ 🗋 denoised_otutab.txt.gz
+ │ │ │ │ │ └ 🗋 denoised_search.txt.gz
+ │ │ │ │ │ ├ 📂 taxonomy
+ │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sintax_70.txt.gz
+ │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sintax_70.biom.gz
+ │ │ │ │ │ │ └ 🗋 unite-sintax_usearch-sklearn_70.txt.gz
+ │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sklearn_70.biom.gz
+ │ │ │ │ │ │ ├ 📂 fasta
+ │ │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sintax_70.fasta.gz
+ │ │ │ │ │ │ │ └ 🗋 unite-sintax_usearch-sklearn_70.fasta.gz
+ │ │ │ │ │ │ ├ 📂 sintax
+ │ │ │ │ │ │ │ └ ... (original SINTAX output)
+ │ │ │ │ │ ├ 📂 cmp
+ │ │ │ │ │ │ ├ 🗋 my_file_comparison.txt
+ │ │ │ │ │ │ ├ 🗋 my_file_comparison.bam
+ │ │ │ │ │ │ ├ 🗋 my_file_comparison.bam.bai
+ │ │ │ │ │ │ ├ 🗋 my_file_comparison_denoised_notmatched.fasta.gz
+ │ │ │ │ │ │ └ 🗋 my_file_comparison_notmatched.fasta.gz
+ │ │ │ │ │ ├ 📂 [ITSx]
+ │ │ │ │ │ │ ├ 🗋 out.positions.txt
+ │ │ │ │ │ │ └ ... (ITSx output)
+ │ │ │ ├ 📂 _validation
+ │ │ │ │ ├ 📂 multiqc
+ │ │ │ │ │ └ 🗋 multiqc_report.html  [including primer-trimming report]
+ │ │ │ │ └ 🗋 sample_report.tsv
+ │ ├ 📂 _validation
+ │ │ └ ... (FastQC / MultiQC results)
+ │ ├ 🗋 samples.tsv
+ │ └ 🗋 samples.yaml
+```
+
+#### Multi-workflow/marker results
+
+ In the case of multiple primer / marker / sequencing strategy combinations, the individual results are available using the full path: `results/<workflow name>/pipeline_<name>/<marker>__<fwd-primer>...<rev-primer>/<strategy>/` whereby *strategy* refers to the paired-end (`paired`) or single-end (not yet implemented) sequencing strategy. The following (simplified) directory structure results from running the two workflows named `unoise` and `qiime_dada2`, each with three primer combinations for two markers:
+
+```
+📦my_analysis
+ ├ 📂 results
+ │ ├ 📂 _validation
+ │ │ └ ... (FastQC / MultiQC results)
+ │ ├ 📂 unoise
+ │ │ ├ 📂 pipeline_usearch_unoise3
+ │ │ │ ├ 📂 ITS__ITS3-KYO2...ITS4ngsUni
+ │ │ │ │ └ 📂 paired
+ │ │ │ │ │  └ ...
+ │ │ │ ├ 📂 ITS__gITS7ngs...ITS4ngsUni
+ │ │ │ │ └ 📂 paired
+ │ │ │ │ │  └ ...
+ │ │ │ ├ 📂 COI__BF2...BR2
+ │ │ │ │ └ 📂 paired
+ │ │ │ │ │  └ ...
+ │ │ └ 🗋 config.yaml
+ │ ├ 📂 qiime_dada2
+ │ │ ├ 📂 pipeline_qiime_dada2
+ │ │ │ ├ 📂 ITS__ITS3-KYO2...ITS4ngsUni (...)
+ │ │ │ ├ 📂 ITS__gITS7ngs...ITS4ngsUni (...)
+ │ │ │ ├ 📂 COI__BF2...BR2 (...)
+ │ │ └ 🗋 config.yaml
+ │ ├ 🗋 samples.tsv
+ │ └ 🗋 samples.yaml
+```
+
+The `config/config.yaml` file structure corresponding to this setup:
+
+```yaml
+input:
+  (...)
+
+pipelines:
+  unoise:
+    cluster: usearch_unoise3
+    taxonomy: default
+  qiime_dada2:
+    cluster: qiime_dada2
+    taxonomy: default
+
+compare:
+  my_file_comparison:
+    file: my_sequences.fasta
+    ident_threshold: 0.9
+
+primers:
+  ITS:
+    forward: 
+      - ITS3-KYO2: GGGATGAAGAACGYAGYRAA
+      - gITS7ngs: GTGARTCATCRARTYTTTG
+    reverse:
+      - ITS4ngsUni: CCTSCSCTTANTDATATGC
+    combinations: default
+  COI:
+    forward:
+      -BF2: GCHCCHGAYATRGCHTTYCC
+    reverse:
+      -BR2: TCDGGRTGNCCRAARAAYCA
+    combinations: default
+  (...)
+
+taxonomy_dbs:
+  ITS:
+    unite:
+      db: unite_eukarya_all
+      defined: species
+  COI:
+    midori:
+      db: Midori_COI
+      defined: species
+
+taxonomy_methods:
+  sintax_70:
+    method: sintax_usearch
+    confidence: 0.7
+  sklearn_70:
+    method: qiime_sklearn
+    confidence: 0.7
+
+(...)
+```
+
+### Detailed description
+
 
 - **input**: Contains all input sequence files (FASTQ, generated by *collect_input* and many other commands)
   - **input/grouped**: hierarchical grouping of the files, which is then used as input for the pipelines.
