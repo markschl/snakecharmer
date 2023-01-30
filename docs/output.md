@@ -37,11 +37,11 @@ Usually the results are found in `<my analysis>/results/<workflow name>/data` wi
  │ │ │ │ │ ├ 📂 taxonomy
  │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sintax_70.txt.gz
  │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sintax_70.biom.gz
- │ │ │ │ │ │ └ 🗋 unite-sintax_usearch-sklearn_70.txt.gz
- │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sklearn_70.biom.gz
+ │ │ │ │ │ │ └ 🗋 unite-qiime_sklearn-sklearn_70.txt.gz
+ │ │ │ │ │ │ ├ 🗋 unite-qiime_sklearn-sklearn_70.biom.gz
  │ │ │ │ │ │ ├ 📂 fasta
  │ │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sintax_70.fasta.gz
- │ │ │ │ │ │ │ └ 🗋 unite-sintax_usearch-sklearn_70.fasta.gz
+ │ │ │ │ │ │ │ └ 🗋 unite-qiime_sklearn-sklearn_70.fasta.gz
  │ │ │ │ │ │ ├ 📂 sintax
  │ │ │ │ │ │ │ └ ... (original SINTAX output)
  │ │ │ │ │ ├ 📂 cmp
