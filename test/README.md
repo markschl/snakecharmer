@@ -42,7 +42,7 @@ The results of the comparison are found in `test/mock_cmp`. The mock community i
 In order to further carefully validate this pipeline, the test data was further analyzed using example scripts from the online documentation of the different tools, currently:
 
 * [USEARCH pipeline](https://www.drive5.com/usearch/manual/ex_miseq_its.html) for MiSeq 2x300 fungal ITS
-* [VSEARCH "alternative" pipeline](https://github.com/torognes/vsearch/wiki/Alternative-VSEARCH-pipeline/c4859786f05bba35d8c306de4a3d64fea40d9dbf) slightly modified to use UNOISE3 following the [this description](https://github.com/torognes/vsearch/pull/283). The pipeline follows the USEARCH strategy for OTU table construction, but using quality filtered instead of raw/unfiltered reads (as [recommended by USEARCH](https://www.drive5.com/usearch/manual/cmd_otutab.html)). Our pipeline currently follows the USEARCH approach with a 97% identity threshold. In the future, this should be configurable.
+* [VSEARCH "alternative" pipeline](https://github.com/torognes/vsearch/wiki/Alternative-VSEARCH-pipeline/c4859786f05bba35d8c306de4a3d64fea40d9dbf) slightly modified to use UNOISE3 following the [this description](https://github.com/torognes/vsearch/pull/283). The VSEARCH "alternative" pipeline contains an extra step of read mapping against the OTUs to obtain the count table, using quality filtered reads in this case. The workflow from this repository maps the raw/unfiltered reads instead (with a 97% identity threshold), [as recommended by the USEARCH author](https://www.drive5.com/usearch/manual/cmd_otutab.html). In the future, this should be configurable.
 
 The following script runs the "simple" workflows and compares the results with the outcomes of our test pipeline:
 
