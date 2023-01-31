@@ -2,7 +2,7 @@
 
 ## Rule graph
 
-![rule graph](../rulegraph.png)
+![rule graph](https://raw.githubusercontent.com/markschl/snakecharmer/main/rulegraph.png)
 
 ## List of rules
 
