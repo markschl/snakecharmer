@@ -48,12 +48,14 @@ def collect_sample_files(
     if directories is not None:
         if recursive is True:
             for rd in directories:
+                rd = os.path.expanduser(rd)
                 for root, _, fnames in os.walk(rd):
                     for f in fnames:
                         yield os.path.join(root, f)
         else:
             for root in directories:
-                for f in os.listdirs(root):
+                root = os.path.expanduser(root)
+                for f in os.listdir(root):
                     yield os.path.join(root, f)
 
 
