@@ -18,7 +18,7 @@ from snakemake.workflow import srcdir
 
 # Set environment variable of pipeline root dir to allow post-deploy
 # scripts to run other scripts stored in that directory
-# TODO: kind of a hack, not sure if it works in all cases; possibly replace with standard Snakemake scripts
+# TODO: kind of a hack, not sure if it works in all cases; replace with standard Snakemake scripts
 os.environ['PIPELINE_DIR'] = dirname(dirname(dirname(srcdir('.'))))
 
 
@@ -71,8 +71,11 @@ def parse_sample(f, pattern: Pattern[str]) -> Tuple[str, int]:
     if m is None:
         raise Exception(
             'Sample name "{}" not matched by Regex pattern "{}". Is '
-            'the name_pattern option correctly specified? Regex patterns '
-            'can be debugged e.g. on https://regexr.com'.format(
+            'the name_pattern option correctly specified?',
+            'Note that if specifying a directories list as input,'
+            'all files need to be actual read files (e.g. Illumina index files present)'
+            'in the directory as well will cause this error.\n'
+            'Regex patterns can be debugged e.g. on https://regex101.com or https://regexr.com'.format(
                 f, pattern.pattern)
         )
     sample_name = m.group(1)

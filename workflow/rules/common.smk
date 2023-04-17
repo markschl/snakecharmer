@@ -76,6 +76,10 @@ link_paths_flat = [p for _, paths in link_paths
                    for p in paths]
 
 
+if len(link_paths_flat) == 0:
+    raise Exception('No sample files found! Are the input directories/patterns correctly specified?')
+
+
 #### Configuration ####
 
 
