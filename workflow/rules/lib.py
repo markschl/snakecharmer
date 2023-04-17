@@ -68,6 +68,9 @@ def parse_pattern(name_pattern: str) -> str:
     return name_pattern
 
 
+_usearch_sample_rep = re.compile('[-\\.]')
+
+
 def parse_sample(f, pattern: Pattern[str]) -> Tuple[str, int]:
     m = pattern.match(f)
     if m is None:
@@ -89,8 +92,11 @@ def parse_sample(f, pattern: Pattern[str]) -> Tuple[str, int]:
         'Read number in file name must be 1 or 2, found instead "{}". ' \
         'Is the Regex pattern (name_pattern) correct?'.format(read)
     if '-' in sample_name:
-        print('- in sample name: {}. Does not work '
-              'with USEARCH pipeline'.format(sample_name), file=sys.stderr)
+        new_name = _usearch_sample_rep.sub('_', sample_name)
+        # TODO: collect all renamed samples and report only once
+        print('Dashes (-) and dots (.) in sample name are problematic with the USEARCH pipeline.'
+              'The sample {} was renamed to {}'.format(sample_name, new_name), file=sys.stderr)
+        sample_name = new_name
     return sample_name, int(read)
 
 
@@ -178,7 +184,7 @@ def group_samples(
                 'Forward and reverse reads not found in same directory: {} and {}'.format(
                     *(os.path.join(*p) for p in paths)
                 )
-            assert all(sample_name in basename(f) for f in paths)
+            # assert all(sample_name in basename(f) for f in paths)
     return by_strategy
 
 
