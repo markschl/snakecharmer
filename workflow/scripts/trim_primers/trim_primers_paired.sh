@@ -38,8 +38,9 @@ zstd -dcq "$input_file" |
     "$@" 2> $outdir/"$sample"_rev.log |
   st split --fq -o "$outdir/{a:fwd}...{a:rev}.fastq"
 
-zstd -q --rm "$outdir/"*...*.fastq
-zstd -q --rm "$short_file"
+if [ -e "$short_file" ]; then
+  zstd -qf --rm "$short_file"
+fi
 
 # add sample name to cutadapt logs: a hack needed for multiqc to recognize the sample
 sed -i -E "s/(Command line parameters[^$]+$)/\1 $sample.fastq.gz/g" $outdir/"$sample"_fwd.log
