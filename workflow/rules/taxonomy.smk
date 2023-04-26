@@ -1,4 +1,9 @@
 
+localrules:
+    clean_taxdb,
+    clean_tax,
+
+
 rule obtain_taxdb:
     params:
         par=lambda w: config["taxonomy_dbs"][w.marker][w.db],
@@ -8,7 +13,8 @@ rule obtain_taxdb:
         "logs/taxdb/obtain/{marker}/{db}.log",
     conda:
         "envs/basic.yaml"
-    # cache: True
+    # cache:
+    #     True
     group:
         "taxonomy"
     shell:
@@ -87,3 +93,12 @@ rule make_tax_biom:
           --sc-separated taxonomy --float-fields Confidence --output-as-json |
           gzip -nc > {output.biom}
         """
+
+
+rule clean_taxdb:
+    shell:
+        "rm -Rf refdb"
+
+rule clean_tax:
+    shell:
+        "rm -Rf results/*/pipeline_*/*/*/taxonomy"

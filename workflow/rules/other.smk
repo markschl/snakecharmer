@@ -1,5 +1,12 @@
 
 
+localrules:
+    clean,
+    clean_all,
+    clean_itsx,
+    clean_cmp,
+
+
 rule itsx:
     params:
         par=config["ITSx"],
@@ -79,3 +86,12 @@ rule vsearch_global:
         rm -f $sam "$db.fai"
         samtools index $bam 2> {log}
         """
+
+
+rule clean_itsx:
+    shell:
+        "rm -Rf results/*/pipeline_*/*/*/ITSx"
+
+rule clean_cmp:
+    shell:
+        "rm -Rf results/*/pipeline_*/*/*/cmp"

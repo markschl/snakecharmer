@@ -16,6 +16,7 @@ validate(config, "config.schema.yaml")
 
 
 include: "rules/common.smk"
+include: "rules/qc.smk"
 include: "rules/usearch.smk"
 if "qiime" in config["software"]:
     include: "rules/qiime.smk"
@@ -132,10 +133,6 @@ rule cmp:
 localrules:
     clean,
     clean_all,
-    clean_taxdb,
-    clean_tax,
-    clean_itsx,
-    clean_cmp,
 
 
 rule clean:
@@ -145,19 +142,3 @@ rule clean:
 rule clean_all:
     shell:
         "rm -Rf results input/grouped processing logs"
-
-rule clean_taxdb:
-    shell:
-        "rm -Rf refdb"
-
-rule clean_tax:
-    shell:
-        "rm -Rf results/*/pipeline_*/*/*/taxonomy"
-
-rule clean_itsx:
-    shell:
-        "rm -Rf results/*/pipeline_*/*/*/ITSx"
-
-rule clean_cmp:
-    shell:
-        "rm -Rf results/*/pipeline_*/*/*/cmp"
