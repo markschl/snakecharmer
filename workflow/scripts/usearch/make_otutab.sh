@@ -18,8 +18,8 @@ map="$1" && shift
 bam="$1" && shift
 notmatched="$1" && shift
 
-sam=${bam%.*}.sam
-notmatched=${notmatched%.*}
+sam="${bam%.*}.sam"
+notmatched="${notmatched%.*}"
 
 if [[ "$program" == "vsearch" ]]; then
     zstd -dcq "$uniques_compr" |
@@ -37,7 +37,7 @@ if [[ "$program" == "vsearch" ]]; then
 
     # SAM -> BAM
     rm -f "$otus".fai "$bam".bai
-    samtools view -T "$otus" -b $sam |
+    samtools view -T "$otus" -b "$sam" |
         samtools sort -@ $threads > "$bam"
     rm $sam "$otus".fai
     samtools index "$bam"
