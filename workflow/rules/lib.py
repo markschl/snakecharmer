@@ -27,10 +27,20 @@ os.environ['PIPELINE_DIR'] = dirname(dirname(dirname(srcdir('.'))))
 
 def collect_samples(name_pattern: str, *args, **kwargs) -> Tuple[str, str, str, int]:
     _name_pat = re.compile(parse_pattern(name_pattern))
+    renamed_samples = []
     for f in collect_sample_files(*args, **kwargs):
         root, fname = os.path.split(os.path.abspath(f))
-        sample_name, read = parse_sample(fname, _name_pat)
+        sample_name, read, renamed = parse_sample(fname, _name_pat)
+        if renamed:
+            renamed_samples.append(sample_name)
         yield sample_name, root, fname, read
+    if renamed_samples:
+        renamed_samples = list(OrderedDict(zip(renamed_samples, renamed_samples)).keys())
+        print(
+            'Dashes (-) or dots (.) in sample names were replaced by underscores '
+            'since they are not compatible with the USEARCH pipeline: {}'.format(format_list(renamed_samples)), 
+            file=sys.stderr
+        )
 
 
 def collect_sample_files(
@@ -71,7 +81,7 @@ def parse_pattern(name_pattern: str) -> str:
 _usearch_sample_rep = re.compile('[-\\.]')
 
 
-def parse_sample(f, pattern: Pattern[str]) -> Tuple[str, int]:
+def parse_sample(f, pattern: Pattern[str]) -> Tuple[str, int, bool]:
     m = pattern.match(f)
     if m is None:
         raise Exception(
@@ -91,13 +101,10 @@ def parse_sample(f, pattern: Pattern[str]) -> Tuple[str, int]:
     assert (read in ('1', '2')), \
         'Read number in file name must be 1 or 2, found instead "{}". ' \
         'Is the Regex pattern (name_pattern) correct?'.format(read)
-    if '-' in sample_name:
-        new_name = _usearch_sample_rep.sub('_', sample_name)
-        # TODO: collect all renamed samples and report only once
-        print('Dashes (-) and dots (.) in sample name are problematic with the USEARCH pipeline.'
-              'The sample {} was renamed to {}'.format(sample_name, new_name), file=sys.stderr)
-        sample_name = new_name
-    return sample_name, int(read)
+    rename = '-' in sample_name
+    if rename:
+        sample_name = _usearch_sample_rep.sub('_', sample_name)
+    return sample_name, int(read), rename
 
 
 def group_samples(
@@ -439,3 +446,10 @@ def file_md5(filename):
         for chunk in iter(lambda: f.read(4096), b""):
             md5.update(chunk)
         return md5.hexdigest()
+
+
+def format_list(l, cutoff=10):
+    out = ", ".join(l[:10])
+    if len(l) > cutoff:
+        out += '...'
+    return out
