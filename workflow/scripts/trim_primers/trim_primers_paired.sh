@@ -46,14 +46,22 @@ fi
 sed -i -E "s/(Command line parameters[^$]+$)/\1 $sample.fastq.gz/g" $outdir/"$sample"_fwd.log
 sed -i -E "s/(Command line parameters[^$]+$)/\1 $sample.fastq.gz/g" $outdir/"$sample"_rev.log
 
-# parse logfiles to obtain total numbers
-extract_num() {
-  sed -E 's/[^0-9]+([0-9,]+).*/\1/g' | tr -d ','
-}
-n=$(grep 'Total reads processed' "$outdir/$sample"_fwd.log | extract_num)
-n_trimmed_f=$(grep 'Reads with adapters' "$outdir/$sample"_fwd.log | extract_num)
-n_trimmed_r=$(grep 'Reads with adapters' "$outdir/$sample"_rev.log | extract_num)
-# TODO: this reports only the reverse sequences that are long enough,
-# not very intuitive
-n_long=$(grep 'Reads written' "$outdir/$sample"_rev.log | extract_num)
+# statistics
+if grep -q "No reads processed!" $outdir/"$sample"_fwd.log; then
+  n=0
+  n_trimmed_f=0
+  n_trimmed_r=0
+  n_long=0
+else
+  # parse logfiles to obtain total numbers
+  extract_num() {
+    sed -E 's/[^0-9]+([0-9,]+).*/\1/g' | tr -d ','
+  }
+  n=$(grep 'Total reads processed' "$outdir/$sample"_fwd.log | extract_num)
+  n_trimmed_f=$(grep 'Reads with adapters' "$outdir/$sample"_fwd.log | extract_num)
+  n_trimmed_r=$(grep 'Reads with adapters' "$outdir/$sample"_rev.log | extract_num)
+  n_long=$(grep 'Reads written' "$outdir/$sample"_rev.log | extract_num)
+  # TODO (when turning into Python script): this reports only the reverse sequences that are long enough,
+  # not very intuitive
+fi
 printf "$n\t$n_trimmed_f\t$n_trimmed_r\t$n_long" > "$outdir/$sample"_stats.txt

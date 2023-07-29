@@ -87,11 +87,15 @@ rule make_tax_biom:
         gzip -dc {input.tax} | 
           sed 's/Taxon/taxonomy/g' |
           sed 's/Feature ID/# Feature ID/g' > {output.tax_tmp}
-        biom add-metadata -i {input.biom}  \
-          -o /dev/stdout \
-          --observation-metadata-fp {output.tax_tmp} \
-          --sc-separated taxonomy --float-fields Confidence --output-as-json |
-          gzip -nc > {output.biom}
+        if [[ $(wc -l < "{output.tax_tmp}") -ge 2 ]]; then
+            biom add-metadata -i {input.biom}  \
+            -o /dev/stdout \
+            --observation-metadata-fp {output.tax_tmp} \
+            --sc-separated taxonomy --float-fields Confidence --output-as-json |
+            gzip -nc > {output.biom}
+        else
+            echo -n | gzip -nc > {output.biom}
+        fi
         """
 
 

@@ -37,11 +37,15 @@ if [[ "$program" == "vsearch" ]]; then
         "$@"
 
     # SAM -> BAM
+    if [ -s "$otus" ]; then
     rm -f "$otus".fai "$bam".bai
-    samtools view -T "$otus" -b "$sam" |
-        samtools sort -@ $threads > "$bam"
-    rm $sam "$otus".fai
-    samtools index "$bam"
+        samtools view -T "$otus" -b "$sam" |
+            samtools sort -@ $threads > "$bam"
+        rm $sam "$otus".fai
+        samtools index "$bam"
+    else
+        echo -n > "$bam"
+    fi
 
 elif [[ "$program" == "usearch" ]]; then
     uniques=$(mktemp ${uniques_compr%.fasta.zst}.XXXXXX.fasta)

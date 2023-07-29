@@ -90,6 +90,7 @@ rule trim_primers_paired:
             --error-rate {params.par[max_error_rate]} \
             --overlap {params.par[min_overlap]} \
              2> {log}
+        # TODO: default to --no-indels? \
         # compress and rename to contain marker name
         # TODO: kind of complicated procedure
         prefix=processing/{wildcards.name}/usearch/paired/2_trim/{wildcards.sample}/merged
@@ -99,12 +100,12 @@ rule trim_primers_paired:
             if [ -f "$prefix/$comb.fastq" ]; then
                 zstd --rm -qf "$prefix/$comb.fastq" -o "$prefix/$marker_comb.fastq.zst" 2>> {log}
             else
-                echo "No sequences with both forward and reverse primer ($marker_comb) were found in sample {wildcards.sample}" >&2
+                echo "No sequences with both forward and reverse primer ($marker_comb) were found in sample {wildcards.sample}" > {log}
                 echo -n | zstd -cq > "$prefix/$marker_comb.fastq.zst" 2>> {log}
             fi
-            for f in "$prefix/"no_adapter...*.fastq; do zstd --rm -qf "$f"; done
-            for f in "$prefix/"*...no_adapter.fastq; do zstd --rm -qf "$f"; done
         done
+        for f in "$prefix/"no_adapter...*.fastq; do zstd --rm -qf "$f"; done
+        for f in "$prefix/"*...no_adapter.fastq; do zstd --rm -qf "$f"; done
         """
 
 

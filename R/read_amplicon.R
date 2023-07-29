@@ -5,7 +5,7 @@
 #' @param input_dir: path of the input directory
 #' @param ...: Additional parameters are passed on to `read_qiime_taxonomy()`
 read_pipeline_results = function(input_dir,
-                                 otutab_dir = file.path(input_dir, 'denoised_otutab.txt.gz'),
+                                 otutab = file.path(input_dir, 'denoised_otutab.txt'),
                                  taxonomy_dir = file.path(input_dir, 'taxonomy'),
                                  denoised_seqs = file.path(input_dir, 'denoised.fasta'),
                                  cmp_dir = file.path(input_dir, 'cmp'),
@@ -15,21 +15,21 @@ read_pipeline_results = function(input_dir,
                                  ...) {
   out = list()
   
-  maybe_gz = function(f, stop=NULL) {
+  maybe_gz = function(f, stop_msg=NULL) {
     if (file.exists(f))
       return(f)
-    f = gsub('\\.gz(ip)?$', '', f)
+    f = paste0(f, '.gz')
     if (file.exists(f))
       return(f)
-    if (!is.null(stop))
-      stop(stop)
+    if (!is.null(stop_msg))
+      stop(stop_msg)
   }
   
   # OTU table
   if (verbose)
     cat('Reading OTU table...\n', file = stderr())
-  otutab_dir = maybe_gz(otutab_dir, stop='OTU table not found.')
-  out$otutab = read_otutab(otutab_dir)
+  otutab = maybe_gz(otutab, stop='OTU table not found.')
+  out$otutab = read_otutab(otutab)
   
   # read taxonomy
   if (verbose)
@@ -50,6 +50,9 @@ read_pipeline_results = function(input_dir,
       warning(sprintf('Taxonomy "%s is present both in gzip-compressed and uncompressed form, used "%s"\n', name, tax_file))
     }
     out$taxonomy[[name]] = read_qiime_taxonomy(tax_file, ...)
+    # TODO: document
+    if (!is.null(out$taxonomy[[name]]))
+      attr(out$taxonomy[[name]], 'biom_file') = gsub('\\.txt.\\gz$', '.biom.gz', tax_file)
   }
   
   # OTU sequences
@@ -86,7 +89,7 @@ read_pipeline_results = function(input_dir,
   if (dir.exists(dirname(itsx_prefix))) {
     if (verbose)
       cat('ITSx directory found, reading...\n', file = stderr())
-    posfile = paste0(itsx_prefix, '.positions.txt.gz')
+    posfile = paste0(itsx_prefix, '.positions.txt')
     posfile = maybe_gz(posfile, stop=paste('ITSx positions file not found: ', posfile))
     out$itsx_results = read_itsx_pos(posfile)
     nd = paste0(itsx_prefix, '_no_detections.txt')
@@ -275,12 +278,12 @@ make_phyloseq = function(..., missing_empty=F, otutab_missing_threshold=0.01) {
   # convert taxonomy to matrix
   tax = as.matrix(tax)
   if ('OTU' %in% colnames(tax)) {
-    rownames(tax) = tax[, 'OTU']
-    tax = tax[, colnames(tax) != 'OTU']
+    rownames(tax) = tax[, 'OTU', drop=F]
+    tax = tax[, colnames(tax) != 'OTU', drop=F]
   }
   # make sure that the taxonomic ranks come first, otherwise, tax_glom will fail
   col_order = c(intersect(ranks, colnames(tax)), setdiff(colnames(tax), ranks))
-  tax = tax[, col_order]
+  tax = tax[, col_order, drop=F]
   
   # OTU sequences
   seq = get_data(data, 'refseq', required=F)
@@ -328,6 +331,8 @@ make_phyloseq = function(..., missing_empty=F, otutab_missing_threshold=0.01) {
 read_otutab = function(otu_file) {
   otutab = as.data.frame(suppressMessages(readr::read_tsv(otu_file)))
   row.names(otutab) = otutab[, 1]
+  if (ncol(otutab) <= 1)
+    return(NULL)
   otutab = otutab[2:ncol(otutab)]
   as.matrix(otutab)
 }
@@ -374,6 +379,8 @@ read_qiime_taxonomy = function(tax_file, ...) {
                    colClasses='character',
                    na.strings=c('NA', 'Unassigned'),
                    stringsAsFactors=F)
+  if (nrow(tax) == 0)
+    return(NULL)
   t = as.data.frame(expand_lineage(tax[, 2]), stringsAsFactors=F)
   ranks = names(t)
   t = cbind(OTU = tax[, 1], t)
@@ -459,19 +466,24 @@ expand_lineage = function(x,
                                             'species')) {
   ranks = strsplit(gsub(pattern, '\\1', x, perl = T), delim)
   lineages = strsplit(gsub(pattern, '\\2', x, perl = T), delim)
+  # assign rank names to split lineages
   named = lapply(1:length(ranks), function(i) {
     l = lineages[[i]]
     names(l) = ranks[[i]]
     l
   })
+  # unique rank names (should be in order unless intermediate ranks are missing)
   rankcols = na.omit(unique(unlist(ranks)))
-  cols = lapply(rankcols, function(r)
-    sapply(named, '[', r))
-  t = do.call(cbind, cols)
-  # try replacing names
-  i = sapply(rankcols, function(col)
-    which(startsWith(replace_ranks, col))[1])
-  rankcols[!is.na(i)] = replace_ranks[!is.na(i)]
+  # For each rank column, select elements belonging to this rank
+  # (lineages missing the rank will have NAs) -> always same number of elements
+  cols = lapply(rankcols, function(r) sapply(named, '[', r))
+  t = unname(do.call(cbind, cols))
+  # try replacing short codes with full rank names
+  rankcols = sapply(rankcols, function(col) {
+    i = which(startsWith(replace_ranks, col))[1]
+    if (!is.na(i)) replace_ranks[i] else col
+  })
+  # set final column and row names
   colnames(t) = rankcols
   rownames(t) = names(x)
   t
@@ -514,8 +526,8 @@ replace_missing_taxa = function(tax_tab,
                                 top_unknown = 'Unknown',
                                 unknown_species_fmt = '%s clone',
                                 unknown_fmt = '%s_%s_unknown',
-                                genus_name = ifelse('genus' %in% ranks, 'genus', NULL),
-                                species_name = ifelse('species' %in% ranks, 'species', NULL),
+                                genus_name = if('genus' %in% ranks) 'genus' else NULL,
+                                species_name = if ('species' %in% ranks) 'species' else NULL,
                                 not_def_rank = '<none>') {
   stopifnot(!is.null(top_unknown))
   # prepare species completion
@@ -573,4 +585,3 @@ replace_missing_taxa = function(tax_tab,
   tax$def_rank = factor(tax$def_rank, c(ranks, not_def_rank))
   tax
 }
-
