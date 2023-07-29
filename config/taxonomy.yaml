@@ -1,5 +1,7 @@
 
 taxonomy_db_sources:
+  # note: obtain the URL by querying https://api.plutof.ut.ee/v1/public/dois/?format=api&identifier=<DOI>
+  # see also https://github.com/bokulich-lab/RESCRIPt/issues/123
   unite_eukarya_refs:
     type: unite_otus
     version: "9.0"
@@ -15,12 +17,17 @@ taxonomy_db_sources:
   Midori_COI:
     type: midori
     reference: https://doi.org/10.1002/edn3.303
-    url: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank251/QIIME/uniq/MIDORI2_UNIQ_NUC_GB251_CO1_QIIME
+    url: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank256/QIIME/uniq/MIDORI2_UNIQ_NUC_GB256_CO1_QIIME
   Midori_16S:
     type: midori
     reference: https://doi.org/10.1002/edn3.303
-    url: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank251/QIIME/uniq/MIDORI2_UNIQ_NUC_GB251_lrRNA_QIIME
+    url: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank256/QIIME/uniq/MIDORI2_UNIQ_NUC_GB256_lrRNA_QIIME
   # Midori_COI_sp:
   #   type: midori
   #   reference: https://doi.org/10.1002/edn3.303
-  #   url: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank251/QIIME_sp/uniq/MIDORI2_UNIQ_NUC_SP_GB251_CO1_QIIME
+  #   url: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank256/QIIME_sp/uniq/MIDORI2_UNIQ_NUC_SP_GB256_CO1_QIIME
+    url: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank256/QIIME/uniq/MIDORI2_UNIQ_NUC_GB256_lrRNA_QIIME
+  Midori_12S:
+    type: midori
+    reference: https://doi.org/10.1002/edn3.303
+    url: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank256/QIIME/uniq/MIDORI2_UNIQ_NUC_GB256_srRNA_QIIME
