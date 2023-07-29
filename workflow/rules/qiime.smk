@@ -66,7 +66,7 @@ rule qiime_trim_paired:
         err_rate=lambda w: cfg[w.name]["settings"]["primers"]["trim_settings"]["max_error_rate"],
         min_len=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
     input:
-        yaml='processing/primers/primers.yaml',
+        yaml="processing/primers/primers.yaml",
         demux="processing/{name}/qiime/paired/demux.qza",
     output:
         qza="processing/{name}/qiime/paired/{marker}__{f_primer}...{r_primer}/trim.qza",
@@ -83,23 +83,9 @@ rule qiime_trim_paired:
         "../scripts/qiime_trim_paired.py"
 
 
-def transform_settings(settings):
-    deepcopy(settings)
-    settings["chimera_method"] = settings.get("chimera_method", "consensus")
-    if settings["chimera_method"] == "per-sample":
-        settings["chimera_method"] = "none"
-    settings["pooling_method"] = settings.get("pooling_method", "independent")
-    if settings["pooling_method"] == "pooled":
-        print('Warning: "pooling_method = pooled" not possible for QIIME2', file=stderr)
-    return settings
-
-
 rule qiime_denoise_paired:
     params:
-        args=lambda w: transform_settings(cfg[w.name]["settings"]["dada2"]),
-        extra=lambda w: "--p-allow-one-off"
-        if cfg[w.name]["settings"]["dada2"]["merge_maxdiffs"] > 0
-        else "--p-no-allow-one-off",
+        par=lambda w: cfg[w.name]["settings"]["dada2"],
     input:
         trim="processing/{name}/qiime/paired/{primers}/trim.qza",
     output:
@@ -116,24 +102,8 @@ rule qiime_denoise_paired:
     resources:
         mem_mb=30000,
         runtime=36 * 60,
-    shell:
-        """
-        qiime dada2 denoise-paired \
-            --i-demultiplexed-seqs {input.trim} \
-            --p-n-threads {threads} \
-            --p-trunc-q {params.args[trunc_qual]:.0f} \
-            --p-trunc-len-f {params.args[trunclen_fwd]:.0f} \
-            --p-trunc-len-r {params.args[trunclen_rev]:.0f} \
-            --p-max-ee-f {params.args[max_err_fwd]} \
-            --p-max-ee-r {params.args[max_err_rev]} \
-            --p-n-reads-learn 1000000 \
-            --p-chimera-method {params.args[chimera_method]} \
-            {params.extra} \
-            --verbose \
-            --o-representative-sequences {output.denoised0} \
-            --o-table {output.tab0} \
-            --o-denoising-stats {output.stats} &> {log}
-        """
+    script:
+        "../scripts/qiime_denoise_paired.py"
 
 
 rule qiime_denoised_convert:

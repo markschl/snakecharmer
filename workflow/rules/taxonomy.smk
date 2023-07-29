@@ -103,6 +103,7 @@ rule clean_taxdb:
     shell:
         "rm -Rf refdb"
 
+
 rule clean_tax:
     shell:
         "rm -Rf results/*/pipeline_*/*/*/taxonomy"

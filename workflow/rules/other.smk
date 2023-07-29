@@ -92,6 +92,7 @@ rule clean_itsx:
     shell:
         "rm -Rf results/*/pipeline_*/*/*/ITSx"
 
+
 rule clean_cmp:
     shell:
         "rm -Rf results/*/pipeline_*/*/*/cmp"

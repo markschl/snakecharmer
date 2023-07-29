@@ -72,6 +72,7 @@ def trim_paired(input_files, demux_out,
         assert usearch_bin is not None
         cmd += ["--usearch", usearch_bin]
 
+    print("Call: " + " ".join(cmd), file=sys.stderr)
     check_call(cmd, cwd=outdir, stdout=sys.stdout, stderr=sys.stderr)
 
 

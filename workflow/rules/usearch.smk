@@ -14,12 +14,10 @@ localrules:
 rule usearch_merge_paired:
     params:
         par=lambda w: cfg[w.name]["settings"]["usearch"]["merge"],
-        usearch_bin=config['software']['usearch']['binary']
+        usearch_bin=config["software"]["usearch"]["binary"],
     input:
-        expand(
-            "input/grouped/paired/{{sample}}/{{sample}}_R{read}.fastq.gz",
-            read=[1, 2],
-        ),
+        r1="input/grouped/paired/{{sample}}/{{sample}}_R1.fastq.gz",
+        r2="input/grouped/paired/{{sample}}/{{sample}}_R2.fastq.gz",
     output:
         merged="processing/{name}/usearch/paired/1_merged/{sample}/{sample}.fastq.zst",
         r1="processing/{name}/usearch/paired/1_merged/{sample}/{sample}_notmerged_R1.fastq.zst",
@@ -35,7 +33,7 @@ rule usearch_merge_paired:
         """
         out={output.merged}
         $PIPELINE_DIR/workflow/scripts/usearch/merge_paired.sh \
-            {input[0]} {input[1]} ${{out%.fastq.zst}} \
+            {input.r1} {input.r2} ${{out%.fastq.zst}} \
             "{params.par[program]}" "{params.usearch_bin}" {params.par[overlap_ident]} \
             -threads 1 \
             -fastq_maxdiffs {params.par[max_diffs]} \
@@ -43,13 +41,12 @@ rule usearch_merge_paired:
         """
 
 
-
 rule make_cutadapt_fasta:
     input:
-        yaml='processing/primers/primers.yaml',
+        yaml="processing/primers/primers.yaml",
     output:
         forward="processing/primers/forward.fasta",
-        reverse_rev="processing/primers/reverse_rev.fasta"
+        reverse_rev="processing/primers/reverse_rev.fasta",
     log:
         "logs/make_primer_fasta.log",
     conda:
@@ -191,7 +188,7 @@ rule usearch_collect_derep:
 rule usearch_unoise3:
     params:
         par=lambda w: cfg[w.name]["settings"]["usearch"]["unoise"],
-        usearch_bin=config['software']['usearch']['binary']
+        usearch_bin=config["software"]["usearch"]["binary"],
     input:
         "processing/{name}/usearch/{strategy}/4_unique/{primers}/good_uniques.fasta.zst",
     output:
@@ -202,11 +199,12 @@ rule usearch_unoise3:
         "envs/usearch-vsearch.yaml"
     group:
         "denoise"
+    # threads:
+    # VSEARCH works in parallel (although cores seem to be used only ~50%) while
+    # USEARCH v11 does not appear to use more than 1 thread
+    # TODO: further validate VSEARCH threads setting
     threads:
-        # VSEARCH works in parallel (although cores seem to be used only ~50%) while
-        # USEARCH v11 does not appear to use more than 1 thread
-        # TODO: further validate VSEARCH threads setting
-        lambda w: int(workflow.cores*1.5) if cfg[w.name]["settings"]["usearch"]["unoise"]["program"] == "vsearch" else 1
+        lambda w: int(workflow.cores * 1.5) if cfg[w.name]["settings"]["usearch"]["unoise"]["program"] == "vsearch" else 1
     resources:
         mem_mb=10000,
         runtime=24 * 60,
@@ -248,7 +246,7 @@ rule usearch_unoise3:
 rule usearch_make_otutab:
     params:
         par=lambda w: cfg[w.name]["settings"]["usearch"]["otutab"],
-        usearch_bin=config['software']['usearch']['binary']
+        usearch_bin=config["software"]["usearch"]["binary"],
     input:
         denoised="results/{name}/pipeline_usearch_{cluster}/{primers}/{strategy}/denoised.fasta",
         uniques="processing/{name}/usearch/{strategy}/4_unique/{primers}/all_uniques.fasta.zst",
@@ -306,7 +304,7 @@ rule convert_taxdb_utax:
 rule assign_taxonomy_sintax:
     params:
         par=lambda w: cfg[w.name]["taxonomy"][w.marker][(w.db_name, w.tax_method)],
-        usearch_bin=config['software']['usearch']['binary']
+        usearch_bin=config["software"]["usearch"]["binary"],
     input:
         fa="results/{name}/{pipeline}/{marker}__{primers}/{strategy}/denoised.fasta",
         db=lambda w: "refdb/taxonomy/{{marker}}/{db_name}/formatted/utax/{defined}.fasta.zst".format(
@@ -321,10 +319,13 @@ rule assign_taxonomy_sintax:
         "taxonomy"
     conda:
         "envs/usearch-vsearch.yaml"
+    # threads:
+    # VSEARCH works in parallel (although cores seem to be used only ~50%) while
+    # USEARCH v11 does not appear to use more than 1 thread
     threads:
-        # VSEARCH works in parallel (although cores seem to be used only ~50%) while
-        # USEARCH v11 does not appear to use more than 1 thread
-        lambda w: workflow.cores if cfg[w.name]["taxonomy"][w.marker][(w.db_name, w.tax_method)]["program"] == "vsearch" else 1,
+        lambda w: workflow.cores \
+            if cfg[w.name]["taxonomy"][w.marker][(w.db_name, w.tax_method)]["program"] == "vsearch" \
+            else 1
     resources:
         mem_mb=5000,
     shell:
@@ -371,7 +372,7 @@ rule usearch_multiqc_paired:
 # TODO: parse both paired and single into one sample_report.tsv
 rule usearch_stats_paired:
     params:
-        primer_combinations=cfg.primer_combinations_flat
+        primer_combinations=cfg.primer_combinations_flat,
     input:
         merge=expand(
             "processing/{{name}}/usearch/paired/1_merged/{sample}/{sample}_stats.txt",

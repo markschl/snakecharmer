@@ -10,6 +10,8 @@ min_version("6.1.4")
 
 configfile: "config/config.yaml"
 configfile: "config/taxonomy.yaml"
+
+
 validate(config, "config.schema.yaml")
 
 ##### load rules #####
@@ -18,15 +20,26 @@ validate(config, "config.schema.yaml")
 include: "rules/common.smk"
 include: "rules/qc.smk"
 include: "rules/usearch.smk"
+
+
 if "qiime" in config["software"]:
+
     include: "rules/qiime.smk"
+
+
 if "amptk" in config["software"]:
+
     include: "rules/amptk.smk"
+
+
 include: "rules/taxonomy.smk"
+
+
 include: "rules/other.smk"
 
 
 #### Paths ####
+
 
 pipeline_dirs = expand(
     "results/{name}/pipeline_{cluster}",
@@ -83,7 +96,7 @@ rule samples:
     input:
         rules.dump_samples_yaml.output,
         rules.dump_samples_tsv.output,
-        rules.link_samples.output
+        rules.link_samples.output,
 
 
 rule quality:
@@ -130,6 +143,7 @@ rule cmp:
 
 # commands for cleaning up
 
+
 localrules:
     clean,
     clean_all,
@@ -138,6 +152,7 @@ localrules:
 rule clean:
     shell:
         "rm -Rf input/grouped processing"
+
 
 rule clean_all:
     shell:

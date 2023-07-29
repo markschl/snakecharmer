@@ -25,8 +25,15 @@ rule fastqc:
 
 rule multiqc_fastqc:
     input:
-        [join("results", "_validation", "fastqc", splitext(splitext(join(path, name))[0])[0] + "_fastqc.html")
-        for _, path, name in link_paths_flat],
+        [
+            join(
+                "results",
+                "_validation",
+                "fastqc",
+                splitext(splitext(join(path, name))[0])[0] + "_fastqc.html",
+            )
+            for _, path, name in link_paths_flat
+        ],
     output:
         "results/_validation/multiqc/multiqc_report.html",
     log:

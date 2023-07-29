@@ -32,9 +32,9 @@ rule amptk_merge_trim:
         err_rate=lambda w: cfg[w.name]["settings"]["primers"]["trim_settings"]["max_error_rate"],
         min_len=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
         program=lambda w: cfg[w.name]["settings"]["usearch"]["merge"]["program"],
-        usearch_bin=config['software']['usearch']['binary']
+        usearch_bin=config["software"]["usearch"]["binary"],
     input:
-        primers_yaml='processing/primers/primers.yaml',
+        primers_yaml="processing/primers/primers.yaml",
         fq=expand(
             "processing/{{name}}/amptk/input/grouped/paired/{sample}_R{read}.fastq.gz",
             sample=cfg.sample_names["paired"],
@@ -58,44 +58,11 @@ rule amptk_merge_trim:
         "../scripts/amptk_trim_paired.py"
 
 
-def amptk_denoise_params(method, settings, usearch_bin=None):
-    upar = settings["usearch"]
-    maxee = upar["merge"]["expected_length"] * upar["filter"]["max_error_rate"]
-    if method == "unoise3":
-        args = [
-                "--usearch",
-                usearch_bin,
-                "--maxee",
-                str(maxee),
-                "--method",
-                upar["unoise"]["program"],
-                "--minsize",
-                str(upar["unoise"]["min_size"]),
-            ]
-        if upar["unoise"]["program"] == "usearch":
-            assert usearch_bin is not None
-            args += ["--usearch", usearch_bin]
-        return " ".join(args)
-    if method == "dada2":
-        par = settings["dada2"]
-        out = [
-            "--maxee",
-            str(maxee),
-            "--chimera_method",
-            par["chimera_method"],
-        ]
-        p = par.get("pooling_method", "independent")
-        if p == "pooled":
-            out.append("--pool")
-        elif p == "pseudo":
-            out.append("--pseudopool")
-        return " ".join(out)
-    raise Exception("Unknown / unimplemented Amptk command " + method)
-
-
 rule amptk_denoise:
     params:
-        args=lambda w: amptk_denoise_params(w.method, cfg[w.name]["settings"], usearch_bin=config['software']['usearch']['binary']),
+        method=lambda wildcards: wildcards.method,
+        par=lambda wildcards: cfg[wildcards.name]["settings"],
+        usearch_bin=config["software"]["usearch"]["binary"],
     input:
         demux="processing/{name}/amptk/analysis/paired/{primers}/illumina.demux.fq.gz",
     output:
@@ -111,19 +78,8 @@ rule amptk_denoise:
     resources:
         mem_mb=30000,
         runtime=36 * 60,
-    shell:
-        """
-        outdir=$(dirname {input.demux})
-        (  cd $outdir &&
-            amptk {wildcards.method} -i $(basename {input.demux}) \
-                -o {wildcards.method} \
-                {params.args} \
-                --cpus {threads}  ) 2> {log} >/dev/null
-        # copy files
-        mkdir -p $(dirname {output.denoised})
-        cp $outdir/{wildcards.method}.ASVs.fa {output.denoised}
-        gzip -nc $outdir/{wildcards.method}.otu_table.txt > {output.tab}
-        """
+    script:
+        "../scripts/amptk_denoise_paired.py"
 
 
 ##########################

@@ -29,6 +29,7 @@ def trim_paired(primer_file, input, output, f_primer, r_primer, err_rate=None, t
         "--verbose",
         "--o-trimmed-sequences", output
     ]
+    print("Call: " + " ".join(cmd), file=sys.stderr)
     check_call(cmd, stdout=sys.stdout, stderr=sys.stderr)
 
 
