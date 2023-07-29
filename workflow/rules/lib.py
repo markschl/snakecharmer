@@ -1,19 +1,13 @@
 import glob
 import os
 import re
-import hashlib
 import sys
-import traceback
-from collections import defaultdict
-from contextlib import contextmanager
+from collections import defaultdict, OrderedDict
 from copy import deepcopy
 from itertools import product, zip_longest
 from os.path import dirname, basename
 from typing import *
 
-from seq import FastaIO, seq
-from seq.alignment import consensus
-from snakemake.io import Log
 from snakemake.workflow import srcdir
 
 # Set environment variable of pipeline root dir to allow post-deploy
@@ -26,6 +20,14 @@ os.environ['PIPELINE_DIR'] = dirname(dirname(dirname(srcdir('.'))))
 
 
 def collect_samples(name_pattern: str, *args, **kwargs) -> Tuple[str, str, str, int]:
+    """
+    This function collects sample files from `directories` and/or `patterns`
+    (see `collect_sample_files`) and parses the sample names given using
+    a defined pattern (see `parse_pattern`), optionally renaming samples
+    if necessary.
+    The generator yields a tuple of (sample name, sample directory, file name, read number),
+    whereby read number is 1 or 2.
+    """
     _name_pat = re.compile(parse_pattern(name_pattern))
     renamed_samples = []
     for f in collect_sample_files(*args, **kwargs):
@@ -38,7 +40,7 @@ def collect_samples(name_pattern: str, *args, **kwargs) -> Tuple[str, str, str, 
         renamed_samples = list(OrderedDict(zip(renamed_samples, renamed_samples)).keys())
         print(
             'Dashes (-) or dots (.) in sample names were replaced by underscores '
-            'since they are not compatible with the USEARCH pipeline: {}'.format(format_list(renamed_samples)), 
+            'since they are not compatible with the USEARCH pipeline: {}'.format(format_list(renamed_samples)),
             file=sys.stderr
         )
 
@@ -48,6 +50,13 @@ def collect_sample_files(
         patterns: Iterable[str] = None,
         recursive: bool = False
 ) -> Generator[str, None, None]:
+    """
+    Collects all input files, given a sequence of 
+    directories and/or a sequence of glob patterns.
+    Relative paths will be interpreted relative to
+    `base_dir`.
+    The generator yields the individual file paths.
+    """
     if directories is None and patterns is None:
         raise Exception(
             'At least one of "directories" and "patterns" must be defined in "input"')
@@ -69,19 +78,32 @@ def collect_sample_files(
                     yield os.path.join(root, f)
 
 
+__name_patterns = {
+    'illumina': r"(.+?)_S\d+_L\d+_R([12])_\d{3}\.fastq\.gz",
+    'sample_read': r"(.+?)_R([12])\.fastq\.gz"
+}
+
+
 def parse_pattern(name_pattern: str) -> str:
-    pat = name_pattern.lower()
-    if pat == 'illumina':
-        name_pattern = r"(.+?)_S\d+_L\d+_R([12])_\d{3}\.fastq\.gz"
-    elif pat == 'sample_read':
-        name_pattern = r"(.+?)_R([12])\.fastq\.gz"
+    """
+    Prepares name patterns, returning the corresponding Regex
+    for often used keywords.
+    """
+    try:
+        name_pattern = __name_patterns[name_pattern.lower()]
+    except KeyError:
+        pass
     return name_pattern
 
 
-_usearch_sample_rep = re.compile('[-\\.]')
+_usearch_sample_rep = re.compile(r'[-.]')
 
 
 def parse_sample(f, pattern: Pattern[str]) -> Tuple[str, int, bool]:
+    """
+    Matches sample name and read number in a file name, given a
+    name pattern.
+    """
     m = pattern.match(f)
     if m is None:
         raise Exception(
@@ -160,7 +182,7 @@ def group_samples(
             # paired-end
             assert read_idx == (1, 2), \
                 'Two read files present for sample {}, but read numbers are {} and {} instead of 1 and 2' \
-                .format(sample_name, *read_idx)
+                    .format(sample_name, *read_idx)
             strategy = 'paired'
         elif n_reads == 1:
             # single-end
@@ -197,19 +219,9 @@ def group_samples(
 
 def parse_primers(primers: Iterable[Dict[str, str]]) -> Generator[Tuple[str, List[str]], None, None]:
     for p in primers:
-        assert isinstance(p, dict), \
+        assert isinstance(p, dict) and len(p) > 0, \
             "Primers must be defined in the form: 'name: sequence1,sequence2,...'"
-        _id = next(iter(p.keys()))
-        seqs = next(iter(p.values()))
-        seqs = [s.strip() for s in seqs.split(',')]
-        yield _id, seqs
-
-
-def make_primer_fasta(primers: Iterable[Tuple[str, Iterable[str]]], outfile: str):
-    with open(outfile, 'w') as f:
-        for _id, seqs in primers:
-            for s in seqs:
-                FastaIO.write(seq.SeqRecord(_id, s), f)
+        yield next(iter(p.items()))
 
 
 def recursive_update(target, other):
@@ -225,7 +237,7 @@ def recursive_update(target, other):
 
 class Config(object):
     # strategy_names = ['merged', 'notmerged_R1', 'notmerged_R2']
-    workding_dir = 'processing'
+    working_dir = 'processing'
     read_num_map = {'single': [1], 'paired': [1, 2]}
 
     def __init__(self, config):
@@ -241,7 +253,7 @@ class Config(object):
     def _read_samples(self):
         _cfg = self.config['input']
         self.samples = group_samples(
-            allow_duplicates = self.config['input']['pool_duplicates'],
+            allow_duplicates=self.config['input']['pool_duplicates'],
             directories=_cfg.get('directories', None),
             patterns=_cfg.get('patterns', None),
             name_pattern=_cfg['name_pattern'],
@@ -270,16 +282,13 @@ class Config(object):
 
     def _init_dirs(self):
         # c_dir because the primers are placed there
-        if not os.path.isdir(self.workding_dir):
-            os.makedirs(self.workding_dir)
+        if not os.path.isdir(self.working_dir):
+            os.makedirs(self.working_dir)
 
     def _read_primers(self):
         # if self.config['primers']['process_unmerged'] is True:
         #     self.unmerged_read_idx = self.read_idx
         self.primers = {}
-        self.primers_rev = {}
-        self.primers_consensus = {}
-        self.primers_consensus_rev = {}
         self.primer_combinations = {}
         self.primer_combinations_flat = []
         self.markers = list(self.config['primers'])
@@ -292,24 +301,6 @@ class Config(object):
             # parse primers
             pr = self.primers[marker] = {dir_: dict(parse_primers(
                 primers[dir_])) for dir_ in ['forward', 'reverse']}
-            # reverse complement versions
-            self.primers_rev[marker] = {
-                direction: {p: [seq.reverse_complement(s) for s in seqs]
-                            for p, seqs in pseqs.items()}
-                for direction, pseqs in pr.items()
-            }
-            # primer consensus
-            cns = self.primers_consensus[marker] = {
-                direction: {name: consensus(seq.SeqRecord(name, s) for s in seqs)
-                            for name, seqs in pseqs.items()}
-                for direction, pseqs in pr.items()
-            }
-            # reverse complement consensus
-            self.primers_consensus_rev[marker] = {
-                direction: {name: seq.reverse_complement(
-                    s) for name, s in cons.items()}
-                for direction, cons in cns.items()
-            }
             # obtain primer combinations
             combinations = primers.get('combinations', 'default')
             if combinations == 'default':
@@ -396,7 +387,7 @@ class Config(object):
             # set VSEARCH as default program if not already present
             # TODO: Jsonschema should do this, but the default keyword has no effect
             for cfg in method_cfg.values():
-                if not 'program' in cfg:
+                if 'program' not in cfg:
                     cfg['program'] = 'vsearch'
             # then, for every marker, assemble the combinations
             tax = {}
@@ -426,30 +417,21 @@ class Config(object):
 #### Helpers ####
 
 
-@contextmanager
-def file_logging(f):
-    if isinstance(f, Log):
-        f = f[0]
-    assert isinstance(f, str)
-    with open(f, "w") as handle:
-        try:
-            yield handle
-        except Exception:
-            traceback.print_exc(file=handle)
-            raise
-
-
-def file_md5(filename):
-    md5 = hashlib.md5()
-    with open(filename,"rb") as f:
-        # Read and update hash in chunks of 4K
-        for chunk in iter(lambda: f.read(4096), b""):
-            md5.update(chunk)
-        return md5.hexdigest()
-
-
 def format_list(l, cutoff=10):
     out = ", ".join(l[:10])
     if len(l) > cutoff:
         out += '...'
     return out
+
+
+def get_nested(d, *keys):
+    """
+    Get a nested dict entry or None if non-existent
+    """
+    if len(keys) == 0:
+        return d
+    try:
+        sub = d[keys[0]]
+        return get_nested(sub, *keys[1:])
+    except KeyError:
+        return None

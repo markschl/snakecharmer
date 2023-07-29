@@ -2,12 +2,12 @@
 Minimal FASTA reader and writer.
 """
 
-from .seq import SeqRecord
-
-
-def from_file(filepath, encoding='utf-8'):
-    f = open(filepath, encoding=encoding)  # TODO: file not closed; cannot use with statement
-    return parse(f)
+class SeqRecord(object):
+    __slots__ = ['id', 'description', 'seq']
+    def __init__(self, id, seq, description=''):
+        self.id = id
+        self.description = description
+        self.seq = seq
 
 
 def parse(handle):

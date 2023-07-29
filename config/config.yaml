@@ -23,7 +23,11 @@ software:
 input:
   # Lists of directories and/or glob patterns can be specified.
   # There is no problem if some files are matched by both, they will only
-  # be included once.
+  # be included once..
+  # Non-absolute paths are interpreted as being relative to
+  # the directory, which contains the configuration (`config` dir)
+  # and in which all other directories (input, processing, results)
+  # are created.
   directories:
     - test/gz
   patterns:
@@ -143,18 +147,29 @@ primers:
     # may occur if:
     # - Different samples were amplified with different primers
     # - Some or all samples are a mix of different amplicons, which were pooled before indexing
-    # Each primer can further be a comma delimited list of oligos, which
-    # were mixed together. However, they should still start at the same
-    # nucleotide position to allow global trimming. Note that some pipelines
-    # cannot deal with primer mixtures, in these cases the consensus sequence of the
-    # single mixed sequences is used.
     # The oligos may include adapter and/or linker sequences, but their position is not
     # required to be at the exact sequence start or end.
+    # Each primer can further be a comma delimited list of oligos, which
+    # were mixed together. However, they should still start at the same
+    # nucleotide position to allow global trimming.
+    # Also note that many pipelines (QIIME, Amptk) cannot deal with primer mixes.
+    # In this case, the consensus sequence of all primers is currently used.
+    # The consensus threshold is 50%, meaning that at each position,
+    # 50% of the bases are represented in the consensus.
+    # This may lead to some rare ambiguous variants being removed. However,
+    # a higher threshold could lead to too many unspecific hits.
+    # With a sufficiently high `max_error_rate`, this will not be a problem.
+    # More options may be added in the future.
+    # *Anchoring*: A sequence (list) can start with '^' to indicate that the
+    # primer cannot occur internally, each read should start with the primer.
+    # This may not be done by every pipeline.
     forward:
       - ITS3-KYO2: GGGATGAAGAACGYAGYRAA
       # - fITS7: GTGARTCATCGAATCTTTG
     reverse:
-      - ITS4: AATCCTCCGCTTATTGATATGC,AATCCTCCGCTGAWTAATATGC
+      - ITS4:
+          AATCCTCCGCTTATTGATATGC,
+          AATCCTCCGCTGAWTAATATGC
     # Primer combinations: either 'default' (to use all possible combinations),
     #   or a list of combinations (see below)
     combinations: default

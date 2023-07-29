@@ -5,11 +5,13 @@ from sys import stderr
 
 localrules:
     qiime_make_manifest_paired,
-    qiime_multiqc_paired,
+    # qiime_multiqc_paired,
     qiime_stats_paired,
 
 
 rule qiime_make_manifest_paired:
+    params:
+        samples=cfg.sample_names["paired"],
     input:
         expand(
             "input/grouped/paired/{sample}/{sample}_R{read}.fastq.gz",
@@ -17,26 +19,11 @@ rule qiime_make_manifest_paired:
             read=[1, 2],
         ),
     output:
-        "processing/{name}/qiime/paired/manifest.txt",
-    run:
-        import csv
-        from os.path import basename, dirname, abspath
-
-        with open(output[0], "w") as out:
-            w = csv.writer(out, delimiter="\t")
-            w.writerow(
-                ["sample-id", "forward-absolute-filepath", "reverse-absolute-filepath"]
-            )
-            for sample in cfg.sample_names["paired"]:
-                paths = [
-                    abspath(
-                        "input/grouped/paired/{sample}/{sample}_R{read}.fastq.gz".format(
-                            sample=sample, read=read
-                        )
-                    )
-                    for read in [1, 2]
-                ]
-                w.writerow([sample] + paths)
+        "processing/qiime/paired/manifest.txt",
+    log:
+        "logs/qiime/make_manifest_paired.log",
+    script:
+        "../scripts/qiime_manifest_paired.py"
 
 
 rule qiime_import:
@@ -48,7 +35,7 @@ rule qiime_import:
         if w.strategy == "single"
         else "PairedEndFastqManifestPhred33V2",
     input:
-        manifest="processing/{name}/qiime/{strategy}/manifest.txt",
+        manifest="processing/qiime/{strategy}/manifest.txt",
         seq=lambda w: expand(
             "input/grouped/paired/{sample}/{sample}_R{read}.fastq.gz",
             sample=cfg.sample_names[w.strategy],
@@ -70,22 +57,19 @@ rule qiime_import:
             --type 'SampleData[{params.type}]' \
             --input-path {input.manifest} \
             --output-path {output} \
-            --input-format {params.format} 2> {log}
+            --input-format {params.format} &> {log}
         """
 
 
 rule qiime_trim_paired:
     params:
-        f_primer_seq=lambda w: cfg.primers_consensus[w.marker]["forward"][w.f_primer],
-        f_primer_seq_rev=lambda w: cfg.primers_consensus_rev[w.marker]["forward"][w.f_primer],
-        r_primer_seq=lambda w: cfg.primers_consensus[w.marker]["reverse"][w.r_primer],
-        r_primer_seq_rev=lambda w: cfg.primers_consensus_rev[w.marker]["reverse"][w.r_primer],
         err_rate=lambda w: cfg[w.name]["settings"]["primers"]["trim_settings"]["max_error_rate"],
         min_len=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
     input:
-        "processing/{name}/qiime/paired/demux.qza",
+        yaml='processing/primers/primers.yaml',
+        demux="processing/{name}/qiime/paired/demux.qza",
     output:
-        "processing/{name}/qiime/paired/{marker}__{f_primer}...{r_primer}/trim.qza",
+        qza="processing/{name}/qiime/paired/{marker}__{f_primer}...{r_primer}/trim.qza",
     log:
         "logs/{name}/qiime/paired/{marker}__{f_primer}...{r_primer}/trim.log",
     group:
@@ -95,20 +79,8 @@ rule qiime_trim_paired:
     threads: workflow.cores
     resources:
         runtime=12 * 60,
-    shell:
-        """
-        qiime cutadapt trim-paired \
-            --i-demultiplexed-sequences {input}  \
-            --p-cores {threads} \
-            --p-adapter-f '{params.f_primer_seq}...{params.r_primer_seq_rev};optional' \
-            --p-adapter-r '{params.r_primer_seq}...{params.f_primer_seq_rev};optional' \
-            --p-error-rate {params.err_rate} \
-            --p-overlap 10 `# TODO: configure` \
-            --p-minimum-length {params.min_len} \
-            --p-discard-untrimmed \
-            --verbose \
-            --o-trimmed-sequences {output} &> {log}
-        """
+    script:
+        "../scripts/qiime_trim_paired.py"
 
 
 def transform_settings(settings):

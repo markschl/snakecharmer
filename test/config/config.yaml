@@ -66,9 +66,13 @@ compare:
 primers:
   ITS:
     forward: 
-      - ITS3-KYO2: GGGATGAAGAACGYAGYRAA,TCGATGAAGAMCGYWGCVAD
+      - ITS3-KYO2:  # comma delimited list of separately mixed oligos (simplified)
+          GGGATGAAGAACGYAGYRAA,
+          TCGATGAAGAMCGYWGCVAD
     reverse:
-      - ITS4: AATCCTCCGCTTATTGATATGC,AATCCTCCGCTGAWTAATATGC
+      - ITS4:
+          AATCCTCCGCTTATTGATATGC,
+          AATCCTCCGCTGAWTAATATGC
     combinations: default
   trim_settings:
     min_overlap: 15

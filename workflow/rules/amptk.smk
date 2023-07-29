@@ -8,9 +8,6 @@ localrules:
     amptk_stats_paired,
 
 
-# TODO: usearch not checked in conda environment
-
-
 rule amptk_collect:
     input:
         expand(
@@ -26,40 +23,19 @@ rule amptk_collect:
         ),
     log:
         "logs/{name}/amptk/collect.log",
-    run:
-        with lib.file_logging(log) as out:
-            for source, target in zip(input, output):
-                assert basename(source) == basename(target)
-                if os.path.exists(target):
-                    os.remove(target)
-                outdir = os.path.dirname(target)
-                if not os.path.exists(outdir):
-                    os.makedirs(outdir)
-                os.symlink(os.path.abspath(source), os.path.abspath(target))
-                source = os.path.relpath(source, ".")
-                target = os.path.relpath(target, ".")
-                print("{} > {}".format(source, target), file=out)
+    script:
+        "../scripts/amptk_collect.py"
 
 
 rule amptk_merge_trim:
     params:
-        f_primer_seq=lambda w: cfg.primers_consensus[w.marker]["forward"][w.f_primer],
-        r_primer_seq=lambda w: cfg.primers_consensus[w.marker]["reverse"][w.r_primer],
-        # note: we limit the max. number of primer mismatches to 2.
-        # The reason is that Amptk apparently does **another** primer trimming after merging 
-        # the already trimmed reads.
-        # Too liberal mismatch thresholds lead to many unspecific primer matches
-        # and consequently to unwanted trimming of reads.
-        pmismatch=lambda w: min(2, round((
-                len(cfg.primers_consensus[w.marker]['forward'][w.f_primer])
-                + len(cfg.primers_consensus[w.marker]['reverse'][w.r_primer])
-            ) / 2
-            * cfg[w.name]["settings"]["primers"]["trim_settings"]["max_error_rate"]
-        )),
+        err_rate=lambda w: cfg[w.name]["settings"]["primers"]["trim_settings"]["max_error_rate"],
         min_len=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
         program=lambda w: cfg[w.name]["settings"]["usearch"]["merge"]["program"],
+        usearch_bin=config['software']['usearch']['binary']
     input:
-        expand(
+        primers_yaml='processing/primers/primers.yaml',
+        fq=expand(
             "processing/{{name}}/amptk/input/grouped/paired/{sample}_R{read}.fastq.gz",
             sample=cfg.sample_names["paired"],
             read=[1, 2],
@@ -78,26 +54,8 @@ rule amptk_merge_trim:
     resources:
         mem_mb=10000,
         runtime=24 * 60,
-    shell:
-        """
-        prefix={output.demux}
-        prefix="${{prefix%.demux.fq.gz}}"
-        outdir=$(dirname $prefix)
-        mkdir -p "$outdir"
-        (   indir=$(realpath --relative-to=$outdir processing/{wildcards.name}/amptk/input/grouped/paired)
-            cd $outdir
-            amptk illumina -i $indir -o $(basename $prefix) \
-                -f {params.f_primer_seq} -r {params.r_primer_seq} \
-                --min_len {params.min_len} \
-                --trim_len 10000000 `# high enough to never be longer`  \
-                --cpus {threads} \
-                --cleanup \
-                --require_primer=on \
-                --rescue_forward=off \
-                --primer_mismatch {params.pmismatch} \
-                --merge_method {params.program} \
-                --usearch $(which usearch)  ) 2> {log} >/dev/null
-        """
+    script:
+        "../scripts/amptk_trim_paired.py"
 
 
 def amptk_denoise_params(method, settings, usearch_bin=None):

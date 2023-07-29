@@ -1,8 +1,8 @@
 from os.path import splitext
-from lib import file_logging
 
 
 localrules:
+    make_cutadapt_fasta,
     usearch_stats_paired,
 
 
@@ -41,6 +41,21 @@ rule usearch_merge_paired:
             -fastq_maxdiffs {params.par[max_diffs]} \
             2> {log}
         """
+
+
+
+rule make_cutadapt_fasta:
+    input:
+        yaml='processing/primers/primers.yaml',
+    output:
+        forward="processing/primers/forward.fasta",
+        reverse_rev="processing/primers/reverse_rev.fasta"
+    log:
+        "logs/make_primer_fasta.log",
+    conda:
+        "envs/consensus.yaml"
+    script:
+        "../scripts/make_primer_fasta.py"
 
 
 rule trim_primers_paired:
@@ -354,6 +369,8 @@ rule usearch_multiqc_paired:
 
 # TODO: parse both paired and single into one sample_report.tsv
 rule usearch_stats_paired:
+    params:
+        primer_combinations=cfg.primer_combinations_flat
     input:
         merge=expand(
             "processing/{{name}}/usearch/paired/1_merged/{sample}/{sample}_stats.txt",
@@ -372,50 +389,5 @@ rule usearch_stats_paired:
         "results/{name}/pipeline_usearch_{cluster}/_validation/sample_report.tsv",
     log:
         "logs/{name}/usearch/paired/pipeline_usearch_{cluster}/sample_report.log",
-    run:
-        # TODO: turn into script
-        from os.path import dirname, basename
-        import csv
-        from collections import defaultdict
-
-
-        def read_stats(files, key):
-            out = {}
-            for f in files:
-                with open(f, "r") as h:
-                    out[key(f)] = [int(n) for n in next(csv.reader(h, delimiter="\t"))]
-            return out
-
-
-        percent = lambda x, y: round(100 * x / y, 2) if y > 0 else 0.0
-
-        with file_logging(log):
-            # read data
-            merge = read_stats(input.merge, key=lambda f: basename(dirname(f)))
-            trim = read_stats(input.trim, key=lambda f: basename(dirname(dirname(f))))
-            flt = read_stats(
-                input.filter,
-                key=lambda f: (basename(dirname(dirname(f))), basename(dirname(f))),
-            )
-            flt2 = defaultdict(dict)
-            for k, n in flt.items():
-                flt2[k[1]][k[0]] = n
-
-            # combine and write to output
-            with open(output[0], 'w') as out:
-                writer = csv.writer(out, delimiter='\t')
-                header = ['sample', 'raw', 'merged', '(%)', 'fwd-primer', '(% of merged)', 'rev-primer', '(% of merged)', 'long enough', '(% of merged)']
-                for p in cfg.primer_combinations_flat:
-                    header += [p, "filtered", "(% of trimmed)"]
-                writer.writerow(header)
-                for sample in merge:
-                    raw, m = merge[sample]
-                    m2, tf, tr, ln = trim[sample]
-                    assert (m == m2), "Number of sequences in logfiles from read merging and primer trimming does not match: {} vs. {}".format(m, m2)
-                    row = [sample, raw, m, percent(m, raw), tf, percent(tf, m), tr, percent(tr, m), ln, percent(ln, m)]
-                    f = flt2[sample]
-                    for p in cfg.primer_combinations_flat:
-                        kept, removed = f[p]
-                        total = kept + removed
-                        row += [total, kept, percent(kept, total)]
-                    writer.writerow(row)
+    script:
+        "../scripts/usearch/stats_paired.py"
