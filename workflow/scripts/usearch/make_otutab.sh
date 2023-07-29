@@ -5,11 +5,12 @@ set -xeuo pipefail
 # FIXME: this script should be converted to a regular Snakemake script (Python or Bash),
 # it has far too many arguments
 if [ $# -lt 8 ]; then
-    echo "usage: $0 <program> <threads> <uniques> <otus> <otutab_out> <map_out> <bam_out> <notmatched_out>  [usearch options]" 1>&2
+    echo "usage: $0 <program> <usearch_bin> <threads> <uniques> <otus> <otutab_out> <map_out> <bam_out> <notmatched_out>  [usearch options]" 1>&2
     exit 1
 fi
 
 program="$1" && shift
+usearch_bin="$1" && shift
 threads="$1" && shift
 uniques_compr="$1" && shift
 otus="$1" && shift
@@ -46,7 +47,7 @@ elif [[ "$program" == "usearch" ]]; then
     uniques=$(mktemp ${uniques_compr%.fasta.zst}.XXXXXX.fasta)
     zstd -dqf "$uniques_compr" -o "$uniques"
     # TODO: -mapout does not include the identity
-    usearch -otutab "$uniques" -otus "$otus" \
+    "$usearch_bin" -otutab "$uniques" -otus "$otus" \
         -otutabout "${tab%.gz}" \
         -userout "${map%.gz}" \
         -userfields query+target+id \

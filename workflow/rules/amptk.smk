@@ -100,14 +100,13 @@ rule amptk_merge_trim:
         """
 
 
-def amptk_denoise_params(method, settings):
+def amptk_denoise_params(method, settings, usearch_bin=None):
     upar = settings["usearch"]
     maxee = upar["merge"]["expected_length"] * upar["filter"]["max_error_rate"]
     if method == "unoise3":
-        return " ".join(
-            [
+        args = [
                 "--usearch",
-                "$(which usearch)",
+                usearch_bin,
                 "--maxee",
                 str(maxee),
                 "--method",
@@ -115,7 +114,10 @@ def amptk_denoise_params(method, settings):
                 "--minsize",
                 str(upar["unoise"]["min_size"]),
             ]
-        )
+        if upar["unoise"]["program"] == "usearch":
+            assert usearch_bin is not None
+            args += ["--usearch", usearch_bin]
+        return " ".join(args)
     if method == "dada2":
         par = settings["dada2"]
         out = [
@@ -135,7 +137,7 @@ def amptk_denoise_params(method, settings):
 
 rule amptk_denoise:
     params:
-        args=lambda w: amptk_denoise_params(w.method, cfg[w.name]["settings"]),
+        args=lambda w: amptk_denoise_params(w.method, cfg[w.name]["settings"], usearch_bin=config['software']['usearch']['binary']),
     input:
         demux="processing/{name}/amptk/analysis/paired/{primers}/illumina.demux.fq.gz",
     output:

@@ -5,7 +5,7 @@ set -xeuo pipefail
 # FIXME: this script should be converted to a regular Snakemake script (Python or Bash),
 # it has far too many arguments
 if [ $# -lt 6 ]; then
-    echo "usage: $0 <forward>.fastq.gz <reverse>.fastq.gz <out_prefix> <program> <min_ident_pct> [usearch options]" 1>&2
+    echo "usage: $0 <forward>.fastq.gz <reverse>.fastq.gz <out_prefix> <program> <usearch_bin> <min_ident_pct> [usearch options]" 1>&2
     exit 1
 fi
 
@@ -13,6 +13,7 @@ forward="$1" && shift
 reverse="$1" && shift
 out_prefix="$1" && shift
 program="$1" && shift
+usearch_bin="$1" && shift
 min_ident_pct="$1" && shift
 
 fwd="$out_prefix"_R1.fastq
@@ -43,7 +44,7 @@ if [[ "$program" == "vsearch" ]]; then
     
 elif [[ "$program" == "usearch" ]]; then
     merge_out=$( \
-        usearch \
+        "$usearch_bin" \
             -fastq_mergepairs "$fwd" \
             --reverse "$rev" \
             -fastqout "$merged" \

@@ -1,5 +1,7 @@
 # Settings for different software
 software:
+  usearch:
+    binary: usearch
   qiime:
     conda_env: qiime2-2022.11
   amptk:

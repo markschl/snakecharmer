@@ -7,6 +7,11 @@
 #  taxonomy assignment methods from these pipelines are
 #  not used in the pipelines definition below.
 software:
+  usearch:
+    # Any path to USEARCH can be specified
+    # (download here: https://drive5.com/usearch/)
+    # By default, assuming that the binary is in PATH under that name
+    binary: usearch
   qiime:
     conda_env: qiime2-2022.11
   amptk:

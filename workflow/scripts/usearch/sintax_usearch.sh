@@ -4,19 +4,25 @@ set -xeuo pipefail
 
 
 if [ $# -lt 3 ]; then
-  echo "Usage: $0 <program> <infile> <refdb> <outfile> [sintax_args]" >&2
+  echo "Usage: $0 <program> <usearch_bin> <infile> <refdb> <outfile> [sintax_args]" >&2
   exit 1
 fi
 
 program="$1" && shift
+usearch_bin="$1" && shift
 infile="$1" && shift
 refdb_compr="$1" && shift
 outfile="$1" && shift
 
-if ! [[ "$program" =~ ^(usearch|vsearch)$ ]]; then
+if [ $program = "usearch" ]; then
+  bin="$usearch_bin"
+elif [ $program = "vsearch" ]; then
+  bin="$program"
+else
   echo "SINTAX program argument needs to be either 'usearch' or 'vsearch'" >&2
   exit 1
 fi
+
 
 out_name=$(basename $outfile)
 outdir=$(dirname $outfile)
@@ -28,7 +34,7 @@ mkdir -p $outdir/sintax
 # first, uncompress the database
 zstd -dqf "$refdb_compr" -o "$refdb"
 
-$program -sintax "$infile" -db "$refdb" \
+"$bin" -sintax "$infile" -db "$refdb" \
   -tabbedout "$sintax_out" \
   -quiet \
   -log /dev/stdout \

@@ -14,6 +14,7 @@ localrules:
 rule usearch_merge_paired:
     params:
         par=lambda w: cfg[w.name]["settings"]["usearch"]["merge"],
+        usearch_bin=config['software']['usearch']['binary']
     input:
         expand(
             "input/grouped/paired/{{sample}}/{{sample}}_R{read}.fastq.gz",
@@ -35,7 +36,7 @@ rule usearch_merge_paired:
         out={output.merged}
         $PIPELINE_DIR/workflow/scripts/usearch/merge_paired.sh \
             {input[0]} {input[1]} ${{out%.fastq.zst}} \
-            {params.par[program]} {params.par[overlap_ident]} \
+            "{params.par[program]}" "{params.usearch_bin}" {params.par[overlap_ident]} \
             -threads 1 \
             -fastq_maxdiffs {params.par[max_diffs]} \
             2> {log}
@@ -174,6 +175,7 @@ rule usearch_collect_derep:
 rule usearch_unoise3:
     params:
         par=lambda w: cfg[w.name]["settings"]["usearch"]["unoise"],
+        usearch_bin=config['software']['usearch']['binary']
     input:
         "processing/{name}/usearch/{strategy}/4_unique/{primers}/good_uniques.fasta.zst",
     output:
@@ -197,7 +199,7 @@ rule usearch_unoise3:
         if [[ "{params.par[program]}" == "usearch" ]]; then
             zstd -dqf {input}
             f={input}
-            usearch -unoise3 ${{f%.zst}} \
+            "{params.usearch_bin}" -unoise3 ${{f%.zst}} \
                 -zotus {output} \
                 -minsize {params.par[min_size]} \
                 &> {log}
@@ -230,6 +232,7 @@ rule usearch_unoise3:
 rule usearch_make_otutab:
     params:
         par=lambda w: cfg[w.name]["settings"]["usearch"]["otutab"],
+        usearch_bin=config['software']['usearch']['binary']
     input:
         denoised="results/{name}/pipeline_usearch_{cluster}/{primers}/{strategy}/denoised.fasta",
         uniques="processing/{name}/usearch/{strategy}/4_unique/{primers}/all_uniques.fasta.zst",
@@ -251,9 +254,12 @@ rule usearch_make_otutab:
     shell:
         """
         # TODO: many arguments, eventually convert into native snakemake Bash/Python script
-        $PIPELINE_DIR/workflow/scripts/usearch/make_otutab.sh {params.par[program]} {threads} \
+        $PIPELINE_DIR/workflow/scripts/usearch/make_otutab.sh \
+          {params.par[program]} "{params.usearch_bin}" \
+          {threads} \
           "{input.uniques}" "{input.denoised}" \
-          "{output.tab}" "{output.map}" "{output.bam}" "{output.notmatched}" \
+          "{output.tab}" "{output.map}" \
+          "{output.bam}" "{output.notmatched}" \
          -id {params.par[ident_threshold]} \
          -maxaccepts {params.par[maxaccepts]} \
          -maxrejects {params.par[maxrejects]} \
@@ -284,6 +290,7 @@ rule convert_taxdb_utax:
 rule assign_taxonomy_sintax:
     params:
         par=lambda w: cfg[w.name]["taxonomy"][w.marker][(w.db_name, w.tax_method)],
+        usearch_bin=config['software']['usearch']['binary']
     input:
         fa="results/{name}/{pipeline}/{marker}__{primers}/{strategy}/denoised.fasta",
         db=lambda w: "refdb/taxonomy/{{marker}}/{db_name}/formatted/utax/{defined}.fasta.zst".format(
@@ -306,8 +313,12 @@ rule assign_taxonomy_sintax:
         mem_mb=5000,
     shell:
         """
+        bin="{params.par[program]}"
+        if [ $bin = "usearch" ]; then
+            bin="{params.usearch_bin}"
+        fi
         $PIPELINE_DIR/workflow/scripts/usearch/sintax_usearch.sh \
-          {params.par[program]} {input.fa} {input.db} {output.tax} \
+          {params.par[program]} "$bin" {input.fa} {input.db} {output.tax} \
             -strand both \
             -sintax_cutoff {params.par[confidence]} \
             -threads {threads} \

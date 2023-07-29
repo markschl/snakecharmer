@@ -53,5 +53,7 @@ extract_num() {
 n=$(grep 'Total reads processed' "$outdir/$sample"_fwd.log | extract_num)
 n_trimmed_f=$(grep 'Reads with adapters' "$outdir/$sample"_fwd.log | extract_num)
 n_trimmed_r=$(grep 'Reads with adapters' "$outdir/$sample"_rev.log | extract_num)
+# TODO: this reports only the reverse sequences that are long enough,
+# not very intuitive
 n_long=$(grep 'Reads written' "$outdir/$sample"_rev.log | extract_num)
 printf "$n\t$n_trimmed_f\t$n_trimmed_r\t$n_long" > "$outdir/$sample"_stats.txt
