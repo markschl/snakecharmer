@@ -1,50 +1,47 @@
-from os.path import basename
-from copy import deepcopy
-from sys import stderr
-
 
 localrules:
-    qiime_make_manifest_paired,
-    # qiime_multiqc_paired,
+    qiime_make_manifest,
+    qiime_multiqc,
     qiime_stats_paired,
 
 
-rule qiime_make_manifest_paired:
-    params:
-        samples=cfg.sample_names["paired"],
+rule qiime_make_manifest:
+    # This is a bit complicated, but serves to obtain the config and output
+    # directory paths, inferring the technology wildcard (which is otherwise
+    # not known)
     input:
-        expand(
-            "input/grouped/paired/{sample}/{sample}_R{read}.fastq.gz",
-            sample=cfg.sample_names["paired"],
-            read=[1, 2],
-        ),
+        run_config=lambda wildcards: expand_runs(
+            "input/sample_config/{technology}/{layout}/{run}",
+            pool=cfg[wildcards.workflow]["settings"]["pool_raw"],
+            **wildcards
+        )[0],
+        fq=lambda wildcards: expand_runs(
+            "processing/{workflow}/input/{technology}/{layout}/{run}",
+            pool=cfg[wildcards.workflow]["settings"]["pool_raw"],
+            **wildcards
+        )[0],
     output:
-        "processing/qiime/paired/manifest.txt",
+        manifest="processing/{workflow}/qiime/manifest/{run}/{layout}/manifest.txt",
     log:
-        "logs/qiime/make_manifest_paired.log",
+        "logs/{workflow}/qiime/{run}/{layout}/make_manifest.log",
     script:
-        "../scripts/qiime_manifest_paired.py"
+        "../scripts/qiime_make_manifest.py"
 
 
 rule qiime_import:
     params:
-        type=lambda w: "SequencesWithQuality"
-        if w.strategy == "single"
-        else "PairedEndSequencesWithQuality",
-        format=lambda w: "SingleEndFastqManifestPhred33V2"
-        if w.strategy == "single"
-        else "PairedEndFastqManifestPhred33V2",
+        type=lambda wildcards: "SequencesWithQuality"
+          if wildcards.layout == "single"
+          else "PairedEndSequencesWithQuality",
+        format=lambda wildcards: "SingleEndFastqManifestPhred33V2"
+          if wildcards.layout == "single"
+          else "PairedEndFastqManifestPhred33V2",
     input:
-        manifest="processing/qiime/{strategy}/manifest.txt",
-        seq=lambda w: expand(
-            "input/grouped/paired/{sample}/{sample}_R{read}.fastq.gz",
-            sample=cfg.sample_names[w.strategy],
-            read=[1, 2] if w.strategy == "paired" else [1],
-        ),
+        manifest="processing/{workflow}/qiime/manifest/{run}/{layout}/manifest.txt",
     output:
-        "processing/{name}/qiime/{strategy}/demux.qza",
+        "processing/{workflow}/qiime/{run}/{layout}/demux.qza",
     log:
-        "logs/{name}/qiime/import_{strategy}.log",
+        "logs/{workflow}/qiime/manifest/{run}/{layout}/import.log",
     group:
         "prepare"
     resources:
@@ -63,15 +60,15 @@ rule qiime_import:
 
 rule qiime_trim_paired:
     params:
-        err_rate=lambda w: cfg[w.name]["settings"]["primers"]["trim_settings"]["max_error_rate"],
-        min_len=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
+        err_rate=lambda w: cfg[w.workflow]["settings"]["primers"]["trim_settings"]["max_error_rate"],
+        min_len=lambda w: cfg[w.workflow]["settings"]["filter"]["min_length"],
     input:
         yaml="processing/primers/primers.yaml",
-        demux="processing/{name}/qiime/paired/demux.qza",
+        demux="processing/{workflow}/qiime/{run}/paired/demux.qza",
     output:
-        qza="processing/{name}/qiime/paired/{marker}__{f_primer}...{r_primer}/trim.qza",
+        qza="processing/{workflow}/qiime/{run}/paired/{marker}__{f_primer}...{r_primer}/trim.qza",
     log:
-        "logs/{name}/qiime/paired/{marker}__{f_primer}...{r_primer}/trim.log",
+        "logs/{workflow}/qiime/{run}/paired/{marker}__{f_primer}...{r_primer}/trim.log",
     group:
         "prepare"
     conda:
@@ -85,15 +82,15 @@ rule qiime_trim_paired:
 
 rule qiime_denoise_paired:
     params:
-        par=lambda w: cfg[w.name]["settings"]["dada2"],
+        par=lambda w: cfg[w.workflow]["settings"]["dada2"],
     input:
-        trim="processing/{name}/qiime/paired/{primers}/trim.qza",
+        trim="processing/{workflow}/qiime/{run}/paired/{primers}/trim.qza",
     output:
-        denoised0="processing/{name}/qiime/paired/{primers}/dada2.qza",
-        tab0="processing/{name}/qiime/paired/{primers}/dada2_tab.qza",
-        stats="processing/{name}/qiime/paired/{primers}/dada2_stats.qza",
+        denoised0="processing/{workflow}/qiime/dada2/{run}/paired/{primers}/dada2.qza",
+        tab0="processing/{workflow}/qiime/dada2/{run}/paired/{primers}/dada2_tab.qza",
+        stats="processing/{workflow}/qiime/dada2/{run}/paired/{primers}/dada2_stats.qza",
     log:
-        "logs/{name}/qiime/paired/{primers}/dada2.log",
+        "logs/{workflow}/qiime/dada2/{run}/paired/{primers}/dada2.log",
     conda:
         config["software"]["qiime"]["conda_env"]
     group:
@@ -106,18 +103,23 @@ rule qiime_denoise_paired:
         "../scripts/qiime_denoise_paired.py"
 
 
-rule qiime_denoised_convert:
+ruleorder:
+    qiime_denoised_export > make_biom
+
+
+rule qiime_denoised_export:
     input:
-        denoised0="processing/{name}/qiime/paired/{primers}/dada2.qza",
-        tab0="processing/{name}/qiime/paired/{primers}/dada2_tab.qza",
+        denoised0="processing/{workflow}/qiime/dada2/{run}/{layout}/{primers}/dada2.qza",
+        tab0="processing/{workflow}/qiime/dada2/{run}/{layout}/{primers}/dada2_tab.qza",
     output:
-        denoised="results/{name}/pipeline_qiime_dada2/{primers}/paired/denoised.fasta",
-        tab="results/{name}/pipeline_qiime_dada2/{primers}/paired/denoised_otutab.txt.gz",
+        denoised="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.fasta",
+        tab="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised_otutab.txt.gz",
+        biom="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.biom",
         tmp=temp(
-            directory("processing/{name}/qiime/paired/{primers}/denoised_convert_tmp")
+            directory("processing/{workflow}/qiime/dada2/{run}/{layout}/{primers}/denoised_convert_tmp")
         ),
     log:
-        "logs/{name}/qiime/paired/{primers}/denoised_convert.log",
+        "logs/{workflow}/qiime/dada2/{run}/{layout}/{primers}/denoised_convert.log",
     conda:
         config["software"]["qiime"]["conda_env"]
     group:
@@ -131,7 +133,8 @@ rule qiime_denoised_convert:
         qiime tools export \
             --input-path {input.tab0} \
             --output-path {output.tmp} &> {log}
-        biom convert -i {output.tmp}/feature-table.biom  \
+        mv {output.tmp}/feature-table.biom {output.biom}
+        biom convert -i {output.biom}  \
             -o $tab \
             --to-tsv --table-type "OTU table" &> {log}
         sed -i '1,1d' $tab
@@ -150,40 +153,28 @@ rule qiime_denoised_convert:
 ##########################
 
 
-rule taxdb_extract_taxonomy:
-    input:
-        "refdb/taxonomy/{db}/filtered/{defined}.fasta.zst",
-    output:
-        "refdb/taxonomy/{db}/filtered/{defined}.txt.zst",
-    conda:
-        "envs/basic.yaml"
-    group:
-        "taxonomy"
-    shell:
-        """
-        zstd -dcqf {input} | st . --to-tsv id,desc | zstd -cq > {output}
-        """
-
-
 rule qiime_taxdb_import:
     input:
-        seq="refdb/taxonomy/{db}/filtered/{defined}.fasta.zst",
-        tax="refdb/taxonomy/{db}/filtered/{defined}.txt.zst",
+        seq="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime.fasta.zst",
     output:
-        tmp=temp(directory("processing/qiime_taxdb/{db}/{defined}")),
-        seq="refdb/taxonomy/{db}/formatted/qiime_qza/{defined}.qza",
-        tax="refdb/taxonomy/{db}/formatted/qiime_qza/{defined}-taxonomy.qza",
+        tmp=temp(directory("processing/qiime_taxdb/db_regular_{source_id}/flt_{filter_id}")),
+        seq="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime-seqdb.qza",
+        tax="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime-taxonomy.qza",
+    wildcard_constraints:
+        source_id = "\w+",
+        filter_id = "\w+",
     conda:
         config["software"]["qiime"]["conda_env"]
     log:
-        "logs/taxdb/convert/{db}/qiime_import/{defined}.log",
+        "logs/taxdb/convert/db_regular_{source_id}/flt_{filter_id}-import-qiime.log",
     group:
         "taxonomy"
     shell:
         """
         mkdir -p {output.tmp}
         zstd -dcqf {input.seq} > {output.tmp}/seq.fasta 2> {log}
-        zstd -dcqf {input.tax} > {output.tmp}/tax.txt 2> {log}
+        # extract taxonomic lineages from FASTA for import in QIIME
+        zstd -dcqf {input} | st . --to-tsv id,desc > {output.tmp}/tax.txt
         qiime tools import \
             --type 'FeatureData[Sequence]' \
             --input-path {output.tmp}/seq.fasta \
@@ -198,14 +189,18 @@ rule qiime_taxdb_import:
 
 rule qiime_taxdb_train_nb:
     input:
-        seq="refdb/taxonomy/{db}/formatted/qiime_qza/{defined}.qza",
-        tax="refdb/taxonomy/{db}/formatted/qiime_qza/{defined}-taxonomy.qza",
+        seq="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime-seqdb.qza",
+        tax="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime-taxonomy.qza",
     output:
-        "refdb/taxonomy/{db}/formatted/qiime_nb/{defined}.qza",
+        trained="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime_nb.qza",
+    wildcard_constraints:
+        source_id = "\w+",
+        filter_id = "\w+",
+    cache: True
     conda:
         config["software"]["qiime"]["conda_env"]
     log:
-        "logs/taxdb/convert/{db}/qiime_nb/{defined}.log",
+        "logs/taxdb/convert/db_regular_{source_id}/flt_{filter_id}-train_qiime_nb.log",
     resources:
         mem_mb=40000,
         runtime=24 * 60,
@@ -214,27 +209,27 @@ rule qiime_taxdb_train_nb:
         qiime feature-classifier fit-classifier-naive-bayes \
             --i-reference-reads {input.seq} \
             --i-reference-taxonomy {input.tax} \
-            --o-classifier {output}
+            --o-classifier {output.trained}
         """
 
 
 rule assign_taxonomy_qiime_sklearn:
     params:
-        par=lambda w: cfg[w.name]["taxonomy"][w.marker][(w.db_name, w.tax_method)],
+        par=lambda w: cfg[w.workflow]["taxonomy"][w.marker][(w.db_name, w.tax_method)]["assign"],
     input:
-        seq="results/{name}/{pipeline}/{marker}__{primers}/{strategy}/denoised.fasta",
-        db=lambda w: "refdb/taxonomy/{{marker}}/{db_name}/formatted/qiime_nb/{defined}.qza".format(
-            **cfg[w.name]["taxonomy"][w.marker][(w.db_name, w.tax_method)]
+        seq="results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/denoised.fasta",
+        db=lambda w: "refdb/taxonomy/db_{preformatted}_{source_id}/flt_{filter_id}/qiime_nb.qza".format(
+            **cfg[w.workflow]["taxonomy"][w.marker][(w.db_name, w.tax_method)]
         ),
     output:
         tmp=temp(
             directory(
-                "processing/{name}/{pipeline}/{marker}__{primers}/{strategy}/taxonomy/{db_name}-{tax_method}/denoised_sklearn"
+                "processing/{workflow}/workflow_{cluster}/qiime_sklearn/{run}/{layout}/{marker}__{primers}/{db_name}-{tax_method}"
             )
         ),
-        tax="results/{name}/{pipeline}/{marker}__{primers}/{strategy}/taxonomy/{db_name}-qiime_sklearn-{tax_method}.txt.gz",
+        tax="results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/taxonomy/{db_name}-qiime_sklearn-{tax_method}.txt.gz",
     log:
-        "logs/{name}/{pipeline}/{strategy}/taxonomy_sklearn/{marker}__{primers}/{db_name}-{tax_method}.log",
+        "logs/processing/{workflow}/workflow_{cluster}/qiime_sklearn/{run}/{layout}/{marker}__{primers}/{db_name}-{tax_method}.log",
     conda:
         config["software"]["qiime"]["conda_env"]
     threads: 1  # needs a LOT of memory depending on the database
@@ -276,21 +271,20 @@ rule assign_taxonomy_qiime_sklearn:
 ##########################
 
 
-rule qiime_multiqc_paired:
+rule qiime_multiqc:
     input:
         rules.multiqc_fastqc.output,
     output:
-        "results/{name}/pipeline_qiime_{method}/_validation/multiqc/multiqc_report.html",
+        "results/{workflow}/validation/multiqc_qiime/multiqc_report.html",
+    log:
+        "logs/{workflow}/multiqc_qiime.log",
     shell:
-        "ln -srf {input} {output}"
+        "ln -srf {input} {output} 2> {log}"
 
 
+# TODO: not implemented
 rule qiime_stats_paired:
     output:
-        "results/{name}/pipeline_qiime_{method}/_validation/sample_report.tsv",
+        touch("results/{workflow}/workflow_qiime_{cluster}/{run}_paired/sample_report.tsv"),
     log:
-        "logs/{name}/qiime/sample_report_{method}.log",
-    run:
-        # TODO: not implemented
-        with open(output[0], "w") as out:
-            pass
+        "logs/{workflow}/workflow_qiime_{cluster}/{run}_paired/sample_report.log",

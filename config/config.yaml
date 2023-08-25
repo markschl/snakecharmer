@@ -36,13 +36,6 @@ input:
   # glob patterns can contain /**/ to match unknown/unlimited directory depth
   # (like the globstar option in Bash)
   recursive: true
-  # Multiple files with the same name in different directories are
-  # either pooled together before processing (if pool_duplicates is true)
-  # or a suffix number (_1, _2, etc.) is added to make the sample names
-  # unique (if pool_duplicates is false).
-  # Which samples were pooled is listed in 'results/samples.yaml' after
-  # running the 'config' or other commands.
-  pool_duplicates: false
   # The name pattern is an important setting that should be correctly
   # specified.
   # While no metadata file specifying sample names and corresponding input files
@@ -58,6 +51,15 @@ input:
   #     The illumina pattern: "(.+?)_S\d+_L\d+_R([12])_\d{3}\.fastq\.gz"
   name_pattern: sample_read  # {sample_read, illumina, <regex>}
 
+# Multiple files with the same name in different directories are
+# either pooled together before processing (if pool_duplicates is true)
+# or a suffix number (_1, _2, etc.) is added to make the sample names
+# unique (if pool_duplicates is false).
+# Which samples were pooled is listed in 'results/samples.yaml' after
+# running the 'config' or other commands.
+pool_raw: false
+
+
 ##### Pipeline definition ####
 
 # Each workflow needs two options:
@@ -66,7 +68,7 @@ input:
 #    below under the 'taxonomy_dbs' and 'taxonomy_methods' options,
 #    or a custom combination of database/method names
 #     (see example in 'unoise_usearch' pipeline)
-pipelines:
+workflows:
   # UNOISE3 pipeline using VSEARCH for denoising
   unoise:
     cluster: usearch_unoise3  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }

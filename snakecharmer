@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+
+import argparse
+import glob
+import os
+import sys
+import multiprocessing
+import yaml
+
+try:
+    import snakemake
+except ImportError:
+    print("Snakemake not found. Did you forget 'conda activate snakemake'? "
+          "Alternatively, you may install Snakemake system-wide.", file=sys.stderr)
+    exit(1)
+
+
+def main(argv = sys.argv[1:]):
+
+    p = argparse.ArgumentParser(
+        description="amplicon data processing workflows for diversity analysis",
+        usage="""snakecharmer.py [parameters] [<snakemake parameters>] <analysis directory> [target, ...]
+
+Snakecharmer allows running and comparing amplicon analysis workflows.
+This script is a more user friendly wrapper for snakemake adapted to this
+specific use case. Additional options are directly passed on to snakemake.
+
+Available rules:
+* preparation: samples, unique_samples, config, quality
+* main rules: denoise, taxonomy
+* additional/special: cmp, ITS
+* cleanup: clean, clean_all, clean_tax, clean_taxdb, clean_fastqc, clean_cmp, clean_itsx
+
+Example:
+Running on a local computer with 8 cores
+(the 'outdir' directory must contain a 'config' directory with 'config.yaml' and 'taxonomy.yaml')
+
+$ cd snakecharmer-main
+$ conda activate snakemake
+$ snakecharmer -c8 outdir denoise
+""")
+    p.add_argument(
+        "directory",
+        help="""
+        Working directory where the configuration is found ('config'
+        directory) and all output is placed.
+        """)
+    p.add_argument(
+        "target",
+        nargs="*",
+        help="""
+        Targets to build (rules or files).
+        """)
+
+    d = p.add_argument_group("Data storage")
+    d.add_argument(
+        "--conda-dir",
+        default=os.path.join("~", "snakecharmer", "conda"),
+        help="""
+        Location to store Conda environments and archives
+        """)
+    d.add_argument(
+        "--cache-dir",
+        default=os.path.join("~", "snakecharmer", "cache"),
+        help="""
+        Location of the between-workflow cache, which is currently used
+        to keep taxonomic databases without having to re-download them
+        all the time.
+        """)
+
+    r = p.add_argument_group("job resources")
+    r.add_argument(
+        "-c", "--cores",
+        default="1",
+        help="""
+        Number of CPU cores to use at most, or 'all' to use all available cores.
+        The default is 1 (one core)
+        """)
+    r.add_argument(
+        "-j", "--jobs",
+        default="1",
+        help="""
+        Number of jobs to submit or 'unlimited'. This is only relevant in cluster/cloud mode.
+        The default is 1, so make sure to change this in order to run jobs
+        simultanesously on multiple nodes.
+        """)
+    r.add_argument(
+        "--local-cores", type=int,
+        default=1,
+        help="""
+        Number of cores to use for very short computations on the host machine.
+        This is not relevant on a normal PC.
+        """)
+    
+    dev = p.add_argument_group("Other")
+    dev.add_argument(
+        "--dev", action="store_true",
+        help="""
+        Developer mode: equivalent to --rerun-triggers mtime,params,input,software-env
+        (excluding 'code' to make sure not everything is always re-run).
+        Also, --quiet is not supplied, showing all output of snakemake
+        """
+    )
+    dev.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="Show all snakemake output (--quiet flag omitted)"
+    )
+
+    args, other_args = p.parse_known_args(argv)
+
+    # set SNAKEMAKE_OUTPUT_CACHE for use with --cache
+    cache_dir = os.path.abspath(os.path.expanduser(args.cache_dir))
+    os.makedirs(cache_dir, exist_ok=True)
+    os.environ["SNAKEMAKE_OUTPUT_CACHE"] = cache_dir
+
+    # basic command
+    base_cmd = ["-d", args.directory,
+                "--use-conda", "--conda-prefix", args.conda_dir,
+                "--cache",
+                "--local-cores", str(args.local_cores),
+                "--rerun-incomplete"]
+    if args.dev:
+        base_cmd += ["--rerun-triggers", "mtime", "params", "input", "software-env"]
+    elif not args.verbose:
+        base_cmd += ["--quiet", "rules"]
+    
+    # First, we need to know the number of samples in order to being able
+    # to configure the group-components.
+    # For this, we need to run the "samples" rule first
+    # TODO: this is actually only necessary on clusters
+    cmd = base_cmd + ["-c", "1", "-j", "1", "samples"]
+    print("Running: snakemake " + " ".join(cmd), file=sys.stderr)
+    try:
+        snakemake.main(cmd)
+    except SystemExit as e:
+        if e.code > 0:
+            raise
+    
+    # determine resources
+    n_cores = multiprocessing.cpu_count() if args.cores == 'all' else int(args.cores)
+    if args.jobs == 'unlimited':
+        print("Warning: setting -j/--jobs to 'unlimited' can cause many"
+              "small jobs to run. Setting to 20 jobs. This can be changed with -j <number>.",
+               file=sys.stderr)
+        n_jobs = 20
+    else:
+        n_jobs = int(args.jobs)
+
+    # For now, we just use the maximum number of samples from any
+    # workflow to determine the group sizes, since we don't know
+    # which workflows actually have sample groups
+    nsamples = []
+    for path in glob.glob(os.path.join(args.directory, "results", "*", "samples.yaml")):
+        with open(path) as f:
+            nsamples.append(sum(
+                1
+                for layouts in yaml.safe_load(f).values()
+                for samples in layouts.values()
+                for _ in samples
+            ))
+    # Sample batch sizes are chosen in a way that the number of batches is
+    # 1.5x the number of jobs (but batch size is at least 10 samples).
+    sample_group_size = max(10, round(max(nsamples) / n_jobs * 1.5))
+
+    # run Snakemake
+    cmd = args.target + base_cmd + [
+        "-c", str(n_cores), "-j", str(n_jobs),
+        "--group-components", f"sample={sample_group_size}",
+    ] + other_args
+    print("Running: snakemake " + " ".join(cmd), file=sys.stderr)
+    snakemake.main(cmd)
+
+
+if __name__ == '__main__':
+    main()

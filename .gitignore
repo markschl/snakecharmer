@@ -2,10 +2,11 @@ input/
 processing/
 logs/
 refdb/
+multiqc_*
 
 *~
 _*
-.snakemake/
+.snakemake*
 .tests/
 *.pyc
 *.swp

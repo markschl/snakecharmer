@@ -17,7 +17,7 @@ def dump_config(config, outfile):
             marker: {"-".join(name): config for name, config in tax.items()}
             for marker, tax in c["taxonomy"].items()
         }
-        yaml.dump(c, o)
+        yaml.safe_dump(c, o)
 
 
 with file_logging(snakemake.log[0]):

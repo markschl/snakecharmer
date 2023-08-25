@@ -1,5 +1,6 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
-description: an entry in the sample sheet
+$id: https://raw.githubusercontent.com/markschl/snakecharmer/main/workflow/config.schema.yaml
+description: Snakecharmer configuration
 properties:
   software:
     type: object
@@ -35,49 +36,73 @@ properties:
     additionalProperties: false
 
   input:
-    type: object
-    properties:
-      directories:
-        type: array
-        items: { type: string }
-        description: >
-          List of directories to search (recursively or not, depending on 
-          recursive setting)
-      patterns:
-        type: array
-        items: { type: string }
-        description: >
-          List of glob patterns that should collectively match input files
-          (in conjunction with "directories"). Unlimited directory depth matching
-          with /**/ can be done if "recursive" is true
-      recursive:
-        type: boolean
-        description: >
-          Activate/deactivate recursive search in directories or pattern search
-          in directories at unlimited depth using /**/ (see "directories" and 
-          "patterns")
-      pool_duplicates:
-        type: boolean
-        description: >
-          Should duplicate files (samples with same name, but in different directory) 
-          be pooled, or should a suffix number be added to make the samples unique?
-      name_pattern:
-        type: string
-        description: >
-          Naming pattern for input files (required to recognize sample name and
-          read number)
-    allOf:
-      -
-        anyOf:
-          - { required: [directories] }
-          - { required: [patterns] }
-      - required: [recursive, pool_duplicates, name_pattern]
-    additionalProperties: false
-
-  pipelines:
+    $defs:
+      input:
+        type: object
+        $dynamicAnchor: input
+        properties:
+          sample_file:
+            type: string
+            description: >
+              Path to a sample file with one forward 
+          sample_pattern:
+            type: string
+            description: >
+              Naming pattern for input files (required to recognize sample name and
+              read number)
+          directories:
+            type: array
+            items: { type: string }
+            description: >
+              List of directories to search (recursively or not, depending on 
+              recursive setting)
+          patterns:
+            type: array
+            items: { type: string }
+            description: >
+              List of glob patterns that should collectively match input files
+              (in conjunction with "directories"). Unlimited directory depth matching
+              with /**/ can be done if "recursive" is true
+          recursive:
+            type: boolean
+            default: false
+            description: >
+              Activate/deactivate recursive search in directories or pattern search
+              in directories at unlimited depth using /**/ (see "directories" and 
+              "patterns")
+          paired_filter:
+            type: string
+            enum: [fwd-only, rev-only]
+            description: >
+              Keep only forward/R1 (fwd-only) or reverse/R2 
+              (rev-only) read files in a paired layout, resulting 
+              in a single-end layout. This setting does not affect 
+              samples that are already in single-end mode.
+              If only keeping reverse/R2 reads, the resulting layout name will
+              actually be "single_rev", indicating that the reads do contain
+              the reverse primer and not the forward primer.
+        additionalProperties: false
+        oneOf:
+          - required: [sample_file]
+          - required: [sample_pattern, directories]
+          - required: [sample_pattern, patterns]
     type: object
     patternProperties:
-      r"^(\w+)$":
+      ^(illumina)$:
+        if:
+          required: ["sample_pattern"]
+        then:
+          "$dynamicRef": "#input"
+        else:
+            patternProperties:
+              ^\w+$:
+                "$dynamicRef": "#input"                
+    additionalProperties: false
+  
+  workflows:
+    type: object
+    patternProperties:
+      ^(\w+)$:
         type: object
         properties:
           cluster:
@@ -92,7 +117,7 @@ properties:
                   dbs:
                     type: object
                     patternProperties: 
-                      r"^(\w+)$":
+                      ^(\w+)$:
                         type: array
                         items: { type: string }
                         minItems: 1
@@ -109,80 +134,88 @@ properties:
                   (dbs: marker: [list of databases], and methods: [list of metods])
           settings:
             type: object
-            properties:
-              compare: { "$ref": "#/compare" }
-              primers: { "$ref": "#/primers" }
-              filter: { "$ref": "#/filter" }
-              usearch: { "$ref": "#/usearch" }
-              dada2: { "$ref": "#/dada2" }
-              ITSx: { "$ref": "#/ITSx" }
-            additionalProperties: false
+            # note: References don't work, but referencing $anchor works.
+            #   However, validating these sub-schemas would require all
+            #   properties in "required" directives to be actually set, which
+            #   is too restrictive.
+            # properties:
+            #   compare: { $dynamicRef: "#/compare" }
+            #   primers: { $dynamicRef: "#/primers" }
+            #   filter: { $dynamicRef: "#/filter" }
+            #   usearch: { $dynamicRef: "#/usearch" }
+            #   dada2: { $dynamicRef: "#/dada2" }
+            #   ITSx: { $dynamicRef: "#/ITSx" }
+            # additionalProperties: false
             description: >
-              Pipeline-specific settings that should override different default
-              settings specified below (compare, primers, filter, usearch, dada2
+              Workflow-specific settings that should override different default
+              settings specified below (compare, primers, pool_raw, filter, usearch, dada2
               and ITSx)
         required: [cluster, taxonomy]
         additionalProperties: false
+    additionalProperties: false
+
+  # qc:
+  #   type: object
+  #   properties:
+  #     fastqc:
+  #       type: object
+  #       properties:
+  #         random_subset:
+  #           type: integer
+  #           description: >
+  #             (number) Only supply a random subset of sequences to FastQC in
+  #             order to speed things up.
+
+  pool_raw:
+    type: boolean
+    default: false
+    description: >
+      Should duplicate files (samples with same name, but in different directory) 
+      be pooled, or should a suffix number be added to make the samples unique?
 
   compare:
     type: object
-    patternProperties:
+    $defs:
+        defaults:
+          type: object
+          properties:
+            ident_threshold:
+              type: number
+              minimum: 0
+              maximum: 1
+            maxhits:
+              type: integer
+              minimum: 1
+              default: 1
+            maxaccepts:
+              type: integer
+              minimum: 1
+              default: 64
+            maxrejects:
+              type: integer
+              minimum: 1
+              default: 64
+    
+    properties:
       default_settings:
-        type: object
-        properties:
-          ident_threshold:
-            type: number
-            minimum: 0
-            maximum: 1
-          maxhits:
-            type: integer
-            minimum: 1
-            default: 1
-          maxaccepts:
-            type: integer
-            minimum: 1
-            default: 64
-          maxrejects:
-            type: integer
-            minimum: 1
-            default: 64
-      r"^(\w+)$":
-        type: object
-        properties:
-          file:
-            type: string
-          "$ref": "#/compare/default_settings"
-        additionalProperties: false
+        $dynamicRef: "#/compare/$defs/defaults"
+    if:
       required: [default_settings]
-      minProperties: 1
+    else:
+      patternProperties:
+        ^(\w+)$:
+          type: object
+          properties:
+            file:
+              type: string
+          additionalProperties:
+            $dynamicRef": "#/compare/$defs/defaults"
+        additionalProperties: false
+    minProperties: 1
       
   primers:
     type: object
-    patternProperties:
-      r"^(\w+)$":
-        type: object
-        properties:
-          forward:
-            type: array
-            items:
-              type: string
-              required: [type]
-            minItems: 1
-          reverse:
-            type: array
-            items:
-              type: string
-              required: [type]
-            minItems: 1
-          combinations:
-            oneOf:
-              - { type: string, enum: [default], default: default }
-              - 
-                type: array
-                items: { type: string }
-                minItems: 1
-        required: [forward, reverse, combinations]
-        additionalProperties: false
+    properties:
       trim_settings:
         type: object
         properties:
@@ -195,27 +228,61 @@ properties:
             maximum: 1
         required: [min_overlap, max_error_rate]
         additionalProperties: false
-    required: [trim_settings]
-    minProperties: 2
+    if:
+      required: [trim_settings]
+    else:
+      patternProperties:
+        ^(\w+)$:
+          type: object
+          properties:
+            forward:
+              type: array
+              items:
+                type: object
+                patternProperties:
+                  ^(\w+)$:
+                    type: string
+              minItems: 1
+            reverse:
+              type: array
+              items:
+                type: object
+                patternProperties:
+                  ^(\w+)$:
+                    type: string
+              minItems: 1
+            combinations:
+              oneOf:
+                - { type: string, enum: [default], default: default }
+                - 
+                  type: array
+                  items: { type: string }
+                  minItems: 1
+          required: [forward, reverse, combinations]
+          additionalProperties: false
+      minProperties: 1
+      additionalProperties: false
 
   taxonomy_dbs:
     type: object
     patternProperties:
-      r"^(\w+)$":
+      ^(\w+)$:
         type: object
         patternProperties:
-          r"^(\w+)$":
+          ^(\w+)$:
             type: object
             properties:
               db: { type: string }
               defined: { type: string }
-              required: [ db ]
+            required: [ db ]
             additionalProperties: false
+        additionalProperties: false
+    additionalProperties: false
 
   taxonomy_methods:
     type: object
     patternProperties:
-      r"^(\w+)$":
+      ^(\w+)$:
         type: object
         properties:
           method:
@@ -231,6 +298,7 @@ properties:
             default: vsearch
         required: [method, confidence]
         additionalProperties: false
+    additionalProperties: false
 
   filter:
     type: object
@@ -383,23 +451,22 @@ properties:
         default: 50  # ITSx has 0 as default
     required: [organism_groups, e-value]
     additionalProperties: false
+
   # taxonomy.yaml
   taxonomy_db_sources:
     type: object
     patternProperties:
-      r"^(\w+)$":
+      ^(\w+)$:
         type: object
         properties:
-          type:
+          format:
             type: string
-            enum: [unite_otus, midori]
-          reference:
-            type: string
-          url:
-            type: string
-        required: [type, url]
-        additionalProperties: false
+            enum: [unite_otus, midori, gtdb, utax, qiime, qiime_qza, idtaxa, qiime_nb]
+        required: [format]
+    additionalProperties: false
+
 additionalProperties: false
-required: [software, input, pipelines, compare, primers,
-           taxonomy_dbs, taxonomy_methods, filter, usearch, dada2,
-           taxonomy_db_sources]
+
+required: [software, input, workflows, primers, pool_raw, compare,
+          taxonomy_dbs, taxonomy_methods, filter, usearch, dada2,
+          taxonomy_db_sources]

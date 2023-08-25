@@ -4,48 +4,31 @@ import lib
 
 
 localrules:
-    amptk_collect,
     amptk_stats_paired,
-
-
-rule amptk_collect:
-    input:
-        expand(
-            "input/grouped/paired/{sample}/{sample}_R{read}.fastq.gz",
-            sample=cfg.sample_names["paired"],
-            read=[1, 2],
-        ),
-    output:
-        expand(
-            "processing/{{name}}/amptk/input/grouped/paired/{sample}_R{read}.fastq.gz",
-            sample=cfg.sample_names["paired"],
-            read=[1, 2],
-        ),
-    log:
-        "logs/{name}/amptk/collect.log",
-    script:
-        "../scripts/amptk_collect.py"
+    amptk_multiqc,
 
 
 rule amptk_merge_trim:
     params:
-        err_rate=lambda w: cfg[w.name]["settings"]["primers"]["trim_settings"]["max_error_rate"],
-        min_len=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
-        program=lambda w: cfg[w.name]["settings"]["usearch"]["merge"]["program"],
+        err_rate=lambda w: cfg[w.workflow]["settings"]["primers"]["trim_settings"]["max_error_rate"],
+        min_len=lambda w: cfg[w.workflow]["settings"]["filter"]["min_length"],
+        program=lambda w: cfg[w.workflow]["settings"]["usearch"]["merge"]["program"],
         usearch_bin=config["software"]["usearch"]["binary"],
     input:
         primers_yaml="processing/primers/primers.yaml",
-        fq=expand(
-            "processing/{{name}}/amptk/input/grouped/paired/{sample}_R{read}.fastq.gz",
-            sample=cfg.sample_names["paired"],
-            read=[1, 2],
+        fq=lambda wildcards: expand_samples(
+            "processing/{workflow}/input/{technology}/{layout}/{run}/{sample}_R{read}.fastq.gz",
+            technology="illumina",
+            layout="paired",
+            pool=cfg[wildcards.workflow]["settings"]["pool_raw"],
+            **wildcards
         ),
     output:
-        demux="processing/{name}/amptk/analysis/paired/{marker}__{f_primer}...{r_primer}/illumina.demux.fq.gz",
-        mapping="processing/{name}/amptk/analysis/paired/{marker}__{f_primer}...{r_primer}/illumina.mapping_file.txt",
-        log="processing/{name}/amptk/analysis/paired/{marker}__{f_primer}...{r_primer}/illumina.amptk-demux.log",
+        demux="processing/{workflow}/amptk/{run}/paired/{marker}__{f_primer}...{r_primer}/illumina.demux.fq.gz",
+        mapping="processing/{workflow}/amptk/{run}/paired/{marker}__{f_primer}...{r_primer}/illumina.mapping_file.txt",
+        log="processing/{workflow}/amptk/{run}/paired/{marker}__{f_primer}...{r_primer}/illumina.amptk-demux.log",
     log:
-        "logs/{name}/amptk/paired/{marker}__{f_primer}...{r_primer}/trim_merge.log",
+        "logs/{workflow}/amptk/{run}/paired/{marker}__{f_primer}...{r_primer}/trim_merge.log",
     group:
         "prepare"
     conda:
@@ -61,15 +44,16 @@ rule amptk_merge_trim:
 rule amptk_denoise:
     params:
         method=lambda wildcards: wildcards.method,
-        par=lambda wildcards: cfg[wildcards.name]["settings"],
+        usearch_par=lambda wildcards: cfg[wildcards.workflow]["settings"]["usearch"],
+        dada2_par=lambda wildcards: cfg[wildcards.workflow]["settings"]["dada2"],
         usearch_bin=config["software"]["usearch"]["binary"],
     input:
-        demux="processing/{name}/amptk/analysis/paired/{primers}/illumina.demux.fq.gz",
+        demux="processing/{workflow}/amptk/{run}/paired/{primers}/illumina.demux.fq.gz",
     output:
-        denoised="results/{name}/pipeline_amptk_{method}/{primers}/paired/denoised.fasta",
-        tab="results/{name}/pipeline_amptk_{method}/{primers}/paired/denoised_otutab.txt.gz",
+        denoised="results/{workflow}/workflow_amptk_{method}/{run}_paired/{primers}/denoised.fasta",
+        tab="results/{workflow}/workflow_amptk_{method}/{run}_paired/{primers}/denoised_otutab.txt.gz",
     log:
-        "logs/{name}/amptk/paired/{primers}/{method}.log",
+        "logs/{workflow}/amptk/{run}/paired/{primers}/{method}.log",
     conda:
         config["software"]["amptk"]["conda_env"]
     group:
@@ -87,26 +71,20 @@ rule amptk_denoise:
 ##########################
 
 
-rule amptk_multiqc_paired:
+rule amptk_multiqc:
     input:
         rules.multiqc_fastqc.output,
     output:
-        "results/{name}/pipeline_amptk_{method}/_validation/multiqc/multiqc_report.html",
-    shell:
-        "ln -srf {input} {output}"
-
-
-rule amptk_stats_paired:
-    input:
-        merge=expand(
-            "processing/{{name}}/amptk/analysis/paired/{primers}/illumina.amptk-demux.log",
-            primers=cfg.primer_combinations_flat,
-        ),
-    output:
-        "results/{name}/pipeline_amptk_{method}/_validation/sample_report.tsv",
+        "results/{workflow}/validation/multiqc_amptk/multiqc_report.html",
     log:
-        "logs/{name}/amptk/sample_report_{method}.log",
-    run:
-        # TODO: not implemented
-        with open(output[0], "w") as out:
-            pass
+        "logs/{workflow}/multiqc_amptk.log",
+    shell:
+        "ln -srf {input} {output} 2> {log}"
+
+
+# TODO: not implemented
+rule amptk_stats_paired:
+    output:
+        touch("results/{workflow}/workflow_amptk_{cluster}/{run}_paired/sample_report.tsv"),
+    log:
+        "logs/{workflow}/workflow_amptk_{cluster}/{run}/paired/sample_report.log",
