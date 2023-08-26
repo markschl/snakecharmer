@@ -16,7 +16,7 @@ out_prefix="$1" && shift
 
 out=$( {  
     zstd -dcq "$input_file" |  # decompress file
-      st set -i "$sample_name.{num}" --fq |  # set sequence number and delete description
+      st set -i "$sample_name.{num}" --fq |  # Create ID from sample name + sequence number
       st del -d --fq |  # delete descriptions
       vsearch -fastq_filter - \
         -fastaout - \

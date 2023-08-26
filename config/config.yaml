@@ -205,7 +205,7 @@ taxonomy_dbs:
     unite_species:
       db: unite_eukarya_all  # defined in taxonomy.yaml
       # only keep references with known species annotation
-      defined: species
+      defined_rank: species
   COI:
     midori:
       db: Midori_COI

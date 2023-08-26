@@ -10,14 +10,12 @@ taxonomy_db_sources:
     doi: 10.15156/BIO/2483918
     # optional settings
     threshold: dynamic  # {dynamic, 97, 99}
-    kind: regular  # optional, 'developer' will return the untrimmed full-length sequences
+    kind: developer  # optional, 'developer' will return the untrimmed full-length sequences
     # optional (quoted): must be a substring of the filename. 
     # If missing, the file with the last date is selected for a given DOI
     date: "29.11.2022"
     # # alternative: specific source URL or file path (overrides doi/date)
     # file: https://files.plutof.ut.ee/public/orig/71/E6/71E68A5DD3F5C311F913757F9E7CA2508430F9400C14413ADA08A0BB33169BB4.tgz
-    # optional and unncecessary, for your own reference
-    version: "9.0"
   unite_eukarya_refs:
     format: unite_otus
     # includes only singletons set as "Refs"

@@ -32,6 +32,7 @@ localrules:
 rule write_taxdb_config:
     params:
         dbconfig=lambda wildcards: cfg.taxdb_sources_by_hash[wildcards.source_id],
+        exclude=["source_id", "name", "preformatted"]
     output:
         yml="refdb/taxonomy/db_{preformatted}_{source_id}/{type}_db_config.yaml",
     log:
@@ -74,7 +75,7 @@ rule obtain_taxdb:
 rule write_taxdb_filter_config:
     params:
         dbconfig=lambda wildcards: cfg.taxdb_filter_by_hash[wildcards.filter_id],
-        exclude=["source", "db", "name"],
+        exclude=["filter_id", "source", "db", "name"],
     output:
         yml="refdb/taxonomy/db_{preformatted}_{source_id}/flt_{filter_id}/filter_config.yaml",
     log:

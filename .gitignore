@@ -1,4 +1,5 @@
 input/
+unique_samples/
 processing/
 logs/
 refdb/

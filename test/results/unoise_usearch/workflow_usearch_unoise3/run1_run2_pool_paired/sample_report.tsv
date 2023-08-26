@@ -1,0 +1,3 @@
+sample	raw	merged	(%)	fwd-primer	(% of merged)	rev-primer	(% of merged)	long enough	(% of merged)	ITS__ITS3-KYO2...ITS4	filtered	(% of trimmed)
+mock1	10000	9903	99.03	9900	99.97	9890	99.87	9679	97.74	9666	8894	92.01
+mock2	5000	4959	99.18	4959	100.0	4954	99.9	4952	99.86	4947	4714	95.29

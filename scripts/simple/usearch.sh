@@ -133,7 +133,7 @@ $usearch -otutab trimmed.fq -otus zotus.fa -otutabout otutab_raw.txt \
 
 # finish up
 
-out=../../results/unoise_usearch_simple/pipeline_usearch_unoise3_simple/ITS__ITS3-KYO2...ITS4/paired
+out=../../results/unoise_usearch_simple/workflow_usearch_unoise3_simple/run1_run2_pool_paired/ITS__ITS3-KYO2...ITS4
 mkdir -p $out
 cp zotus.fa $out/denoised.fasta
 gzip -cn otutab_raw.txt > $out/denoised_otutab.txt.gz

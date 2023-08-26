@@ -15,7 +15,7 @@ if (length(args) == 0) {
 
 # read results of sequence comparison
 cmp = read_tsv(file.path(pipeline_dir, 'cmp', 'cmp.txt'),
-               col_names=c('pipeline', 'primers', 'strategy', 'OTU', 'cluster', 'id'))
+               col_names=c('workflow', 'primers', 'layout', 'OTU', 'cluster', 'id'))
 # similar clusters
 self_cmp = read_tsv(file.path(pipeline_dir, 'cmp', 'self_cmp.txt'),
                col_names=c('primers', 'cluster', 'other', 'id'),
@@ -28,7 +28,7 @@ self_cmp = read_tsv(file.path(pipeline_dir, 'cmp', 'self_cmp.txt'),
 
 # get list of results directories
 dirs = list.dirs(file.path(pipeline_dir, 'results'))
-dirs = dirs[grepl('results(/[^/]+){3,3}/(single|paired)$', dirs, perl=T)]
+dirs = dirs[grepl('results(/[^/]+){2,2}/.+?(single|paired)/[^/]+$', dirs, perl=T)]
 
 if (length(dirs) > 0) {
   primer_combs = basename(dirname(dirs))
@@ -46,32 +46,32 @@ if (length(dirs) > 0) {
     data = map_dfr(seq_along(primer_dirs), function(i) {
       # OTU tabs
       tab_file = tabs[i]
-      pipeline = basename(dirname(dirname(dirname(dirname(tab_file)))))
-      strategy = basename(dirname(tab_file))
+      workflow = basename(dirname(dirname(dirname(dirname(tab_file)))))
+      layout = basename(dirname(tab_file))
       d = suppressMessages(read_tsv(tab_file))
       names(d)[1] = 'OTU'
       d %>% 
         pivot_longer(-OTU, names_to='sample', values_to='count') %>% 
-        mutate(pipeline=!!pipeline,
-               strategy=!!strategy)
+        mutate(workflow=!!workflow,
+               layout=!!layout)
     })
     
     stopifnot(!is.na(data$count))
     
     data = data %>% 
       # add comparison to clusters
-      left_join(cmp, c('pipeline', 'strategy', 'OTU'))
+      left_join(cmp, c('workflow', 'layout', 'OTU'))
     
     data = data.table(data)
-    data = data[, .(count=sum(count), n=.N), by=.(pipeline, strategy, sample, cluster)]
+    data = data[, .(count=sum(count), n=.N), by=.(workflow, layout, sample, cluster)]
 
     count_tabs = data %>% 
       split(.$sample) %>% 
       map(function(smp) {
         m = smp %>% 
           select(-n, -sample) %>% 
-          arrange(pipeline) %>% 
-          pivot_wider(names_from=c(pipeline, strategy), values_from=count, values_fill=0, names_sep=' ') %>% 
+          arrange(workflow) %>% 
+          pivot_wider(names_from=c(workflow, layout), values_from=count, values_fill=0, names_sep=' ') %>% 
           column_to_rownames('cluster')
       })
     

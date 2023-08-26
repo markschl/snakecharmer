@@ -4,7 +4,7 @@
 # simple example pipelines published by the pipeline authors
 # in order to validate our code
 
-set -xeuo pipefail
+set -euo pipefail
 
 # In order for results to be reproducible, we use only one core.
 # This is especially important for USEARCH, where the order of 
@@ -22,10 +22,10 @@ gz=test/gz
 out=test/processing/simple_input
 rm -rf $out
 mkdir -p $out
-zcat $gz/mock1_R1.fastq.gz $gz/mock1_more/mock1_R1.fastq.gz > $out/mock1_R1.fastq
-zcat $gz/mock1_R2.fastq.gz $gz/mock1_more/mock1_R2.fastq.gz > $out/mock1_R2.fastq
-zcat $gz/mock2_R1.fastq.gz > $out/mock2_R1.fastq
-zcat $gz/mock2_R2.fastq.gz > $out/mock2_R2.fastq
+zcat $gz/run1/mock1_R1.fastq.gz $gz/run2/mock1_R1.fastq.gz > $out/mock1_R1.fastq
+zcat $gz/run1/mock1_R2.fastq.gz $gz/run2/mock1_R2.fastq.gz > $out/mock1_R2.fastq
+zcat $gz/run1/mock2_R1.fastq.gz > $out/mock2_R1.fastq
+zcat $gz/run1/mock2_R2.fastq.gz > $out/mock2_R2.fastq
 
 fprimers=$out/fprimers.fa
 rprimers=$out/rprimers.fa
@@ -42,8 +42,8 @@ scripts/compare_results.sh test
 # VSEARCH pipeline presumably should yield same results
 vres=test/results/unoise/data
 ures=test/results/unoise_usearch/data
-usearch_res=test/results/unoise_usearch_simple/pipeline_usearch_unoise3_simple/ITS__ITS3-KYO2...ITS4/paired
-vsearch_res=test/results/unoise_vsearch_simple/pipeline_usearch_unoise3_simple/ITS__ITS3-KYO2...ITS4/paired
+usearch_res=test/results/unoise_usearch_simple/workflow_usearch_unoise3_simple/run1_run2_pool_paired/ITS__ITS3-KYO2...ITS4
+vsearch_res=test/results/unoise_vsearch_simple/workflow_usearch_unoise3_simple/run1_run2_pool_paired/ITS__ITS3-KYO2...ITS4
 # case-insensitive sequence comparisons because of masking (our pipeline converts masked sequences to uppercase)
 if ! cmp -s <(tr '[:upper:]' '[:lower:]' < $vres/denoised.fasta) <(tr '[:upper:]' '[:lower:]' < $vsearch_res/denoised.fasta); then
   echo "ASVs from simple vs. regular VSEARCH pipelines differ ($vres/denoised.fasta and $vsearch_res/denoised.fasta)" >&2

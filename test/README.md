@@ -24,7 +24,8 @@ scripts/compare_results.sh test
 (cd test && scripts/compare_mock.R)
 ## render the example Rmd (requires pandoc in PATH or RSTUDIO_PANDOC set, here for Ubuntu)
 # If this doesn't work, you can still directly run the document in RStudio
-RSTUDIO_PANDOC=/usr/lib/rstudio/resources/app/bin/quarto/bin/tools Rscript -e "rmarkdown::render('test/R_example/example.Rmd', 'github_document')"
+export RSTUDIO_PANDOC=/usr/lib/rstudio/resources/app/bin/quarto/bin/tools
+Rscript -e "rmarkdown::render('test/R_example/example.Rmd', 'github_document')"
 
 # the following command removes everything (INCLUDING the results/ directory)
 ./snakecharmer test clean_all
@@ -37,7 +38,7 @@ The results of the comparison are found in `test/mock_cmp`. The mock community i
 
 ## Validation using example workflows
 
-In order to further carefully validate this pipeline, the test data was further analyzed using example scripts from the online documentation of the different tools, currently:
+In order to further carefully validate this software, the test data was further analyzed using example scripts from the online documentation of the different tools, currently:
 
 * [USEARCH pipeline](https://www.drive5.com/usearch/manual/ex_miseq_its.html) for MiSeq 2x300 fungal ITS
 * [VSEARCH "alternative" pipeline](https://github.com/torognes/vsearch/wiki/Alternative-VSEARCH-pipeline/c4859786f05bba35d8c306de4a3d64fea40d9dbf) slightly modified to use UNOISE3 following the [this description](https://github.com/torognes/vsearch/pull/283). The VSEARCH "alternative" pipeline contains an extra step of read mapping against the OTUs to obtain the count table, using quality filtered reads in this case. The workflow from this repository maps the raw/unfiltered reads instead (with a 97% identity threshold), [as recommended by the USEARCH author](https://www.drive5.com/usearch/manual/cmd_otutab.html). In the future, this should be configurable.

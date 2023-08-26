@@ -273,7 +273,7 @@ properties:
             type: object
             properties:
               db: { type: string }
-              defined: { type: string }
+              defined_rank: { type: string }
             required: [ db ]
             additionalProperties: false
         additionalProperties: false

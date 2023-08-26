@@ -1,0 +1,3 @@
+run	layout	sample	raw	merged	(%)	fwd-primer	(% of merged)	rev-primer	long enough	ITS__ITS3-KYO2...ITS4	filtered	(% of trimmed)
+run1	run2_pool_paired	mock1	10000	9633	96.33	9630	97.69	9622	9410	9399	8731	92.89
+run1	run2_pool_paired	mock2	5000	4890	97.8	4890	99.86	4885	4883	4878	4675	95.84

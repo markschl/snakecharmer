@@ -150,7 +150,7 @@ rule usearch_collect_derep:
             **wildcards
         ),
         all=lambda wildcards: expand_samples(
-            "processing/{workflow}/usearch/{run}/{layout}/3_filter_derep/{primers}/{sample}/{sample}_good_uniques.fasta.zst",
+            "processing/{workflow}/usearch/{run}/{layout}/3_filter_derep/{primers}/{sample}/{sample}_all_uniques.fasta.zst",
             technology="illumina",
             pool=cfg[wildcards.workflow]["settings"]["pool_raw"],
             **wildcards

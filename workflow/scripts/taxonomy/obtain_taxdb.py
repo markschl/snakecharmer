@@ -31,11 +31,11 @@ from tax_helpers import *
 from utils import file_logging
 
 
-def warn_ignored(data):
-    if len(data) > 0:
-        print("WARNING: the following database settings were ignored: {}".format(
+def fail_on_invalid(data):
+    assert len(data) == 0, (
+        "The following taxonomy database settings are unknown: {}".format(
             ", ".join("{}: {}".format(k, v) for k, v in data.items())
-        ), file=sys.stderr)
+        ))
 
 
 def report_problem(permissive, assertion, text):
@@ -151,13 +151,13 @@ class AmbigMatcher(object):
         return lineage
 
 
-def obtain_qiime_qza(target, sequences=None, taxonomy=None, ambig=[], ambig_sp=None, **ignored):
+def obtain_qiime_qza(target, sequences=None, taxonomy=None, ambig=[], ambig_sp=None, **other):
     """
     This simple implementation opens QIIME artifacts without requiring the QIIME2
     software (which would have to be loaded only for that specific method).
     see https://dev.qiime2.org/latest/storing-data/archive
     """
-    warn_ignored(ignored)
+    fail_on_invalid(other)
 
     @contextmanager
     def _open_qza(path, type, filename, encoding="ascii", errors="replace"):
@@ -194,13 +194,13 @@ def obtain_qiime_qza(target, sequences=None, taxonomy=None, ambig=[], ambig_sp=N
 
 
 
-def obtain_qiime(target, file=None, ambig=[], ambig_sp=None, **ignored):
+def obtain_qiime(target, file=None, ambig=[], ambig_sp=None, **other):
     """
     Converter for the flat-file FASTA format with QIIME-style lineages
     in the header.
     This essentially only cleans the lineages (if any ambiguity keywords were supplied)
     """
-    warn_ignored(ignored)
+    fail_on_invalid(other)
     with zstd_fasta_writer(target) as out, fasta_reader(file) as recs:
         filter_ambig = ambig or ambig_sp
         ambig_matcher = AmbigMatcher(ambig, ambig_sp)
@@ -213,14 +213,14 @@ def obtain_qiime(target, file=None, ambig=[], ambig_sp=None, **ignored):
             out.write_record(rec)
 
 
-def obtain_utax(target, file=None, ambig=[], ambig_sp=None, ignore_problems=False, **ignored):
+def obtain_utax(target, file=None, ambig=[], ambig_sp=None, ignore_problems=False, **other):
     """
     UTAX format converter
     Since the UTAX format allows for missing ranks in part of the lineages,
     we have to infer these first, which makes the code somewhat more
     complicated.
     """
-    warn_ignored(ignored)
+    fail_on_invalid(other)
 
     # helper functions
     def set_remove(s, key):
@@ -294,8 +294,8 @@ def obtain_utax(target, file=None, ambig=[], ambig_sp=None, ignore_problems=Fals
                 out.write_record(rec)
 
 
-def obtain_gtdb(target, file=None, **ignored):
-    warn_ignored(ignored)
+def obtain_gtdb(target, file=None, **other):
+    fail_on_invalid(other)
     assert file is not None and isinstance(file, (str, list)),\
         "'file' in GTDB config should be list or single string"
     if isinstance(file, str):
@@ -311,12 +311,13 @@ def obtain_gtdb(target, file=None, **ignored):
                 with TextIOWrapper(t.extractfile(f[0]), "ascii", errors="replace") as fa,\
                     fasta_reader(fa) as seqs:
                     for rec in report_count(seqs):
+                        # remove [...=...] annotations from end
                         rec.description = desc_pat.sub('', rec.description)
                         out.write_record(rec)
 
 
-def obtain_unite_otus(target, doi=None, file=None, date=None, threshold="dynamic", kind="regular", **ignored):
-    warn_ignored(ignored)
+def obtain_unite_otus(target, doi=None, file=None, date=None, threshold="dynamic", kind="regular", **other):
+    fail_on_invalid(other)
     if file is None:
         # Query the UNITE API using the DOI in order to obtain the file URL
         assert doi is not None, "Reference databases of format 'unite' need a 'doi' or an 'url' specified"
@@ -371,7 +372,8 @@ def obtain_unite_otus(target, doi=None, file=None, date=None, threshold="dynamic
                 for rec, lineage in report_count(read_inconsistent(seqs, lineages)):
                     lineage = [n.strip() for n in lineage.split(";")]
                     # make undefined ranks empty
-                    lineage[-1] = sp_pattern.sub("s__", lineage[-1])
+                    if sp_pattern.fullmatch(lineage[-1]) is not None:
+                        lineage[-1] = "s__"
                     for i in range(len(lineage)):
                         m = unknown_pattern.fullmatch(lineage[i])
                         if m is not None:
@@ -380,8 +382,8 @@ def obtain_unite_otus(target, doi=None, file=None, date=None, threshold="dynamic
                     out.write_record(rec)
 
 
-def obtain_midori(target, prefix=None, version=None, marker=None, kind=None, include_ambig=None, remove_num=None, **ignored):
-    warn_ignored(ignored)
+def obtain_midori(target, prefix=None, version=None, marker=None, kind=None, include_ambig=None, remove_num=None, **other):
+    fail_on_invalid(other)
     if prefix is None:
         assert version is not None and marker is not None and kind is not None, "Reference databases of format 'midori' need 'version', 'marker' and 'kind' defined, or alternatively an 'url_prefix'"
         assert kind in {'longest', 'uniq'}, "Reference databases of format 'midori' need kind=uniq or kind=longest"
@@ -392,7 +394,7 @@ def obtain_midori(target, prefix=None, version=None, marker=None, kind=None, inc
             prefix = base_url + "QIIME/{}/MIDORI2_{}_NUC_GB{}_{}_QIIME".format(kind, kind.upper(), version, marker)
 
     # obtain the files
-    print(f"Downloading from: {prefix}", file=sys.stderr)
+    print(f"Obtaining from: {prefix}", file=sys.stderr)
     seqfile = prefix + ".fasta.gz"
     taxfile = prefix + ".taxon.gz"
 

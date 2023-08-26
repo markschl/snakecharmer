@@ -16,8 +16,6 @@ taxonomy_db_sources:
     date: "29.11.2022"
     # # alternative: specific source URL or file path (overrides doi/date)
     # file: https://files.plutof.ut.ee/public/orig/71/E6/71E68A5DD3F5C311F913757F9E7CA2508430F9400C14413ADA08A0BB33169BB4.tgz
-    # optional and unncecessary, for your own reference
-    version: "9.0"
   unite_eukarya_refs:
     format: unite_otus
     # includes only singletons set as "Refs"

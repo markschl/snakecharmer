@@ -88,14 +88,12 @@ from itertools import chain
 
 rule config:
     input:
-        # rules.dump_samples_yaml.output,
         expand("results/{workflow}/config.yaml", workflow=cfg.workflows),
 
 
 rule samples:
     input:
         expand("results/{workflow}/samples.yaml", workflow=cfg.workflows),
-        # rules.get_unique_samples.output,
 
 
 rule unique_samples:

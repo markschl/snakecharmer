@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 from tempfile import mkstemp
 import unittest
 
@@ -23,21 +24,22 @@ class Filters(object):
     Ambigs = set(b"MRWSYKVHDBN")
     
     # list of filter keywords
-    keywords = ['def_rank', 'min_len', 'max_len', 'max_n', 'max_ambig']
+    keywords = ['defined_rank', 'min_len', 'max_len', 'max_n', 'max_ambig']
 
     def __init__(
             self,
-            def_rank = None,
+            defined_rank = None,
             min_len = None,
             max_len = None,
             max_n = None,
             max_ambig = None
     ):
-        self.def_rank = def_rank
+        self.defined_rank = defined_rank
         self.min_len = min_len
         self.max_len = max_len
         self.max_n = max_n
         self.max_ambig = max_ambig
+        self.initialized = False
 
     def init(self, lineage):
         """
@@ -47,23 +49,23 @@ class Filters(object):
         self._ambig_filter = self.max_n is not None or self.max_ambig is not None
         self._no_ambigs = self._ambig_filter and self.max_n in (None, 0) and self.max_ambig in (None, 0)
 
-        # validate def_rank
-        self.def_rank_prefix = None
-        if self.def_rank is not None:
+        # validate defined_rank
+        self.defined_rank_prefix = None
+        if self.defined_rank is not None:
             try:
                 ranks_short = [self._prefix_re.match(r.strip()).group(1) for r in lineage.split(';')]
             except AttributeError:
                 raise Exception("Not a valid QIIME-formatted lineage: {}".format(lineage))
-            assert self.def_rank in RANK_TRANS, "Unknown rank name for filtering: {}".format(self.def_rank)
-            rank_short = RANK_TRANS[self.def_rank]
-            self.def_rank_prefix = rank_short + '__'
+            assert self.defined_rank in RANK_TRANS, "Unknown rank name for filtering: {}".format(self.defined_rank)
+            rank_short = RANK_TRANS[self.defined_rank]
+            self.defined_rank_prefix = rank_short + '__'
             if rank_short not in ranks_short:
                 rev_dict = dict(zip(RANK_TRANS.values(), RANK_TRANS.keys()))
                 raise Exception((
                     "Minimum unambiguous rank name not found in lineage: {}. "
                     "Even though this is a valid rank, it should actually exist in the database."
                     "Available ranks: {}").format(
-                        self.def_rank, ", ".join(rev_dict[r] for r in ranks_short)))
+                        self.defined_rank, ", ".join(rev_dict[r] for r in ranks_short)))
             # ensure ranks are in order
             possible_ranks = list(RANK_TRANS.values())
             try:
@@ -74,13 +76,18 @@ class Filters(object):
 
 
     def check(self, id: str, lineage: str, seq: Seq) -> bool:
+        # initialize if necessary
+        if not self.initialized:
+            self.init(lineage)
+            self.initialized = True
+
         # ambiguous rank filter
-        if self.def_rank_prefix is not None:
+        if self.defined_rank_prefix is not None:
             lineage = [l.strip() for l in lineage.split(";")]
             try:
                 # if the empty prefix is found, this means that the rank
                 # is not defined.
-                undef_i = lineage.index(self.def_rank_prefix)
+                undef_i = lineage.index(self.defined_rank_prefix)
                 # Before we return, we do some additional basic validation
                 for r in lineage[undef_i:]:
                     assert self._prefix_re.fullmatch(r) is not None, (
@@ -125,37 +132,31 @@ class Filters(object):
 
 
 def filter_taxdb(input, filtered_out, cfg_file):
-    # # TODO: necessary?
-    # outdir = os.path.dirname(filtered_out)
-    # if not os.path.exists(outdir):
-    #     os.makedirs(outdir)
 
     with open(cfg_file) as f:
         cfg = yaml.safe_load(f)
     
-    # retain only filtering configuration
-    cfg = {k: v for k, v in cfg.items() if k in Filters.keywords}
+    invalid = [k for k in cfg if not k in Filters.keywords]
+    assert len(invalid) == 0, \
+        "Invalid taxonomy database filter keyword(s) found: " + " ".join(invalid)
 
     if len(cfg) > 0:
         # there seems to be something to filter
         with zstd_fasta_reader(input) as records, zstd_fasta_writer(filtered_out) as out:
             filters = Filters(**cfg)
-            initiated = False
             written = 0
             i = -1
             for i, rec in enumerate(records):
-                if not initiated:
-                    filters.init(rec.description)
-                    initiated = True
                 if filters.check(rec.id, rec.description, rec.seq) is True:
                     out.write_record(rec)
                     written += 1
             assert i is not None, "No records found"
-            print("{} of {} records written to output".format(written, i + 1))
+            print(f"{written} of {i+1} records written to output", file=sys.stderr)
     else:
         # nothing to do, simply link to the output file
         if os.path.exists(filtered_out):
             os.remove(filtered_out)
+        print(f"No filtering to be done, linking {input} to {filtered_out}", file=sys.stderr)
         os.symlink(os.path.relpath(input, os.path.dirname(filtered_out)), filtered_out)
 
 
@@ -166,7 +167,6 @@ def _do_filter(records, **cfg):
     infile = mkstemp()[1]
     outfile = mkstemp()[1]
     cfg_file = mkstemp()[1]
-    cfg["source_id"] = cfg["filter_id"] = cfg["name"] = "_placeholder"
     with open(cfg_file, "w") as f:
         yaml.safe_dump(cfg, f)
     with zstd_fasta_writer(infile) as w:
@@ -210,17 +210,17 @@ class Tester(unittest.TestCase):
         self.assertEqual(flt, rec)
 
     def test_rank_filter(self):
-        flt = _do_filter(self.tax_records, def_rank="species")
+        flt = _do_filter(self.tax_records, defined_rank="species")
         self.assertEqual(flt, [self.tax_records[i] for i in [0]])
-        flt = _do_filter(self.tax_records, def_rank="genus")
+        flt = _do_filter(self.tax_records, defined_rank="genus")
         self.assertEqual(flt, [self.tax_records[i] for i in [0]])
-        flt = _do_filter(self.tax_records, def_rank="family")
+        flt = _do_filter(self.tax_records, defined_rank="family")
         self.assertEqual(flt, [self.tax_records[i] for i in [0, 1]])
         with self.assertRaises(Exception) as ctx:
-            _do_filter(self.tax_records, def_rank="subfamily")
+            _do_filter(self.tax_records, defined_rank="subfamily")
         self.assertTrue('Minimum unambiguous rank name not found in lineage: subfamily.' in str(ctx.exception))
         with self.assertRaises(Exception) as ctx:
-            _do_filter(self.tax_records, def_rank="noname")
+            _do_filter(self.tax_records, defined_rank="noname")
         self.assertTrue('Unknown rank name for filtering: noname' in str(ctx.exception))
 
     def test_ambig(self):
@@ -249,24 +249,24 @@ class Tester(unittest.TestCase):
 
     def test_comb(self):
         rec = self.tax_records + self.ambig_records
-        flt = _do_filter(rec, def_rank="genus", max_ambig=3, max_n=0)
+        flt = _do_filter(rec, defined_rank="genus", max_ambig=3, max_n=0)
         self.assertEqual(flt, [rec[i] for i in [0, 3, 5]])
-        flt = _do_filter(rec, def_rank="kingdom", max_ambig=2, max_n=1)
+        flt = _do_filter(rec, defined_rank="kingdom", max_ambig=2, max_n=1)
         self.assertEqual(flt, [rec[i] for i in [0, 1, 2, 3]])
-        flt = _do_filter(rec, def_rank="species", max_ambig=2, min_len=8)
+        flt = _do_filter(rec, defined_rank="species", max_ambig=2, min_len=8)
         self.assertEqual(flt, [rec[i] for i in [0, 3]])
 
     def test_invalid_tax(self):
         # errors are only checked with rank filter
         with self.assertRaises(Exception) as ctx:
-            _do_filter([self.invalid_tax[0]], def_rank="kingdom")
+            _do_filter([self.invalid_tax[0]], defined_rank="kingdom")
         self.assertTrue('Blank intermediate name detected' in str(ctx.exception))
         with self.assertRaises(Exception) as ctx:
-            _do_filter([self.invalid_tax[1]], def_rank="kingdom")
+            _do_filter([self.invalid_tax[1]], defined_rank="kingdom")
         self.assertTrue('Ranks in the first lineage are not in the correct order' in str(ctx.exception))
         for rec in self.invalid_tax[2:]:
             with self.assertRaises(Exception) as ctx:
-                _do_filter([rec], def_rank="kingdom")
+                _do_filter([rec], defined_rank="kingdom")
             self.assertTrue('Not a valid QIIME-formatted lineage' in str(ctx.exception))
 
     def test_invalid_seq(self):

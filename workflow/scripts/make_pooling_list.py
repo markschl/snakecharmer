@@ -28,11 +28,11 @@ def make_pooling_list(run_config, sample_file_out, info_file_out):
     sample_pools = {}
     for sample in unique_names:
         # obtain a list of all run files for that sample
-        run_files = list(zip(*(d[sample] for d in sample_dicts if sample in d)))
-        # the run files are sorted by path/name, assuming at least
-        # *some* consistent naming pattern that makes sure that the read order
-        # stays the same in pooled R1 and R2 files.
+        run_files = [d[sample] for d in sample_dicts if sample in d]
+        # sort the runs by path to have a consistent output
         run_files.sort()
+        # group by R1/R2
+        run_files = list(zip(*run_files))
         out_reads = [f"{sample}_R{i+1}.fastq.gz" for i in range(sample_list_out.n_reads)]
         sample_list_out.add(sample, out_reads)
         sample_pools[sample] = {f"R{i+1}": f for i, f in enumerate(run_files)}
@@ -40,6 +40,8 @@ def make_pooling_list(run_config, sample_file_out, info_file_out):
     with open(sample_file_out, "w") as f:
         sample_list_out.write(f)
     # write YAML file with all pooling info
+    # note: sample keys are sorted (unless sort_keys=False), but the
+    # but the order of read pooling is consistent (files are in a sorted list)
     with open(info_file_out, "w") as f:
         yaml.safe_dump(sample_pools, f)
 

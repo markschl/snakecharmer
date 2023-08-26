@@ -57,6 +57,10 @@ workflows:
     cluster: amptk_dada2
     taxonomy: default
 
+# qc:
+#   fastqc:
+#     random_subset: 1000
+
 # Whether to pool the raw read files from different sequencing runs.
 # This setting may make sense with some pipelines (e.g. USEARCH-based ones)
 # e.g. if runs are known not to have a strong batch effect.
@@ -89,8 +93,8 @@ primers:
 taxonomy_dbs:
   ITS:
     unite:
-      db: unite_all
-      defined: order
+      db: unite_eukarya_all
+      defined_rank: species
 
 # Taxonomic assignment methods
 taxonomy_methods:
