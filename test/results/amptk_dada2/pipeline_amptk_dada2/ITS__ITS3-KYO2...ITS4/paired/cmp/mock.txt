@@ -13,7 +13,7 @@ ASV12	Septoria_sp	100.0
 ASV13	Xylariaceae_isolate	100.0
 ASV14	H_annosum	100.0
 ASV15	N_serpens	100.0
-ASV16	E_nigrum	100.0
-ASV17	A_pullulans	100.0
-ASV18	H_fraxineus	100.0
+ASV16	H_fraxineus	100.0
+ASV17	E_nigrum	100.0
+ASV18	A_pullulans	100.0
 ASV19	P_vulgaris	100.0
