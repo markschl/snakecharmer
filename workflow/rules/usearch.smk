@@ -16,8 +16,8 @@ rule usearch_merge_paired:
         par=lambda w: cfg[w.name]["settings"]["usearch"]["merge"],
         usearch_bin=config["software"]["usearch"]["binary"],
     input:
-        r1="input/grouped/paired/{{sample}}/{{sample}}_R1.fastq.gz",
-        r2="input/grouped/paired/{{sample}}/{{sample}}_R2.fastq.gz",
+        r1="input/grouped/paired/{sample}/{sample}_R1.fastq.gz",
+        r2="input/grouped/paired/{sample}/{sample}_R2.fastq.gz",
     output:
         merged="processing/{name}/usearch/paired/1_merged/{sample}/{sample}.fastq.zst",
         r1="processing/{name}/usearch/paired/1_merged/{sample}/{sample}_notmerged_R1.fastq.zst",
