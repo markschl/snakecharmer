@@ -4,8 +4,9 @@ logs/
 refdb/
 
 *~
-_*
-.snakemake/
+_*/
+.snakemake*
+multiqc*
 .tests/
 *.pyc
 *.swp
