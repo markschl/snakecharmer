@@ -70,4 +70,4 @@ else
 fi
 # compress
 gzip -n "${tab%.gz}" "${map%.gz}"
-zstd -qf "$notmatched"
+zstd --rm -qf "$notmatched"

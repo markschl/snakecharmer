@@ -8,7 +8,8 @@ from utils import file_logging
 
 def anchored(seq_d):
     if seq_d['anchor']:
-        print('WARNING: The primer: {} should be anochored, but this is not possible with the Amptk pipeline'.format(seq_d['seq']),
+        print(f"WARNING: The primer: {seq_d['seq']} should be anochored, but "
+              "this is not possible with the Amptk workflow",
               file=sys.stderr)
     return seq_d['seq']
 
@@ -34,7 +35,10 @@ def trim_paired(input_files, demux_out,
     # Too liberal mismatch thresholds lead to many unspecific primer matches
     # and consequently to unwanted trimming of reads.
     if primer_mismatch > 2:
-        print('WARNING: The maximum primer mismatches were limited to 2 with the Amptk pipeline (would be {} with current max_error_rate setting).'.format(primer_mismatch))
+        print(f"WARNING: The maximum primer mismatches were limited to 2 with "
+              "the Amptk workflow (would be {primer_mismatch} with current "
+              "max_error_rate setting)",
+              file=sys.stderr)
         primer_mismatch = 2
         
     # prepare input/output dirs
@@ -50,7 +54,8 @@ def trim_paired(input_files, demux_out,
     # there are no other files
     f1 = set(os.path.basename(f) for f in input_files)
     f2 = set(os.path.basename(f) for f in os.listdir(indir) if f.endswith('.fastq.gz'))
-    assert f1 == f2, "Amptk input dir has unknown files: {}".format(', '.join(f2.difference(f1)))
+    assert f1 == f2, \
+        "Amptk input dir has unknown files: {}".format(', '.join(f2.difference(f1)))
 
     # run
     cmd = [

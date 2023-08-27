@@ -1,8 +1,6 @@
 
 
 localrules:
-    clean,
-    clean_all,
     clean_itsx,
     clean_cmp,
 
@@ -11,11 +9,11 @@ rule itsx:
     params:
         par=config["ITSx"],
     input:
-        fa="results/{name}/{pipeline}/ITS__{primers}/{strategy}/denoised.fasta",
+        fa="results/{workflow}/workflow_{cluster}/{run}_{layout}/ITS__{primers}/denoised.fasta",
     output:
-        pos="results/{name}/{pipeline}/ITS__{primers}/{strategy}/ITSx/out.positions.txt",
+        pos="results/{workflow}/workflow_{cluster}/{run}_{layout}/ITS__{primers}/ITSx/out.positions.txt",
     log:
-        "logs/{name}/other/{strategy}/{pipeline}/ITS__{primers}/ITSx.log",
+        "logs/results/{workflow}/workflow_{cluster}/{run}_{layout}/ITS__{primers}/ITSx.log",
     group:
         "ITS"
     conda:
@@ -45,14 +43,14 @@ rule vsearch_global:
         par=lambda w: cfg.cmp_files[w.db],
         maxhits=lambda w: cfg.cmp_files[w.db].get("maxhits", 0),  # 0 = unlimited
     input:
-        otus="results/{name}/{pipeline}/{primers}/{strategy}/denoised.fasta",
+        otus="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/denoised.fasta",
     output:
-        map="results/{name}/{pipeline}/{primers}/{strategy}/cmp/{db}.txt",
-        bam="results/{name}/{pipeline}/{primers}/{strategy}/cmp/{db}.bam",
-        denoised_notmatched="results/{name}/{pipeline}/{primers}/{strategy}/cmp/{db}_denoised_notmatched.fasta.gz",
-        notmatched="results/{name}/{pipeline}/{primers}/{strategy}/cmp/{db}_notmatched.fasta.gz",
+        map="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{db}.txt",
+        bam="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{db}.bam",
+        denoised_notmatched="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{db}_denoised_notmatched.fasta.gz",
+        notmatched="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{db}_notmatched.fasta.gz",
     log:
-        "logs/{name}/other/{strategy}/{pipeline}/{primers}/search_{db}.log",
+        "logs/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp_{db}.log",
     group:
         "cmp"
     # TODO: resources? usually pretty fast
@@ -90,9 +88,9 @@ rule vsearch_global:
 
 rule clean_itsx:
     shell:
-        "rm -Rf results/*/pipeline_*/*/*/ITSx"
+        "rm -Rf results/*/workflow_*/*/*/ITSx"
 
 
 rule clean_cmp:
     shell:
-        "rm -Rf results/*/pipeline_*/*/*/cmp"
+        "rm -Rf results/*/workflow_*/*/*/cmp"

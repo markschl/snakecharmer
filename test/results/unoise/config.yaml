@@ -1,8 +1,5 @@
 cluster: usearch_unoise3
-is_simple: true
 name: unoise
-sequencing_strategies:
-- paired
 settings:
   ITSx:
     allow_single_domain: 1e-9,0
@@ -30,6 +27,7 @@ settings:
     trunclen_rev: 250
   filter:
     min_length: 100
+  pool_raw: true
   software:
     amptk:
       conda_env: amptk
@@ -53,21 +51,26 @@ settings:
     unoise:
       min_size: 8
       program: vsearch
-single_primercomb: ITS__ITS3-KYO2...ITS4
-single_strategy: paired
 taxonomy:
   ITS:
     unite-sintax_70:
-      confidence: 0.7
-      date: 2022-11-29
+      assign:
+        confidence: 0.7
+        method: sintax_usearch
+        program: vsearch
       db: unite_eukarya_all
       db_name: unite
-      defined: species
+      defined_rank: species
+      filter_id: ee5bc0b5a2f74ae32afad85641ca1d113c800507e6ccb0bb8bcf5af7bde07b69
       marker: ITS
-      method: sintax_usearch
       method_name: sintax_70
-      program: vsearch
-      reference: https://doi.org/10.15156/BIO/2483918
-      type: unite_otus
-      url: https://files.plutof.ut.ee/public/orig/71/E6/71E68A5DD3F5C311F913757F9E7CA2508430F9400C14413ADA08A0BB33169BB4.tgz
-      version: '9.0'
+      name: unite
+      source:
+        date: 29.11.2022
+        doi: 10.15156/BIO/2483918
+        format: unite_otus
+        kind: developer
+        name: unite_eukarya_all
+        preformatted: regular
+        source_id: 3add1eed4bbef2ada511d2be693b36d9764fb7a2a09395997e2330b9d4841785
+        threshold: dynamic

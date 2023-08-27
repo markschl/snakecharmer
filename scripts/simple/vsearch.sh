@@ -312,7 +312,7 @@ echo Done
 # finish up
 # Copy to results dir in order to enable a comparison with the other pipelines
 
-out=../../results/unoise_vsearch_simple/pipeline_usearch_unoise3_simple/ITS__ITS3-KYO2...ITS4/paired
+out=../../results/unoise_vsearch_simple/workflow_usearch_unoise3_simple/run1_run2_pool_paired/ITS__ITS3-KYO2...ITS4
 mkdir -p $out
 cp otus.fasta $out/denoised.fasta
 gzip -cn otutab.txt > $out/denoised_otutab.txt.gz

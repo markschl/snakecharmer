@@ -37,15 +37,18 @@ components:
   `read_pipeline_results` (`unknown_fmt` and `unknown_species_fmt`, see
   documentation of `replace_missing_taxa`). Example with shortened
   names:
+  <div class="kable-table">
 
-| OTU   | kingdom | phylum | class  | order  | family | genus           | species                      | def_rank |
-|:------|:--------|:-------|:-------|:-------|:-------|:----------------|:-----------------------------|:---------|
-| Zotu1 | Fungi   | Ascomy | Euroti | Euroti | Asperg | Penicillium     | Penicillium brevicompactum   | species  |
-| Zotu2 | Fungi   | Basidi | Cystob | Erythr | Erythr | Erythrobasidium | Erythrobasidium proteacearum | species  |
-| Zotu3 | Fungi   | Ascomy | Sordar | Glomer | Glomer | Colletotrichum  | Colletotrichum sp.           | genus    |
-| Zotu4 | Fungi   | Basidi | Agaric | Agaric | Hymeno | Hebeloma        | Hebeloma incarnatulum        | species  |
-| Zotu5 | Fungi   | Ascomy | Dothid | Pleosp | Didyme | Didymellaceae_g | Didymellaceae clone          | family   |
-| Zotu6 | Fungi   | Basidi | Agaric | Boleta | Coniop | Coniophora      | Coniophora puteana           | species  |
+| OTU   | kingdom | phylum | class  | order  | family | genus           | species                    | def_rank |
+|:------|:--------|:-------|:-------|:-------|:-------|:----------------|:---------------------------|:---------|
+| Zotu1 | Fungi   | Ascomy | Euroti | Euroti | Asperg | Penicillium     | Penicillium brevicompactum | species  |
+| Zotu2 | Fungi   | Basidi | Cystob | Erythr | Erythr | Erythrobasidium | Erythrobasidium sp.        | genus    |
+| Zotu3 | Fungi   | Ascomy | Sordar | Glomer | Glomer | Colletotrichum  | Colletotrichum sp.         | genus    |
+| Zotu4 | Fungi   | Basidi | Agaric | Agaric | Hymeno | Hebeloma        | Hebeloma incarnatulum      | species  |
+| Zotu5 | Fungi   | Ascomy | Dothid | Pleosp | Didyme | Didymellaceae_g | Didymellaceae clone        | family   |
+| Zotu6 | Fungi   | Basidi | Agaric | Boleta | Coniop | Coniophora      | Coniophora puteana         | species  |
+
+</div>
 
 - `refseq`: OTU/ASV sequences as `Biostrings::DNAStringSet` object.
 - `tree`: tree object (not present in this case since the ITS region is
@@ -53,6 +56,7 @@ components:
 - `cmp`: List of sequence comparisons with OTUS/ASVs. In this case, the
   ITS2 sequences of the mixed species in the mock communities were
   compared. The first few rows:
+  <div class="kable-table">
 
 | query | target            | ident |
 |:------|:------------------|------:|
@@ -63,11 +67,14 @@ components:
 | Zotu5 | Boeremia_sp_2     |   100 |
 | Zotu6 | C_puteana         |   100 |
 
+</div>
+
 - `itsx_results`: Finally, the rDNA domains were searched using ITSx,
   since these are fungal ITS sequences. The `ITSx_cat` contains
   (shortened) messages from ITSx. *partial_5.8S* means that not the
   whole 5.8S region was found, which is not surprising since the forward
   primer is located on the 5.8S region. The first few rows:
+  <div class="kable-table">
 
 | OTU   | SSU | ITS1 | ITS2    | LSU     | ITSx_cat     |
 |:------|:----|:-----|:--------|:--------|:-------------|
@@ -77,6 +84,8 @@ components:
 | Zotu4 | NA  | NA   | 106-320 | 321-360 | partial_5.8S |
 | Zotu5 | NA  | NA   | 106-259 | 260-299 | partial_5.8S |
 | Zotu6 | NA  | NA   | 107-367 | 368-407 | partial_5.8S |
+
+</div>
 
 ## Mixed vs. amplified frequencies
 
@@ -110,6 +119,8 @@ mock_data <- read.delim(file.path("..", "mock", "mock_data.txt")) %>%
 head(mock_data)
 ```
 
+<div class="kable-table">
+
 | name              | rel_abund_m1 | n_reads | ASVs  | n_asvs |
 |:------------------|-------------:|--------:|:------|-------:|
 | E_hasegawianum    |       0.4000 |    2366 | Zotu2 |      1 |
@@ -118,6 +129,8 @@ head(mock_data)
 | D_eres            |       0.0864 |     979 | Zotu7 |      1 |
 | F_tritinctum      |       0.0518 |     929 | Zotu8 |      1 |
 | Boeremia_sp_2     |       0.0311 |    1163 | Zotu5 |      1 |
+
+</div>
 
 ``` r
 ggplot(mock_data, aes(rel_abund_m1, n_reads)) +

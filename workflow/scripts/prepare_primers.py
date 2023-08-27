@@ -1,6 +1,6 @@
 import yaml
 from seq_consensus import consensus
-from utils import file_logging, OrderedDumper
+from utils import file_logging
 
 
 __complements = bytes.maketrans(
@@ -83,4 +83,4 @@ def process_primers(primers_by_marker, single_method='consensus:50'):
 with file_logging(snakemake.log[0]):
     out = process_primers(snakemake.params.primers)
     with open(snakemake.output.yaml, 'w') as f:
-        yaml.dump(out, f, Dumper=OrderedDumper)
+        yaml.safe_dump(out, f, sort_keys=False)

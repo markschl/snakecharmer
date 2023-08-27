@@ -1,20 +1,17 @@
 # Target rules ("commands") and output files
 
-## Rule graph
-
-![rule graph](https://raw.githubusercontent.com/markschl/snakecharmer/main/rulegraph.png)
-
 ## List of rules
 
 ### Initial checks
 
-- **config**: Allows checking the pipeline configuration, creates the files `results/samples.yaml` and `<pipeline>/config.yaml`
-- **samples**: Creates links (symlinks) of the input files to the `input` directory. The sample files in the resulting `input/unique_samples` directory can e.g. be used for upload to public SRA databases. Furthermore, the samples lists `results/samples.yaml` and `results/samples.tsv` are created, providing the necessary sample metadata (see *config* command).
-- **quality**: Runs [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc) and [MultiQC](https://multiqc.info) (output in `results/_validation`). This can be done in a first step before deciding on the quality filtering/trimming options in `config/config.yaml`.
+- **config**: Allows checking the workflow configuration, creates the files `results/samples.yaml` and `<workflow>/config.yaml`
+- **samples**: Parses the *input* configuration in `config/config.yaml` and creates links (symlinks) of the input files to the `input` directory. Lists all samples in `results/<workflow>/samples.yaml`.
+- **unique_samples**: Creates a directory `unique_samples/demux/read_files` with symlinks to all input files with unique names (numbered suffix appended in case of multiple sequencing runs with same samples). The file `unique_samples/demux/read_files` contains the necessary metadata (including MD5 hashes) e.g. for upload to public read archives.
+- **quality**: Runs [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc) and [MultiQC](https://multiqc.info) (output in `results/<workflow>/validation`). This can be done in a first step before deciding on the quality filtering/trimming options in `config/config.yaml`.
 
 ### Denoising (clustering)
 
-- **denoise**: Does the denoising (clustering) for all pipelines, as specified in `config/config.yaml`. The results are normally found in `results/<pipeline>/data`, unless the input files contain both paired and single-end (different "sequencing strategies"), or multiple primer combinations are specified. In this case, the output path is `results/<pipeline>/pipeline_.../<primers>/<strategy>`.
+- **denoise**: Does the denoising (clustering) for all workflows, as specified in `config/config.yaml`. The results are normally found in `results/<workflow>/data`, unless the input files contain both paired and single-end (different "sequencing strategies"), or multiple primer combinations are specified. In this case, the output path is `results/<workflow>/workflow_.../<run>_<layout>/<primers>`.
 
 ### Analysis of denoised sequences
 
@@ -24,7 +21,6 @@
 
 ### Cleanup
 
-- **clean**: Removes the working directories `input/grouped` and `processing`. The `results` and `logs` directories are retained.
-- **clean_taxdb**: Removes the taxonomic reference databases (`refdb` directory)
+- **clean**: Removes the working directories `input`, `processing` and `logs`. The `results` and `unique_samples` directories are retained.
 - **clean_tax**, **clean_cmp**, **clean_itsx**: Removes the `taxonomy`, `cmp` or `ITSx` directories in all results directories.
-- **clean_all**: Cleans up everything (including the pipeline output), except for taxonomic reference databases. This should only be used to **completely remove** all output from a target directory.
+- **clean_all**: Cleans up everything (including the workflow output). This should only be used to **completely remove** all output from a target directory and obtain a clean workspace.

@@ -9,14 +9,15 @@ software:
 
 # Input files
 input:
-  directories:
-    - gz
-  recursive: true
-  pool_duplicates: true
-  name_pattern: sample_read  # {sample_read, illumina}
-
-# Pipeline definition
-pipelines:
+  illumina:
+    directories:
+      - gz/{run}
+    # recursive: true
+    sample_pattern: sample_read  # {sample_read, illumina}
+    # run2:
+    #   sample_file: run1.tsv
+# Workflow definition
+workflows:
   # UNOISE3 pipeline using VSEARCH for denoising
   unoise:
     cluster: usearch_unoise3
@@ -56,12 +57,22 @@ pipelines:
     cluster: amptk_dada2
     taxonomy: default
 
+# qc:
+#   fastqc:
+#     random_subset: 1000
+
+# Whether to pool the raw read files from different sequencing runs.
+# This setting may make sense with some pipelines (e.g. USEARCH-based ones)
+# e.g. if runs are known not to have a strong batch effect.
+# With other methods such as DADA2 denoising, this is not recommended.
+pool_raw: true
+
 # Files to compare with ASVs/OTUs using usearch_global (VSEARCH)
 compare:
   mock:
     file: mock/mock_ITS2.fasta
     ident_threshold: 0.9
-    
+
 # Primers
 primers:
   ITS:
@@ -83,7 +94,7 @@ taxonomy_dbs:
   ITS:
     unite:
       db: unite_eukarya_all
-      defined: species
+      defined_rank: species
 
 # Taxonomic assignment methods
 taxonomy_methods:

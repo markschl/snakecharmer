@@ -11,7 +11,8 @@ def denoise_paired(method,
                 trimmed_in,
                 denoised_out, otutab_out,
                 usearch_bin,
-                par,
+                usearch_par,
+                dada2_par,
                 threads=1):
     
     cmd = [
@@ -22,10 +23,9 @@ def denoise_paired(method,
     ]
 
     # add method specific arguments
-    upar = par["usearch"]
     # TODO: inconsistent to have these settings under usearch even though used for DADA2 as well
     # (on the other hand, Amptk uses an USEACH-like procedure for DADA2 as well)
-    maxee = upar["merge"]["expected_length"] * upar["filter"]["max_error_rate"]
+    maxee = usearch_par["merge"]["expected_length"] * usearch_par["filter"]["max_error_rate"]
     if method == "unoise3":
         cmd += [
                 "--usearch",
@@ -33,23 +33,22 @@ def denoise_paired(method,
                 "--maxee",
                 str(maxee),
                 "--method",
-                upar["unoise"]["program"],
+                usearch_par["unoise"]["program"],
                 "--minsize",
-                str(upar["unoise"]["min_size"]),
+                str(usearch_par["unoise"]["min_size"]),
             ]
-        if upar["unoise"]["program"] == "usearch":
+        if usearch_par["unoise"]["program"] == "usearch":
             assert usearch_bin is not None
             cmd += ["--usearch", usearch_bin]
     else:
         assert method == "dada2", "Unknown / unimplemented Amptk command"
-        par = par["dada2"]
         cmd += [
             "--maxee",
             str(maxee),
             "--chimera_method",
-            par["chimera_method"],
+            dada2_par["chimera_method"],
         ]
-        p = par.get("pooling_method", "independent")
+        p = dada2_par["pooling_method"]
         if p == "pooled":
             cmd.append("--pool")
         elif p == "pseudo":
@@ -76,6 +75,7 @@ with file_logging(snakemake.log[0]):
         denoised_out=snakemake.output.denoised,
         otutab_out=snakemake.output.tab,
         usearch_bin=snakemake.params.usearch_bin,
-        par=snakemake.params.par,
+        usearch_par=snakemake.params.usearch_par,
+        dada2_par=snakemake.params.dada2_par,
         threads=snakemake.threads,
     )

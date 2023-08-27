@@ -1,5 +1,3 @@
-from os.path import splitext
-
 
 localrules:
     make_cutadapt_fasta,
@@ -13,18 +11,18 @@ localrules:
 
 rule usearch_merge_paired:
     params:
-        par=lambda w: cfg[w.name]["settings"]["usearch"]["merge"],
+        par=lambda w: cfg[w.workflow]["settings"]["usearch"]["merge"],
         usearch_bin=config["software"]["usearch"]["binary"],
     input:
-        r1="input/grouped/paired/{sample}/{sample}_R1.fastq.gz",
-        r2="input/grouped/paired/{sample}/{sample}_R2.fastq.gz",
+        r1="processing/{workflow}/input/illumina/paired/{run}/{sample}_R1.fastq.gz",
+        r2="processing/{workflow}/input/illumina/paired/{run}/{sample}_R2.fastq.gz",
     output:
-        merged="processing/{name}/usearch/paired/1_merged/{sample}/{sample}.fastq.zst",
-        r1="processing/{name}/usearch/paired/1_merged/{sample}/{sample}_notmerged_R1.fastq.zst",
-        r2="processing/{name}/usearch/paired/1_merged/{sample}/{sample}_notmerged_R2.fastq.zst",
-        stats="processing/{name}/usearch/paired/1_merged/{sample}/{sample}_stats.txt",
+        merged="processing/{workflow}/usearch/{run}/paired/1_merged/{sample}/{sample}.fastq.zst",
+        r1="processing/{workflow}/usearch/{run}/paired/1_merged/{sample}/{sample}_notmerged_R1.fastq.zst",
+        r2="processing/{workflow}/usearch/{run}/paired/1_merged/{sample}/{sample}_notmerged_R2.fastq.zst",
+        stats="processing/{workflow}/usearch/{run}/paired/1_merged/{sample}/{sample}_stats.txt",
     log:
-        "logs/{name}/usearch/paired/1_merge/{sample}.log",
+        "logs/{workflow}/usearch/{run}/paired/1_merge/{sample}.log",
     conda:
         "envs/usearch-vsearch.yaml"
     group:
@@ -57,24 +55,24 @@ rule make_cutadapt_fasta:
 
 rule trim_primers_paired:
     params:
-        par=lambda w: cfg[w.name]["settings"]["primers"]["trim_settings"],
-        minlen=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],
+        par=lambda w: cfg[w.workflow]["settings"]["primers"]["trim_settings"],
+        minlen=lambda w: cfg[w.workflow]["settings"]["filter"]["min_length"],
         primer_comb=cfg.primer_combinations_flat,
     input:
         fprimers="processing/primers/forward.fasta",
         rprimers_rev="processing/primers/reverse_rev.fasta",
-        seq="processing/{name}/usearch/paired/1_merged/{sample}/{sample}.fastq.zst",
+        seq="processing/{workflow}/usearch/{run}/paired/1_merged/{sample}/{sample}.fastq.zst",
     output:
-        fwd_log="processing/{name}/usearch/paired/2_trim/{sample}/merged/{sample}_fwd.log",
-        rev_log="processing/{name}/usearch/paired/2_trim/{sample}/merged/{sample}_rev.log",
-        stats="processing/{name}/usearch/paired/2_trim/{sample}/merged/{sample}_stats.txt",
+        fwd_log="processing/{workflow}/usearch/{run}/paired/2_trim/{sample}/merged/{sample}_fwd.log",
+        rev_log="processing/{workflow}/usearch/{run}/paired/2_trim/{sample}/merged/{sample}_rev.log",
+        stats="processing/{workflow}/usearch/{run}/paired/2_trim/{sample}/merged/{sample}_stats.txt",
         by_primers=expand(
-            "processing/{{name}}/usearch/paired/2_trim/{{sample}}/merged/{primers}.fastq.zst",
+            "processing/{{workflow}}/usearch/{{run}}/paired/2_trim/{{sample}}/merged/{primers}.fastq.zst",
             primers=cfg.primer_combinations_flat,
         ),
-        short="processing/{name}/usearch/paired/2_trim/{sample}/merged/too_short.fastq.zst",
+        short="processing/{workflow}/usearch/{run}/paired/2_trim/{sample}/merged/too_short.fastq.zst",
     log:
-        "logs/{name}/usearch/paired/2_trim/{sample}.log",
+        "logs/{workflow}/usearch/{run}/paired/2_trim/{sample}.log",
     conda:
         "envs/cutadapt.yaml"
     group:
@@ -90,7 +88,7 @@ rule trim_primers_paired:
         # TODO: default to --no-indels? \
         # compress and rename to contain marker name
         # TODO: kind of complicated procedure
-        prefix=processing/{wildcards.name}/usearch/paired/2_trim/{wildcards.sample}/merged
+        prefix=$(dirname "{output.stats}")
         shopt -s nullglob  # TODO: assuming Bash, eventually we may convert to Python script
         for marker_comb in {params.primer_comb}; do
             comb=${{marker_comb##*__}}
@@ -108,16 +106,16 @@ rule trim_primers_paired:
 
 rule usearch_filter_derep_paired:
     params:
-        maxee=lambda w: cfg[w.name]["settings"]["usearch"]["filter"]["max_error_rate"],
-        minlen=lambda w: cfg[w.name]["settings"]["filter"]["min_length"],  # not absolutely required (done after trimming)
+        maxee=lambda w: cfg[w.workflow]["settings"]["usearch"]["filter"]["max_error_rate"],
+        minlen=lambda w: cfg[w.workflow]["settings"]["filter"]["min_length"],  # not absolutely required (done after trimming)
     input:
-        "processing/{name}/usearch/paired/2_trim/{sample}/merged/{primers}.fastq.zst",
+        "processing/{workflow}/usearch/{run}/paired/2_trim/{sample}/merged/{primers}.fastq.zst",
     output:
-        all="processing/{name}/usearch/paired/3_filter_derep/{primers}/{sample}/{sample}_all_uniques.fasta.zst",
-        good="processing/{name}/usearch/paired/3_filter_derep/{primers}/{sample}/{sample}_good_uniques.fasta.zst",
-        stats="processing/{name}/usearch/paired/3_filter_derep/{primers}/{sample}/{sample}_stats.txt",
+        all="processing/{workflow}/usearch/{run}/paired/3_filter_derep/{primers}/{sample}/{sample}_all_uniques.fasta.zst",
+        good="processing/{workflow}/usearch/{run}/paired/3_filter_derep/{primers}/{sample}/{sample}_good_uniques.fasta.zst",
+        stats="processing/{workflow}/usearch/{run}/paired/3_filter_derep/{primers}/{sample}/{sample}_stats.txt",
     log:
-        "logs/{name}/usearch/paired/3_filter_derep/{primers}/{sample}.log",
+        "logs/{workflow}/usearch/{run}/paired/3_filter_derep/{primers}/{sample}.log",
     conda:
         "envs/usearch-vsearch.yaml"
     group:
@@ -144,19 +142,24 @@ rule usearch_filter_derep_paired:
 
 rule usearch_collect_derep:
     input:
-        good=lambda w: expand(
-            "processing/{{name}}/usearch/{{strategy}}/3_filter_derep/{{primers}}/{sample}/{sample}_good_uniques.fasta.zst",
-            sample=cfg.sample_names[w.strategy],
+        # The 'expand_samples' method depends on the 'get_sample_config' and 'link_samples' checkpoints
+        good=lambda wildcards: expand_samples(
+            "processing/{workflow}/usearch/{run}/{layout}/3_filter_derep/{primers}/{sample}/{sample}_good_uniques.fasta.zst",
+            technology="illumina",
+            pool=cfg[wildcards.workflow]["settings"]["pool_raw"],
+            **wildcards
         ),
-        all=lambda w: expand(
-            "processing/{{name}}/usearch/{{strategy}}/3_filter_derep/{{primers}}/{sample}/{sample}_all_uniques.fasta.zst",
-            sample=cfg.sample_names[w.strategy],
+        all=lambda wildcards: expand_samples(
+            "processing/{workflow}/usearch/{run}/{layout}/3_filter_derep/{primers}/{sample}/{sample}_all_uniques.fasta.zst",
+            technology="illumina",
+            pool=cfg[wildcards.workflow]["settings"]["pool_raw"],
+            **wildcards
         ),
     output:
-        good="processing/{name}/usearch/{strategy}/4_unique/{primers}/good_uniques.fasta.zst",
-        all="processing/{name}/usearch/{strategy}/4_unique/{primers}/all_uniques.fasta.zst",
+        good="processing/{workflow}/usearch/{run}/{layout}/4_unique/{primers}/good_uniques.fasta.zst",
+        all="processing/{workflow}/usearch/{run}/{layout}/4_unique/{primers}/all_uniques.fasta.zst",
     log:
-        "logs/{name}/usearch/{strategy}/4_collect_derep/{primers}.log",
+        "logs/{workflow}/usearch/{run}/{layout}/4_unique/{primers}.log",
     group:
         "denoise"
     conda:
@@ -187,14 +190,14 @@ rule usearch_collect_derep:
 
 rule usearch_unoise3:
     params:
-        par=lambda w: cfg[w.name]["settings"]["usearch"]["unoise"],
+        par=lambda w: cfg[w.workflow]["settings"]["usearch"]["unoise"],
         usearch_bin=config["software"]["usearch"]["binary"],
     input:
-        "processing/{name}/usearch/{strategy}/4_unique/{primers}/good_uniques.fasta.zst",
+        "processing/{workflow}/usearch/{run}/{layout}/4_unique/{primers}/good_uniques.fasta.zst",
     output:
-        "results/{name}/pipeline_usearch_unoise3/{primers}/{strategy}/denoised.fasta",
+        "results/{workflow}/workflow_usearch_unoise3/{run}_{layout}/{primers}/denoised.fasta",
     log:
-        "logs/{name}/usearch/{strategy}/pipeline_usearch_unoise3/{primers}/unoise3.log",
+        "logs/{workflow}/usearch/{run}_{layout}/workflow_usearch_unoise3/{primers}/unoise3.log",
     conda:
         "envs/usearch-vsearch.yaml"
     group:
@@ -204,7 +207,7 @@ rule usearch_unoise3:
     # USEARCH v11 does not appear to use more than 1 thread
     # TODO: further validate VSEARCH threads setting
     threads:
-        lambda w: int(workflow.cores * 1.5) if cfg[w.name]["settings"]["usearch"]["unoise"]["program"] == "vsearch" else 1
+        lambda w: int(workflow.cores * 1.5) if cfg[w.workflow]["settings"]["usearch"]["unoise"]["program"] == "vsearch" else 1
     resources:
         mem_mb=10000,
         runtime=24 * 60,
@@ -245,19 +248,19 @@ rule usearch_unoise3:
 
 rule usearch_make_otutab:
     params:
-        par=lambda w: cfg[w.name]["settings"]["usearch"]["otutab"],
+        par=lambda w: cfg[w.workflow]["settings"]["usearch"]["otutab"],
         usearch_bin=config["software"]["usearch"]["binary"],
     input:
-        denoised="results/{name}/pipeline_usearch_{cluster}/{primers}/{strategy}/denoised.fasta",
-        uniques="processing/{name}/usearch/{strategy}/4_unique/{primers}/all_uniques.fasta.zst",
+        denoised="results/{workflow}/workflow_usearch_{cluster}/{run}_{layout}/{primers}/denoised.fasta",
+        uniques="processing/{workflow}/usearch/{run}/{layout}/4_unique/{primers}/all_uniques.fasta.zst",
     output:
-        tab="results/{name}/pipeline_usearch_{cluster}/{primers}/{strategy}/denoised_otutab.txt.gz",
-        map="results/{name}/pipeline_usearch_{cluster}/{primers}/{strategy}/denoised_search.txt.gz",
-        notmatched="processing/{name}/usearch/{strategy}/pipeline_usearch_{cluster}/{primers}/make_otutab/notmatched.fasta.zst",
-        bam="processing/{name}/usearch/{strategy}/pipeline_usearch_{cluster}/{primers}/make_otutab/mapping.bam",
+        tab="results/{workflow}/workflow_usearch_{cluster}/{run}_{layout}/{primers}/denoised_otutab.txt.gz",
+        map="results/{workflow}/workflow_usearch_{cluster}/{run}_{layout}/{primers}/denoised_search.txt.gz",
+        notmatched="processing/{workflow}/usearch/{run}/{layout}/workflow_usearch_{cluster}/{primers}/make_otutab/notmatched.fasta.zst",
+        bam="processing/{workflow}/usearch/{run}/{layout}/workflow_usearch_{cluster}/{primers}/make_otutab/mapping.bam",
     threads: workflow.cores
     log:
-        "logs/{name}/usearch/{strategy}/pipeline_usearch_{cluster}/{primers}/make_otutab.log",
+        "logs/{workflow}/usearch/{run}_{layout}/workflow_usearch_{cluster}/{primers}/make_otutab.log",
     conda:
         "envs/vsearch-samtools.yaml"
     group:
@@ -288,33 +291,36 @@ rule usearch_make_otutab:
 
 rule convert_taxdb_utax:
     input:
-        "refdb/taxonomy/{db}/filtered/{defined}.fasta.zst",
+        db="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime.fasta.zst"
     output:
-        "refdb/taxonomy/{db}/formatted/utax/{defined}.fasta.zst",
+        db="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/utax.fasta.zst"
+    log:
+        "logs/taxdb/filter/db_regular_{source_id}/flt_{filter_id}/convert_utax.log",
+    wildcard_constraints:
+        source_id = "\w+",
+        filter_id = "\w+",
     conda:
-        "envs/basic.yaml"
+        "envs/taxonomy.yaml"
     group:
         "taxonomy"
-    shell:
-        """
-        $PIPELINE_DIR/workflow/scripts/usearch/convert_utax.sh {input} {output}
-        """
+    script:
+        "../scripts/taxonomy/convert_utax.py"
 
 
 rule assign_taxonomy_sintax:
     params:
-        par=lambda w: cfg[w.name]["taxonomy"][w.marker][(w.db_name, w.tax_method)],
+        par=lambda w: cfg[w.workflow]["taxonomy"][w.marker][(w.db_name, w.tax_method)]["assign"],
         usearch_bin=config["software"]["usearch"]["binary"],
     input:
-        fa="results/{name}/{pipeline}/{marker}__{primers}/{strategy}/denoised.fasta",
-        db=lambda w: "refdb/taxonomy/{{marker}}/{db_name}/formatted/utax/{defined}.fasta.zst".format(
-            **cfg[w.name]["taxonomy"][w.marker][(w.db_name, w.tax_method)]
+        fa="results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/denoised.fasta",
+        db=lambda w: "refdb/taxonomy/db_{source[preformatted]}_{source[source_id]}/flt_{filter_id}/utax.fasta.zst".format(
+            **cfg[w.workflow]["taxonomy"][w.marker][(w.db_name, w.tax_method)]
         ),
     output:
-        tax="results/{name}/{pipeline}/{marker}__{primers}/{strategy}/taxonomy/{db_name}-sintax_usearch-{tax_method}.txt.gz",
-        sintax="results/{name}/{pipeline}/{marker}__{primers}/{strategy}/taxonomy/sintax/{db_name}-sintax_usearch-{tax_method}.txt.gz",
+        tax="results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/taxonomy/{db_name}-sintax_usearch-{tax_method}.txt.gz",
+        sintax="results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/taxonomy/sintax/{db_name}-sintax_usearch-{tax_method}.txt.gz",
     log:
-        "logs/{name}/other/{strategy}/{pipeline}/{marker}__{primers}/taxonomy_sintax/{db_name}-{tax_method}.log",
+        "logs/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/taxonomy_sintax/{db_name}-{tax_method}.log",
     group:
         "taxonomy"
     conda:
@@ -324,18 +330,19 @@ rule assign_taxonomy_sintax:
     # USEARCH v11 does not appear to use more than 1 thread
     threads:
         lambda w: workflow.cores \
-            if cfg[w.name]["taxonomy"][w.marker][(w.db_name, w.tax_method)]["program"] == "vsearch" \
+            if cfg[w.workflow]["taxonomy"][w.marker][(w.db_name, w.tax_method)]["assign"]["program"] == "vsearch" \
             else 1
     resources:
         mem_mb=5000,
     shell:
         """
-        bin="{params.par[program]}"
-        if [ $bin = "usearch" ]; then
-            bin="{params.usearch_bin}"
+        program="{params.par[program]}"
+        usearch_bin="$program"
+        if [ "$program" = "usearch" ]; then
+            usearch_bin="{params.usearch_bin}"
         fi
         $PIPELINE_DIR/workflow/scripts/usearch/sintax_usearch.sh \
-          {params.par[program]} "$bin" {input.fa} {input.db} {output.tax} \
+          "$program" "$usearch_bin" {input.fa} {input.db} {output.tax} \
             -strand both \
             -sintax_cutoff {params.par[confidence]} \
             -threads {threads} \
@@ -350,22 +357,31 @@ rule assign_taxonomy_sintax:
 
 rule usearch_multiqc_paired:
     input:
-        fastqc=rules.multiqc_fastqc.input,
-        cutadapt=expand(
-            "processing/{{name}}/usearch/paired/2_trim/{sample}/merged/{sample}_{dir}.log",
-            sample=cfg.sample_names["paired"],
+        fastqc=lambda wildcards: expand_samples(
+            path="input/{technology}/paired/{demux_method}/{run}/fastqc/{sample}_R{read}_fastqc.html",
+            demux_method="demux",
+            **wildcards
+        ),  #demux_method=cfg[w.workflow]["demux_method"],
+        cutadapt=lambda wildcards: expand_samples(
+            "processing/{workflow}/usearch/{run}/{layout}/2_trim/{sample}/merged/{sample}_{dir}.log",
+            technology="illumina",
             dir=["fwd", "rev"],
+            pool=cfg[wildcards.workflow]["settings"]["pool_raw"],
+            **wildcards,
         ),
     output:
-        "results/{name}/pipeline_usearch_{cluster}/_validation/multiqc/multiqc_report.html",
+        "results/{workflow}/validation/multiqc_usearch/multiqc_report.html",
     log:
-        "logs/{name}/usearch/paired/pipeline_usearch_{cluster}/multiqc_paired.log",
+        "logs/{workflow}/multiqc_usearch.log",
     conda:
         "envs/multiqc.yaml"
     shell:
         """
+        indir=input
+        outdir="$(dirname {output})"
         cutadapt_dir=$(dirname $(dirname $(dirname {input.cutadapt[0]})))
-        multiqc -f -m fastqc -m cutadapt -o $(dirname {output}) results/_validation/fastqc $cutadapt_dir 2> {log}
+        echo $indir $outdir $cutadapt_dir
+        multiqc -f -m fastqc -m cutadapt -o "$outdir" "$indir" "$cutadapt_dir" 2> {log}
         """
 
 
@@ -374,22 +390,31 @@ rule usearch_stats_paired:
     params:
         primer_combinations=cfg.primer_combinations_flat,
     input:
-        merge=expand(
-            "processing/{{name}}/usearch/paired/1_merged/{sample}/{sample}_stats.txt",
-            sample=cfg.sample_names["paired"],
+        merge=lambda wildcards: expand_samples(
+            "processing/{{workflow}}/usearch/{run}/{layout}/1_merged/{sample}/{sample}_stats.txt",
+            technology="illumina",
+            layout="paired",
+            pool=cfg[wildcards.workflow]["settings"]["pool_raw"],
+            **wildcards,
         ),
-        trim=expand(
-            "processing/{{name}}/usearch/paired/2_trim/{sample}/merged/{sample}_stats.txt",
-            sample=cfg.sample_names["paired"],
+        trim=lambda wildcards: expand_samples(
+            "processing/{{workflow}}/usearch/{run}/{layout}/2_trim/{sample}/merged/{sample}_stats.txt",
+            technology="illumina",
+            layout="paired",
+            pool=cfg[wildcards.workflow]["settings"]["pool_raw"],
+            **wildcards,
         ),
-        filter=expand(
-            "processing/{{name}}/usearch/paired/3_filter_derep/{primers}/{sample}/{sample}_stats.txt",
+        filter=lambda wildcards: expand_samples(
+            "processing/{{workflow}}/usearch/{run}/{layout}/3_filter_derep/{primers}/{sample}/{sample}_stats.txt",
+            layout="paired",
+            technology="illumina",
             primers=cfg.primer_combinations_flat,
-            sample=cfg.sample_names["paired"],
+            pool=cfg[wildcards.workflow]["settings"]["pool_raw"],
+            **wildcards,
         ),
     output:
-        "results/{name}/pipeline_usearch_{cluster}/_validation/sample_report.tsv",
+        "results/{workflow}/workflow_usearch_{cluster}/{run}_paired/sample_report.tsv",
     log:
-        "logs/{name}/usearch/paired/pipeline_usearch_{cluster}/sample_report.log",
+        "logs/{workflow}/workflow_usearch_{cluster}/{run}_paired/sample_report.log",
     script:
         "../scripts/usearch/stats_paired.py"

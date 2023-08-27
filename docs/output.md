@@ -2,7 +2,7 @@
 
 ## Example file structure
 
-Usually the results are found in `<my analysis>/results/<workflow name>/data` within analysis directory. `data` is actually a symbolic link to another nested directory and is only present if each workflow in the `results` directory has only a single primer combination (marker) and paired/single-end data is not mixed. Here is a full example result of the `denoise`, `taxonomy`, `cmp` and `ITS` rules. The latter runs ITSx, but only for ITS amplicons.
+Usually the results are found in `<my analysis>/results/<workflow name>/data` within analysis directory. `data` is actually a symbolic link to another nested directory and is only present if each workflow in the `results` directory has only a single primer combination (marker) and paired/single-end data is not mixed. Here is a full example result of the `unique_samples`, `denoise`, `taxonomy`, `cmp` and `ITS` rules. The latter runs ITSx, but only for ITS amplicons.
 
 ```
 📦my_analysis
@@ -10,14 +10,7 @@ Usually the results are found in `<my analysis>/results/<workflow name>/data` wi
  │ ├ 🗋 config.yaml
  │ └ 🗋 taxonomy.yaml
  ├ 📂 input
- │ ├ 📂 grouped
  │ │ └ ... (contains links or copies of raw sequencing files, used internally)
- │ └ 📂 unique_samples
- │ │ ├ 🗋 sample1_R1.fastq.gz
- │ │ ├ 🗋 sample1_R2.fastq.gz
- │ │ ├ 🗋 sample2_R1.fastq.gz
- │ │ ├ 🗋 sample2_R2.fastq.gz
- │ │ └ ... (symlinks to all input files)
  ├ 📂 logs
  │ └ ... (log files for every step, helpful for debugging)
  ├ 📂 processing
@@ -26,10 +19,15 @@ Usually the results are found in `<my analysis>/results/<workflow name>/data` wi
  │ └ ... (downloaded reference databases grouped by marker)
  ├ 📂 results
  │ ├ 📂 unoise
- │ │ ├ 📂 data  [symlink to -> 📂 paired directory]
- │ │ ├ 📂 pipeline_usearch_unoise3
- │ │ │ ├ 📂 ITS__ITS3-KYO2...ITS4ngsUni
- │ │ │ │ └ 📂 paired
+ │ │ ├ 🗋 config.yaml
+ │ │ ├ 🗋 samples.yaml
+ │ │ ├ 🗋 sample_report.tsv
+ │ │ 📂 validation
+ │ │ ├ ... (MultiQC report(s))
+ │ │ ├ 📂 data  [symlink to -> 📂 ITS__ITS3-KYO2...ITS4ngsUni directory]
+ │ │ ├ 📂 workflow_usearch_unoise3
+ │ │ │ ├ 📂 run1_paired
+ │ │ │ │ └ 📂 ITS__ITS3-KYO2...ITS4ngsUni
  │ │ │ │ │ ├ 🗋 denoised.fasta
  │ │ │ │ │ ├ 🗋 denoised.biom
  │ │ │ │ │ ├ 🗋 denoised_otutab.txt.gz
@@ -53,45 +51,38 @@ Usually the results are found in `<my analysis>/results/<workflow name>/data` wi
  │ │ │ │ │ ├ 📂 [ITSx]
  │ │ │ │ │ │ ├ 🗋 out.positions.txt
  │ │ │ │ │ │ └ ... (ITSx output)
- │ │ │ ├ 📂 _validation
- │ │ │ │ ├ 📂 multiqc
- │ │ │ │ │ └ 🗋 multiqc_report.html  [including primer-trimming report]
- │ │ │ │ └ 🗋 sample_report.tsv
- │ ├ 📂 _validation
- │ │ └ ... (FastQC / MultiQC results)
- │ ├ 🗋 samples.tsv
- │ └ 🗋 samples.yaml
+ ├ 📂 unique_samples
+ │ └ 📂 demux
+ │ └ 🗋 samples.tsv
+ │ │ ├ 📂 read_files  (with _1/_2 suffixes to make them unique)
+ │ │ │ ├ 🗋 sample1_1_R1.fastq.gz
+ │ │ │ ├ 🗋 sample1_2_R2.fastq.gz
+ │ │ │ ├ 🗋 sample2_1_R1.fastq.gz
+ │ │ │ ├ 🗋 sample2_2_R2.fastq.gz
+ │ │ │ └ ... (symlinks to all input files)
 ```
 
 ### Multi-workflow/marker results
 
- In the case of multiple primer / marker / sequencing strategy combinations, the individual results are available using the full path: `results/<workflow name>/pipeline_<name>/<marker>__<fwd-primer>...<rev-primer>/<strategy>/` whereby *strategy* refers to the paired-end (`paired`) or single-end (not yet implemented) sequencing strategy. The following (simplified) directory structure results from running the two workflows named `unoise` and `qiime_dada2`, each with three primer combinations for two markers:
+ In the case of multiple primer / marker / sequencing layout combinations, the individual results are available using the full path: `results/<workflow name>/workflow_<name>/<run>_<layout>/<marker>__<fwd-primer>...<rev-primer>/` whereby *layout* refers to the paired-end (`paired`) or single-end (not yet implemented) sequencing layout. The following (simplified) directory structure results from running the two workflows named `unoise` and `qiime_dada2`, each with three primer combinations for two markers:
 
 ```
 📦my_analysis
  ├ 📂 results
- │ ├ 📂 _validation
- │ │ └ ... (FastQC / MultiQC results)
  │ ├ 📂 unoise
- │ │ ├ 📂 pipeline_usearch_unoise3
- │ │ │ ├ 📂 ITS__ITS3-KYO2...ITS4ngsUni
- │ │ │ │ └ 📂 paired
+ │ │ ├ 📂 workflow_usearch_unoise3
+ │ │ │ ├ 📂 run1_paired
+ │ │ │ │ └ 📂 ITS__ITS3-KYO2...ITS4ngsUni
  │ │ │ │ │  └ ...
- │ │ │ ├ 📂 ITS__gITS7ngs...ITS4ngsUni
- │ │ │ │ └ 📂 paired
+ │ │ │ │ └ 📂 ITS__gITS7ngs...ITS4ngsUni
  │ │ │ │ │  └ ...
- │ │ │ ├ 📂 COI__BF2...BR2
- │ │ │ │ └ 📂 paired
+ │ │ │ │ └ 📂 COI__BF2...BR2
  │ │ │ │ │  └ ...
- │ │ └ 🗋 config.yaml
  │ ├ 📂 qiime_dada2
- │ │ ├ 📂 pipeline_qiime_dada2
- │ │ │ ├ 📂 ITS__ITS3-KYO2...ITS4ngsUni (...)
- │ │ │ ├ 📂 ITS__gITS7ngs...ITS4ngsUni (...)
- │ │ │ ├ 📂 COI__BF2...BR2 (...)
- │ │ └ 🗋 config.yaml
- │ ├ 🗋 samples.tsv
- │ └ 🗋 samples.yaml
+ │ │ ├ 📂 workflow_qiime_dada2
+ │ │ │ ├ 📂 run1_paired
+ │ │ │ │ └ ...
+ ...
 ```
 
 A simplified example `config/config.yaml` corresponding to the above setup:
@@ -100,7 +91,7 @@ A simplified example `config/config.yaml` corresponding to the above setup:
 input:
   (...)
 
-pipelines:
+workflows:
   unoise:
     cluster: usearch_unoise3
     taxonomy: default
@@ -152,22 +143,21 @@ taxonomy_methods:
 
 ## Detailed description of directories/files
 
-- **input**: Contains all input sequence files (FASTQ, generated by *collect_input* and many other commands)
-  - **input/grouped**: hierarchical grouping of the files, which is then used as input for the pipelines.
-  - **input/unique_samples**: lists all input sample files in one directory. Samples with identical names (but from different directories) are de-duplicated by adding a numbered suffix.
-- **processing**: Contains all temporary data used by the denoising pipelines. In some cases, this can result in gigabytes of data, so be careful to monitor its size. Once everything is finished (deposited in the *results* dir), it can be safely removed with the *clean* command. Downstream target rules such as *txonomy*, *cmp* and *ITS* don't need this directory to be present.
+- **input**: Contains all input sequence files. Gzip-compressed FASTQ files are directly imported by symlinking (no copying involved). Run pools (`pool_raw: true`) may be generated. This will also be the place for demultiplexed data, once demultiplexing is implemented.
+- **unique_samples**: (generated by *unique_samples* rule) Lists all input sample files in one directory and provides `samples.tsv` with useful metadata ([example](../test/unique_samples/demux/samples.tsv)). Samples with identical names (different run/layout combinations) are de-duplicated by adding a numbered suffix. This table is especially useful when submitting sample metadata to public read archives.
+- **processing**: Contains all temporary data used by the denoising workflows. In some cases, this can result in gigabytes of data, so be careful to monitor its size. Once everything is finished (deposited in the *results* dir), it can be safely removed with the *clean* command. Downstream target rules such as *taxonomy*, *cmp* and *ITS* don't need this directory to be present.
 - **results**: Results directory
   - **sample lists / config files**: Useful to check the input configuration and to obtain sequence metadata (generated by *config*, *collect_input* and *denoise* commands)
-    - `samples.yaml` lists the sample names and the corresponding input files ([example](../test/results/samples.yaml))
-    - The tab-separated `results/samples.tsv` file also lists all unique samples and their corresponding read files in tabular format ([example](../test/results/samples.tsv)). This table is especially useful when submitting sample metadata to public SRA archives. For files from different directories with the same sample name, a numbered suffix is added to the sample to make the names unique.
-    - The files `<pipeline>/config.yaml` contain the final configuration of each pipeline used internally (slightly modified, structure may change with later versions) ([example](../test/results/unoise/config.yaml)). This is especially useful to check, whether additional settings specified in the `pipelines` definition in `config/config.yaml` correctly override the default settings.
-  - **results/_validation**: Contains QC of every input file and a MultiQC summary (`results/_validation/multiqc/multiqc_report.html`). Generated by *quality* and *denoise* command
-  - **denoising results directories** (*denoise* command): `results/<pipeline>/data` in simple cases or `results/<pipeline>/pipeline_.../<marker>__<fwd-primer>...<rev-primer>/<strategy>` in the case of multiple primer combinations and sequencing strategies. Contents:
+    - `results/<workflow>/samples.yaml` lists the sample names and the corresponding input files ([example](../test/results/unoise/samples.yaml))
+    - `results/<workflow>/config.yaml` contains the full configuration of each workflow used internally, including configuration defaults not actually visible in `config.yaml` ([example](../test/results/unoise/config.yaml)). This is especially useful to check, whether additional settings specified in the `workflows` definition in `config/config.yaml` correctly override the default settings.
+    - `results/<workflow>/sample_report.tsv` lists read statistics for each processing step ([example](../test/results/unoise/sample_report.tsv)).
+  - **validation**: Contains QC of every input file and a MultiQC summary (`results/<workflow>/validation/multiqc/multiqc_report.html`). Generated by *quality* and *denoise* command. `multiqc_usearch` further incorporates Cutadapt statistics.
+  - **denoising results directories** (*denoise* command): `results/<workflow>/data` in simple cases or `results/<workflow>/workflow_.../<run>_<layout>/<marker>__<fwd-primer>...<rev-primer>` in the case of multiple read layouts and primer combinations. Contents:
     - `denoised.fasta`: Denoised / clustered sequences
     - `denoised_otutab.txt.gz` / `denoised.biom`: OTU table in flat text format (gzip-compressed) or in BIOM format
     - **taxonomy** (*taxonomy* command): The directory containing the taxonomic assignments. The file names are constructed as follows `<ref. database>-<assignment method>-<assignment name>.txt.gz`. In addition, a GZIP-compressed BIOM file is created.
       - *fasta*: subdirectory containing FASTA files annotated with taxonomy
     - **cmp** (*cmp* command): Results of sequence comparisons, which are tab-delimited mapping files with three columns: *query* (ASV/OTU), *target* (from custom sequence database), *percent identity* (edit distance excluding terminal gaps in the alignment, see also `-iddef` USEARCH/VSEARCH option). FASTA files of both the non-matched query and database sequences are also created, as well as a *BAM file*, which allows viewing/extracting the alignments of query and target sequences.
-  - **sample report** (*denoise* command): A sample report with read numbers retained in each step is placed in `results/<pipeline>/pipeline_.../_validation`, along with another MultiQC report including Cutadapt statistics (currently only UNOISE pipeline).
 - **logs**: Contains all logfiles by the different commands. Usually it is not necessary to consult them unless there is an error. *Logs* is left in place by the *clean* command.
-- **refdb**: Contains Zstandard-compressed taxonomy reference databases, including trained reference sets.
+- **refdb**: Contains taxonomy reference databases. [See here](../workflow/rules/taxonomy.smk) for more information on the structure.
+  

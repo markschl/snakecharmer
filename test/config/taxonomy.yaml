@@ -1,8 +1,98 @@
+# Taxonomic databases are configured in this file.
+# Both FASTA and pre-trained formats are available. Below is a selection of
+# possible sources that may be useful and/or serve to illustrate the capabilities
+# see docs/taxonomy.md for more information
 
 taxonomy_db_sources:
   unite_eukarya_all:
-    type: unite_otus
-    version: "9.0"
-    date: 2022-11-29
-    reference: https://doi.org/10.15156/BIO/2483918
-    url: https://files.plutof.ut.ee/public/orig/71/E6/71E68A5DD3F5C311F913757F9E7CA2508430F9400C14413ADA08A0BB33169BB4.tgz
+    format: unite_otus
+    # includes all singleton reference sequences
+    doi: 10.15156/BIO/2483918
+    # optional settings
+    threshold: dynamic  # {dynamic, 97, 99}
+    kind: developer  # optional, 'developer' will return the untrimmed full-length sequences
+    # optional (quoted): must be a substring of the filename. 
+    # If missing, the file with the last date is selected for a given DOI
+    date: "29.11.2022"
+    # # alternative: specific source URL or file path (overrides doi/date)
+    # file: https://files.plutof.ut.ee/public/orig/71/E6/71E68A5DD3F5C311F913757F9E7CA2508430F9400C14413ADA08A0BB33169BB4.tgz
+  unite_eukarya_refs:
+    format: unite_otus
+    # includes only singletons set as "Refs"
+    doi: 10.15156/BIO/2483917
+  Midori_16S:
+    format: midori
+    version: 256
+    # markers: lrRNA is 16S, srRNA is 12S
+    marker: lrRNA # {CO1, CO2, CO3, srRNA, lrRNA, ND1, ND2, ..., A1, A2, ...}
+    kind: longest # {uniq, longest}
+    remove_num: true   # if true: remove number suffixes at end of names
+    # if true: download the non-filtered "QIIME_SP" version, which includes undefined species
+    # (however, undefined names will be removed from lineages (resulting in empty
+    # ranks) using more or less the same strategy as the one employed by Midori
+    include_ambig: false
+    # alternatively: specify the URL or file prefix (everything before ".fasta.gz" and ".taxon.gz")
+    # on your own (overrides all of the above):
+    # prefix: http://www.reference-midori.info/forceDownload.php?fName=download/Databases/GenBank256/QIIME/uniq/MIDORI2_UNIQ_NUC_GB256_CO1_QIIME
+  Midori_COI:
+    format: midori
+    version: 256
+    marker: CO1
+    kind: longest
+    remove_num: true
+  GTDB_16S:
+    format: gtdb
+    file:
+      - https://data.ace.uq.edu.au/public/gtdb/data/releases/release214/214.1/genomic_files_reps/ar53_ssu_reps_r214.tar.gz
+      - https://data.ace.uq.edu.au/public/gtdb/data/releases/release214/214.1/genomic_files_reps/bac120_ssu_reps_r214.tar.gz
+  SILVA_16S_utax:
+    # UTAX-formatted database provided by R. Edgar
+    # note: the 'ambig' and 'ambig_sp' settings are available as well (see qiime_qza example below)
+    format: utax
+    file: https://www.drive5.com/sintax/gg_16s_13.5.fa.gz
+  SILVA_V4_QZA:
+    # QIIME2-qza formatted V4 sequences from Greengenes
+    format: qiime_qza
+    sequences: https://data.qiime2.org/2023.5/common/silva-138-99-seqs-515-806.qza
+    taxonomy: https://data.qiime2.org/2023.5/common/silva-138-99-tax-515-806.qza
+    # These settings allow defining keywords matching ambiguous/undefined names
+    # in general in all ranks ('ambig') plus specifically in species names ('ambig_sp').
+    # This filter is available for the 'utax', 'qiime' and 'qiime_qza' formats.
+    # Matched names are set to blank.
+    # Other formats (unite_otus, gtdb, midori) have their own patterns/keywords
+    # adapted to the specific format, which *should* correctly normalize the names.
+    ambig:  # these are all fixed (non-regex) patterns
+      - undefined
+      - unidentified
+      - uncultured
+    ambig_sp:
+      # regex: indicates a regex pattern; *note* that double backslashes are needed
+      #   (to escape them)
+      - regex: "sp\\.?$"
+  Greengenes_V4_QZA:
+    # QIIME2-qza formatted V4 sequences from Greengenes
+    format: qiime_qza
+    sequences: http://ftp.microbio.me/greengenes_release/2022.10/2022.10.backbone.full-length.fna.qza
+    taxonomy: http://ftp.microbio.me/greengenes_release/2022.10/2022.10.backbone.tax.qza
+  local_example_file:
+    # local file, already a FASTA file with QIIME-style headers, so no conversion done
+    format: qiime
+    path: test_data/taxonomy/qiime/qiime_input.fasta
+    # however, we can still clean this file a bit
+    ambig:
+      - undefined
+    ambig_sp:
+      - regex: "sp\\.?$"
+
+  # All the following databases are pre-formatted/pre-trained and cannot be
+  # used with other classifiers than the ones they were intended for
+  IDTAXA_ITS:
+    format: idtaxa
+    # either specify an URL or a file path
+    file: http://www2.decipher.codes/Classification/TrainingSets/UNITE_v2021_May2021.RData
+    # alternative (local file):
+    # file: /path/to/TrainingSet.RData
+  SILVA_16SV4_qiime:
+    # UTAX-formatted database provided by R. Edgar
+    format: qiime_nb
+    file: https://data.qiime2.org/2023.5/common/silva-138-99-515-806-nb-classifier.qza

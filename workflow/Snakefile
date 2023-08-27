@@ -19,16 +19,14 @@ validate(config, "config.schema.yaml")
 
 include: "rules/common.smk"
 include: "rules/qc.smk"
-include: "rules/usearch.smk"
 
+if "usearch" in config["software"]:
+    include: "rules/usearch.smk"
 
 if "qiime" in config["software"]:
-
     include: "rules/qiime.smk"
 
-
 if "amptk" in config["software"]:
-
     include: "rules/amptk.smk"
 
 
@@ -41,40 +39,42 @@ include: "rules/other.smk"
 #### Paths ####
 
 
-pipeline_dirs = expand(
-    "results/{name}/pipeline_{cluster}",
-    zip,
-    name=cfg.pipelines.keys(),
-    cluster=(p["cluster"] for p in cfg.pipelines.values()),
-)
-
-simple_results_dirs = expand(
-    "results/{name}/data",
-    name=(name for name, p in cfg.pipelines.items() if p["is_simple"]),
-)
-
-results_dirs = expand(
-    "{prefix}/{primers}/{strategy}",
-    prefix=pipeline_dirs,
-    primers=cfg.primer_combinations_flat,
-    strategy=cfg.sequencing_strategies,
-)
-
-
-taxonomy_prefixes = lambda sub_path: list(
+results = lambda sub_path: list(
     chain(
         *[
-            expand(
-                "results/{name}/pipeline_{cluster}/{marker}__{primers}/{strategy}/{sub_path}/{tax[db_name]}-{tax[method]}-{tax[method_name]}",
-                name=name,
+            expand_runs(
+                "results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/{sub_path}",
+                workflow=name,
                 cluster=p["cluster"],
-                strategy=p["sequencing_strategies"],
+                marker=marker,
+                primers=primer_comb,
+                sub_path=sub_path,
+                pool=p["settings"]["pool_raw"],
+                #allow_missing=True,
+            )
+            for name, p in cfg.workflows.items()
+            for marker, primer_comb in cfg.primer_combinations.items()
+        ]
+    )
+)
+
+
+taxdirs = lambda sub_path, ext: list(
+    chain(
+        *[
+            expand_runs(
+                "results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/{sub_path}/{tax[db_name]}-{tax[assign][method]}-{tax[method_name]}.{ext}",
+                workflow=name,
+                cluster=p["cluster"],
                 marker=marker,
                 primers=primer_comb,
                 sub_path=sub_path,
                 tax=p["taxonomy"][marker].values(),
+                ext=ext,
+                pool=p["settings"]["pool_raw"],
+                # allow_missing=True,
             )
-            for name, p in cfg.pipelines.items()
+            for name, p in cfg.workflows.items()
             for marker, primer_comb in cfg.primer_combinations.items()
         ]
     )
@@ -88,57 +88,59 @@ from itertools import chain
 
 rule config:
     input:
-        rules.dump_samples_yaml.output,
-        expand("results/{name}/config.yaml", name=cfg.pipelines),
+        expand("results/{workflow}/config.yaml", workflow=cfg.workflows),
 
 
 rule samples:
     input:
-        rules.dump_samples_yaml.output,
-        rules.dump_samples_tsv.output,
-        rules.link_samples.output,
+        expand("results/{workflow}/samples.yaml", workflow=cfg.workflows),
+
+
+rule unique_samples:
+    input:
+        rules.collect_unique_files.output,
 
 
 rule quality:
     input:
-        rules.multiqc_fastqc.output,
-        rules.config.input,
+        expand("results/{workflow}/validation/multiqc/multiqc_report.html", workflow=cfg.workflows),
+        expand("results/{workflow}/validation/multiqc_{cluster}/multiqc_report.html",
+               zip, workflow=cfg.workflows,
+               cluster=[w["cluster"].split('_', 1)[0] for w in cfg.workflows.values()],
+               allow_missing=True)
+        # rules.config.input,
 
 
 rule denoise:
     input:
         rules.config.input,
-        rules.dump_samples_yaml.output,
-        rules.dump_samples_tsv.output,
-        simple_results_dirs,
-        expand("{prefix}/denoised.fasta", prefix=results_dirs),
-        expand("{prefix}/denoised_otutab.txt.gz", prefix=results_dirs),
-        expand("{prefix}/denoised.biom", prefix=results_dirs),
-        expand("{prefix}/_validation/multiqc/multiqc_report.html", prefix=pipeline_dirs),
-        # TODO: not all pipelines produce a report
-        expand(
-            "{prefix}/_validation/sample_report.tsv",
-            prefix=pipeline_dirs,
-            allow_missing=True,
-        ),
+        rules.samples.input,
+        rules.quality.input,
+        lambda _: results((
+            "denoised.fasta",
+            "denoised_otutab.txt.gz",
+            "denoised.biom",
+        )),
+        expand("results/{workflow}/sample_report.tsv", workflow=cfg.workflows),
+        expand("results/{workflow}/.outdirs", workflow=cfg.workflows, allow_missing=True),
 
 
 rule taxonomy:
     input:
-        expand("{prefix}.txt.gz", prefix=taxonomy_prefixes("taxonomy")),
-        expand("{prefix}.biom.gz", prefix=taxonomy_prefixes("taxonomy")),
-        expand("{prefix}.fasta.gz", prefix=taxonomy_prefixes("taxonomy/fasta")),
-
+        lambda _: taxdirs("taxonomy", ("txt.gz", "biom.gz")),
+        lambda _: taxdirs("taxonomy/fasta", ("fasta.gz"))
 
 rule ITS:
     input:
-        expand("{prefix}/ITSx/out.positions.txt", prefix=results_dirs),
+        lambda _: results("ITSx/out.positions.txt"),
 
 
 rule cmp:
     input:
-        expand("{prefix}/cmp/{db}.txt", prefix=results_dirs, db=cfg.cmp_files),
-        expand("{prefix}/cmp/{db}.bam", prefix=results_dirs, db=cfg.cmp_files),
+        lambda _: results(
+            expand("cmp/{db}.{ext}", db=cfg.cmp_files, ext=("txt", "bam"))
+        ),
+
 
 
 # commands for cleaning up
@@ -151,9 +153,9 @@ localrules:
 
 rule clean:
     shell:
-        "rm -Rf input/grouped processing"
+        "rm -Rf input processing logs"
 
 
 rule clean_all:
     shell:
-        "rm -Rf results input/grouped processing logs"
+        "rm -Rf results input unique_samples processing logs refdb"
