@@ -13,7 +13,7 @@ This software makes use of the workflow management system [Snakemake](https://sn
 
 **Non-features**
 
-The software does not assist with comprehensive statistical analyses, even though the integrated pipelines may offer them. Since the output files are in commonly used formats (such as BIOM v1), they can still serve as input for many analysis toolkits. There is also a dedicated [import script for R](#analyzing-in-r).
+The software does not assist with comprehensive statistical analyses, even though the integrated pipelines may offer them. Since the output files are in commonly used formats (such as BIOM), they can still serve as input for many analysis toolkits. There is also a dedicated [import script for R](#analyzing-in-r).
 
 **Integrated pipelines**
 
@@ -90,10 +90,12 @@ After running, a few additional directories will have appeared next to `config`.
  │  │  │  ├─ 🗋 denoised.fasta
  │  │  │  ├─ 🗋 denoised_otutab.txt.gz
  │  │  │  ├─ 🗋 denoised.biom
+ │  │  │  ├─ 🗋 denoised.hdf5.biom
  │  │  │  ├─ 🗋 denoised_search.txt.gz
  │  │  │  ├─ 📂 taxonomy
  │  │  │  │  ├─ 🗋 <database>-<method>-<name>..txt.gz
  │  │  │  │  ├─ 🗋 <database>-<method>-<name>.biom.gz
+ │  │  │  │  ├─ 🗋 <database>-<method>-<name>.hdf5.biom.gz
  │  │  │  │  │  (...)
  │  │  │  ├─ 📂 cmp
  │  │  │  │  ├─ 🗋 <my_seq_comparison>.txt
@@ -103,14 +105,10 @@ After running, a few additional directories will have appeared next to `config`.
  │  │  │  ├─ 📂 [ITSx]
  │  │  │  │  ├─ 🗋 out.positions.txt
  │  │  │  │  └─ (...)
- │  │  ├─ 📂 workflow_<type>
- │  │  │  ├─ 📂 <run>_<single/paired>
- │  │  │  │  └─ 📂 <marker>__<fwd-primer>...<rev-primer>
- │  │  │  │     └─ (... same as in *data* directory, only relevant with 
- │  │  │  │             multi-marker/workflow setups)
+ (...)
 ```
 
-Whether the output are ASVs/ESVs or OTUs from a fixed threshold clustering (not yet implemented), the resulting FASTA file is always called `denoised.fasta`. The sample/OTU count matrix is returned both in the traditional tabular format (`denoised_otutab.txt.gz`) and [BIOM v1](https://biom-format.org/documentation/biom_format.html). The taxonomic annotations are named by taxonomy database and assignment method (multiple combinations possible) and returned in a QIIME-style tabular format as well as the BIOM format. Furthermore, there can be results of sequence comparisons (`cmp`) or marker-specific data such as ITSx results.
+Whether the output are ASVs/ESVs or OTUs from a fixed threshold clustering (not yet implemented), the resulting FASTA file is always called `denoised.fasta`. The sample/OTU count matrix is returned both in the traditional tabular format (`denoised_otutab.txt.gz`) and [BIOM](https://biom-format.org/documentation/biom_format.html). The taxonomic annotations are named by taxonomy database and assignment method (multiple combinations possible) and returned in a QIIME-style tabular format as well as the BIOM format. Furthermore, there can be results of sequence comparisons (`cmp`) or marker-specific data such as ITSx results.
 
 With the simplest scenario (one run/layout and one primer combination), the relevant results directory is `<my_analysis>/results/<workflow_name>/data`. With multi-workflow/marker setups, the `data` directory will not be present, and the individual workflow results are placed in the nested directories ([more here](docs/output.md)).
 

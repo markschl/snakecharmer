@@ -104,7 +104,7 @@ rule qiime_denoise_paired:
 
 
 ruleorder:
-    qiime_denoised_export > make_biom
+    qiime_denoised_export > tsv_to_biom
 
 
 rule qiime_denoised_export:
@@ -114,7 +114,8 @@ rule qiime_denoised_export:
     output:
         denoised="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.fasta",
         tab="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised_otutab.txt.gz",
-        biom="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.biom",
+        biom_json="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.biom",
+        biom_hdf5="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.hdf5.biom",
         tmp=temp(
             directory("processing/{workflow}/qiime/dada2/{run}/{layout}/{primers}/denoised_convert_tmp")
         ),
@@ -133,8 +134,11 @@ rule qiime_denoised_export:
         qiime tools export \
             --input-path {input.tab0} \
             --output-path {output.tmp} &> {log}
-        mv {output.tmp}/feature-table.biom {output.biom}
-        biom convert -i {output.biom}  \
+        mv {output.tmp}/feature-table.biom {output.biom_hdf5}
+        biom convert -i {output.biom_hdf5}  \
+            -o {output.biom_json} \
+            --to-json --table-type "OTU table" &> {log}
+        biom convert -i {output.biom_hdf5}  \
             -o $tab \
             --to-tsv --table-type "OTU table" &> {log}
         sed -i '1,1d' $tab
