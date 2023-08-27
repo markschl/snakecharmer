@@ -7,6 +7,7 @@ refdb/
 *~
 _*/
 .snakemake*
+*.hdf5.biom
 multiqc*
 .tests/
 *.pyc

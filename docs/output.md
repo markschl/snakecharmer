@@ -30,13 +30,16 @@ Usually the results are found in `<my analysis>/results/<workflow name>/data` wi
  │ │ │ │ └ 📂 ITS__ITS3-KYO2...ITS4ngsUni
  │ │ │ │ │ ├ 🗋 denoised.fasta
  │ │ │ │ │ ├ 🗋 denoised.biom
+ │ │ │ │ │ ├ 🗋 denoised.hdf5.biom
  │ │ │ │ │ ├ 🗋 denoised_otutab.txt.gz
  │ │ │ │ │ └ 🗋 denoised_search.txt.gz
  │ │ │ │ │ ├ 📂 taxonomy
  │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sintax_70.txt.gz
  │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sintax_70.biom.gz
+ │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sintax_70.hdf5.biom.gz
  │ │ │ │ │ │ └ 🗋 unite-qiime_sklearn-sklearn_70.txt.gz
  │ │ │ │ │ │ ├ 🗋 unite-qiime_sklearn-sklearn_70.biom.gz
+ │ │ │ │ │ │ ├ 🗋 unite-qiime_sklearn-sklearn_70.hdf5.biom.gz
  │ │ │ │ │ │ ├ 📂 fasta
  │ │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sintax_70.fasta.gz
  │ │ │ │ │ │ │ └ 🗋 unite-qiime_sklearn-sklearn_70.fasta.gz

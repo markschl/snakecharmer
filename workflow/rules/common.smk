@@ -383,20 +383,26 @@ rule link_data_dir:
 #### Steps after clustering ####
 
 
-rule make_biom:
+rule tsv_to_biom:
     input:
         tab="results/{workflow}/workflow_{cluster}/{primers}/{layout}_{run}/denoised_otutab.txt.gz",
     output:
         biom="results/{workflow}/workflow_{cluster}/{primers}/{layout}_{run}/denoised.biom",
+        biom_hdf5="results/{workflow}/workflow_{cluster}/{primers}/{layout}_{run}/denoised.hdf5.biom",
     log:
-        "logs/{workflow}/workflow_{cluster}/{primers}/{layout}_{run}/make_biom.log",
+        "logs/{workflow}/workflow_{cluster}/{primers}/{layout}_{run}/tsv_to_biom.log",
     group:
         "denoise"
     conda:
         "envs/biom.yaml"
     shell:
         """
-        biom convert -i {input.tab} -o {output.biom} --table-type 'OTU table' --to-json
+        biom convert -i {input.tab} \
+          -o {output.biom} \
+          --table-type 'OTU table' --to-json &> {log}
+        biom convert -i {output.biom}  \
+          -o {output.biom_hdf5} \
+          --table-type "OTU table" --to-hdf5 &> {log}
         """
 
 
