@@ -244,8 +244,7 @@ filter:
 
 # Usearch pipeline specific settings
 usearch:
-  # paired end merging (currently done by USEARCH)
-  # TODO: should be configurable
+  # paired end merging
   merge:
     overlap_ident: 75  # percent
     # max. nucleotide differences

@@ -14,7 +14,7 @@ conda activate snakemake
 # we use only one core (-c1).
 ./snakecharmer test denoise ITS cmp taxonomy
 
-# (optional) remove working directories (but not logs)
+# (optional) remove working directories
 ./snakecharmer test clean
 
 # run a general comparison script (useful for any pipeline comparison)
