@@ -15,6 +15,9 @@ sample_patterns = {
 }
 
 
+__run = "{run}"
+
+
 class SamplePatternMismatch(Exception):
     def __init__(self, sample, pattern, *args, **kwargs):
         msg = (
@@ -48,10 +51,10 @@ class RunWildcard(object):
     def __init__(self, path, from_end=False):
         parts = list(path.split(os.sep))
         n_parts = len(parts)
-        patterns = [(i, re.compile(re.escape(p).replace(
-            "\\{run\\}", '(.+?)'))) for i, p in enumerate(parts) if "{run}" in p]
+        patterns = [(i, re.compile(re.escape(p).replace("\\{run\\}", '(.+?)')))
+                    for i, p in enumerate(parts) if "{run}" in p]
         assert len(
-            patterns) == 1, "Invalid number of {run} wildcards (only one allowed)"
+            patterns) == 1, f"Invalid number of {__run} wildcards (only one allowed)"
         self.pattern_index, self.pattern = patterns[0]
         if from_end:
             self.pattern_index = self.pattern_index - n_parts
@@ -64,14 +67,11 @@ class RunWildcard(object):
         return self.pattern.fullmatch(parts[self.pattern_index]).group(1)
 
 
-__run = "{run}"
-
-
 def expand_file_pattern(pattern: str, recursive: bool = False) -> Generator[str, None, None]:
     # parse run wildcard
     run_wildcard = None
     n = pattern.count(__run)
-    assert n <= 1, "Too many {run} wildcards (only one allowed)"
+    assert n <= 1, f"Too many {__run} wildcards (only one allowed)"
     if n == 1:
         if recursive:
             parts = pattern.split("**")
@@ -79,8 +79,10 @@ def expand_file_pattern(pattern: str, recursive: bool = False) -> Generator[str,
                 run_wildcard = RunWildcard(parts[0])
                 parts[0] = run_wildcard.glob_pattern
             else:
-                assert __run in parts[-1], \
-                    "The {run} wildcard cannot be in the middle between two recursive /**/ expressions, it must be in the first or last part of the pattern."
+                assert __run in parts[-1], (
+                    f"The {__run} wildcard cannot be in the middle between two "
+                    "recursive /**/ expressions, it must be in the first or last "
+                    "part of the pattern.")
                 run_wildcard = RunWildcard(parts[-1], from_end=True)
                 parts[-1] = run_wildcard.glob_pattern
             pattern = "**".join(parts)
@@ -260,7 +262,7 @@ def group_samples(
             assert sorted(set(read_idx)) == sorted(read_idx), (
                 "Several files with the same sample name found, are they from "
                 "different runs? In this case, "
-                "use the {{run}} wildcard.\n{}").format(format_list(paths))
+                "use the {} wildcard.\n{}").format(__run, format_list(paths))
             # now we can obtain the read layout (single/paired)s
             n_reads = len(read_idx)
             # other than 1 or 2 should be impossible (error caught earlier)
@@ -297,9 +299,10 @@ def group_samples(
     return out
 
 
-def make_manifest(outdir, 
+
+def make_manifest(out_prefix, 
                   header_single, header_paired,
-                  path_template="{layout}_{run}.tsv",
+                  path_template="{out_prefix}{layout}_{run}.tsv",
                   default_run="run1", 
                   relative_paths=True, 
                   **param):
@@ -313,14 +316,15 @@ def make_manifest(outdir,
         for layout, samples in by_layout.items():
             if samples:
                 outfile = path_template \
-                    .format(outdir=outdir, layout=layout, run=run) \
+                    .format(out_prefix=out_prefix, layout=layout, run=run) \
                     .replace('/', os.sep)
                 assert not outfile in unique_paths, (
                     "make_manifest: file {} already exists, is 'path_template' "
                     "correct?".format(outfile))
                 unique_paths.add(outfile)
-                if not os.path.exists(os.path.dirname(outfile)):
-                    os.makedirs(os.path.dirname(outfile))
+                d = os.path.dirname(outfile)
+                if d and not os.path.exists(d):
+                    os.makedirs(d)
                 with open(outfile, "w") as out:
                     w = csv.writer(out, delimiter="\t")
                     w.writerow(header_map[layout])
@@ -341,10 +345,6 @@ if __name__ == "__main__":
         description="Script for making a manifest file as input for amplicon pipelines such as QIIME",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    p.add_argument("outdir",
-                   help="Output directory for manifest files."
-                        "The files will be placed in the following path: "
-                        "{outdir}/single/{run}.tsv or {outdir}/paired/{run}.tsv")
     p.add_argument("-d", "--directory", dest="directories", action="append",
                    help="Directory in which to search for FASTQ files. "
                         "Multiple patterns can be added by using this argument "
@@ -353,6 +353,11 @@ if __name__ == "__main__":
                    help="Glob pattern for finding FASTQ files. "
                         "Multiple patterns can be added by using this argument "
                         "several times")
+    p.add_argument("-o", "--out_prefix", default="manifest_",
+                   help="Output prefix for manifest files. The default is 'manifest_'. "
+                        "The output file names are then: "
+                        "manifest_single_{run}.tsv or manifest_paired_{run}.tsv. "
+                        "See also --path-template for more options.")
     p.add_argument("-r", "--recursive", action="store_true",
                    help="Search directories recursively and match glob patterns "
                        "recursively (unlimited directory depth, specified using /**/)")
@@ -380,7 +385,7 @@ if __name__ == "__main__":
                    default="sample-id,forward-absolute-filepath,reverse-absolute-filepath",
                    help="Single-end manifest header (comma delimited list). "
                        "The default is the QIIME naming.")
-    p.add_argument("--path-template", default="{outdir}/{layout}_{run}.tsv",
+    p.add_argument("--path-template", default="{out_prefix}{layout}_{run}.tsv",
                    help="Template for creating the sample file(s). "
                         "Subdirectories are automatically created.")
     p.add_argument("-f", "--paired-filter", choices={None, "fwd-only", "rev-only"},
@@ -393,6 +398,7 @@ if __name__ == "__main__":
                         "the reverse primer and not the forward primer")
 
     args = vars(p.parse_args())
+
     try:
         assert args["directories"] is not None or args["patterns"] is not None, \
             "Please specify at least one -d/--directory or -p/--pattern"

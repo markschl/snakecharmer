@@ -13,8 +13,8 @@ def get_config_file(outdir, run_name, sample_file=None, **param):
     if sample_file is None:
         # search for read files with given parameters
         _runs = make_manifest(
-            outdir,
-            path_template="{outdir}/{layout}/{run}/samples.tsv",
+            out_prefix=outdir,
+            path_template="{out_prefix}/{layout}/{run}/samples.tsv",
             header_single=SampleList.default_header["single"],
             header_paired=SampleList.default_header["paired"],
             default_run=run_name, 
