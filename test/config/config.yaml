@@ -84,7 +84,6 @@ primers:
       - ITS4:
           AATCCTCCGCTTATTGATATGC,
           AATCCTCCGCTGAWTAATATGC
-    combinations: default
   trim_settings:
     min_overlap: 15
     max_error_rate: 0.25
