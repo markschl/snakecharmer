@@ -108,8 +108,6 @@ rule qiime_denoised_export:
         tab="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised_otutab.txt.gz",
         biom_json="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.biom",
         biom_hdf5="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.hdf5.biom",
-        biom_json="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.biom",
-        biom_hdf5="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.hdf5.biom",
         tmp=temp(
             directory("processing/{workflow}/qiime/dada2/{run}/{layout}/{primers}/denoised_convert_tmp")
         ),
@@ -128,11 +126,6 @@ rule qiime_denoised_export:
         qiime tools export \
             --input-path {input.tab0} \
             --output-path {output.tmp} &> {log}
-        mv {output.tmp}/feature-table.biom {output.biom_hdf5}
-        biom convert -i {output.biom_hdf5}  \
-            -o {output.biom_json} \
-            --to-json --table-type "OTU table" &> {log}
-        biom convert -i {output.biom_hdf5}  \
         mv {output.tmp}/feature-table.biom {output.biom_hdf5}
         biom convert -i {output.biom_hdf5}  \
             -o {output.biom_json} \
