@@ -154,6 +154,7 @@ rule make_tax_biom:
     input:
         biom="results/{name}/{workflow}/{primers}/{layout}/denoised.biom",
         biom_hdf5="results/{name}/{workflow}/{primers}/{layout}/denoised.hdf5.biom",
+        biom_hdf5="results/{name}/{workflow}/{primers}/{layout}/denoised.hdf5.biom",
         tax="results/{name}/{workflow}/{primers}/{layout}/taxonomy/{tax_name}.txt.gz",
     output:
         tax_tmp=temp(
@@ -162,7 +163,11 @@ rule make_tax_biom:
         biom_tmp=temp(
             "processing/{name}/{workflow}/{primers}/{layout}/_tax_tmp/{tax_name}.biom"
         ),
+        biom_tmp=temp(
+            "processing/{name}/{workflow}/{primers}/{layout}/_tax_tmp/{tax_name}.biom"
+        ),
         biom="results/{name}/{workflow}/{primers}/{layout}/taxonomy/{tax_name}.biom.gz",
+        biom_hdf5="results/{name}/{workflow}/{primers}/{layout}/taxonomy/{tax_name}.hdf5.biom.gz",
         biom_hdf5="results/{name}/{workflow}/{primers}/{layout}/taxonomy/{tax_name}.hdf5.biom.gz",
     log:
         "logs/{name}/other/{layout}/{workflow}/{primers}/make_tax_biom/{tax_name}.log",
