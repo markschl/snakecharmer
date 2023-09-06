@@ -1,31 +1,22 @@
 
 localrules:
     qiime_make_manifest,
-    qiime_multiqc,
     qiime_stats_paired,
 
 
 rule qiime_make_manifest:
-    # This is a bit complicated, but serves to obtain the config and output
-    # directory paths, inferring the technology wildcard (which is otherwise
-    # not known)
+    params:
+        qiime_style=True,
+        subdir="nested"
     input:
-        run_config=lambda wildcards: expand_runs(
-            "input/sample_config/{technology}/{layout}/{run}",
-            pool=cfg[wildcards.workflow]["settings"]["pool_raw"],
-            **wildcards
-        )[0],
-        fq=lambda wildcards: expand_runs(
-            "processing/{workflow}/input/{technology}/{layout}/{run}",
-            pool=cfg[wildcards.workflow]["settings"]["pool_raw"],
-            **wildcards
-        )[0],
+        tab=lambda wildcards: "processing/{{workflow}}/input/sample_config/{technology}/{layout}/{run}/samples.tsv".format(**cfg.get_run_data(**wildcards)),
+        sample_dir=lambda wildcards: "processing/{{workflow}}/input/{technology}/{layout}/{run}".format(**cfg.get_run_data(**wildcards)),
     output:
-        manifest="processing/{workflow}/qiime/manifest/{run}/{layout}/manifest.txt",
+        tab="processing/{workflow}/qiime/manifest/{run}_{layout}.txt",
     log:
         "logs/{workflow}/qiime/{run}/{layout}/make_manifest.log",
     script:
-        "../scripts/qiime_make_manifest.py"
+        "../scripts/make_new_sample_tab.py"
 
 
 rule qiime_import:
@@ -37,7 +28,7 @@ rule qiime_import:
           if wildcards.layout == "single"
           else "PairedEndFastqManifestPhred33V2",
     input:
-        manifest="processing/{workflow}/qiime/manifest/{run}/{layout}/manifest.txt",
+        manifest=rules.qiime_make_manifest.output.tab,
     output:
         "processing/{workflow}/qiime/{run}/{layout}/demux.qza",
     log:
@@ -61,7 +52,7 @@ rule qiime_import:
 rule qiime_trim_paired:
     params:
         err_rate=lambda w: cfg[w.workflow]["settings"]["primers"]["trim_settings"]["max_error_rate"],
-        min_len=lambda w: cfg[w.workflow]["settings"]["filter"]["min_length"],
+        min_length=lambda w: cfg[w.workflow]["settings"]["dada2"]["min_length"],
     input:
         yaml="processing/primers/primers.yaml",
         demux="processing/{workflow}/qiime/{run}/paired/demux.qza",
@@ -104,7 +95,7 @@ rule qiime_denoise_paired:
 
 
 ruleorder:
-    qiime_denoised_export > tsv_to_biom
+    qiime_denoised_export > otutab_to_biom > biom_to_hdf5
 
 
 rule qiime_denoised_export:
@@ -112,6 +103,7 @@ rule qiime_denoised_export:
         denoised0="processing/{workflow}/qiime/dada2/{run}/{layout}/{primers}/dada2.qza",
         tab0="processing/{workflow}/qiime/dada2/{run}/{layout}/{primers}/dada2_tab.qza",
     output:
+        # directory("results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}"),
         denoised="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.fasta",
         tab="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised_otutab.txt.gz",
         biom_json="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.biom",
@@ -273,17 +265,6 @@ rule assign_taxonomy_qiime_sklearn:
 ##########################
 #### QC
 ##########################
-
-
-rule qiime_multiqc:
-    input:
-        rules.multiqc_fastqc.output,
-    output:
-        "results/{workflow}/validation/multiqc_qiime/multiqc_report.html",
-    log:
-        "logs/{workflow}/multiqc_qiime.log",
-    shell:
-        "ln -srf {input} {output} 2> {log}"
 
 
 # TODO: not implemented

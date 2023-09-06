@@ -1,44 +1,77 @@
+
 rule fastqc:
     input:
-        lambda w: expand("input/{{technology}}/{{layout}}/{{demux_method}}/{{run}}/{{sample}}_R{read}.fastq.gz",
-               read=[1, 2] if w.layout == "paired" else [1]),
+        sample_dir=rules.collect_sample_files.output.sample_dir,
     output:
-        expand("input/{{technology}}/{{layout}}/{{demux_method}}/{{run}}/fastqc/{{sample}}_R{read}_fastqc.{ext}",
-               read=[1, 2],
-               ext=("html", "zip"),
-               allow_missing=True),
+        qc_dir=directory("input/fastqc/{technology}/{layout}/{demux}/{run}")
     log:
-        "logs/qc/{technology}/{layout}/{demux_method}/{run}/{sample}.log",
+        "logs/qc/{technology}/{layout}/{demux}/{run}.log",
+    threads: workflow.cores,
     group:
-        "sample"
+        "run"
     conda:
         "envs/fastqc.yaml"
     shell:
         """
-        outdir=$(dirname "{output[0]}")
-        mkdir -p "$outdir"
-        fastqc -q -f fastq -t 1 -o "$outdir" {input} 2> {log}
+        mkdir -p {output.qc_dir}
+        fastqc -q -f fastq -t {threads} -o {output.qc_dir} {input.sample_dir}/*.fastq.gz 2> {log}
         """
 
 
 rule multiqc_fastqc:
     input:
-        lambda wildcards: expand_samples(
-            path="input/{technology}/{layout}/{demux_method}/{run}/fastqc/{sample}_R{read}_fastqc.html",
-            demux_method="demux",
-            **wildcards
+        fastqc=lambda wildcards: rules.fastqc.output.qc_dir.format(
+            demux="demux",
+            **cfg.get_run_data(pooled=False, **wildcards)
         ),
-            # demux_method=cfg[wildcards.workflow]["demux_method"],
     output:
-        "results/{workflow}/validation/multiqc/multiqc_report.html",
+        "results/_qc/multiqc_{run}_{layout}/multiqc_report.html",
     log:
-        "logs/{workflow}/multiqc.log",
+        "logs/qc/multiqc_{run}_{layout}.log",
     conda:
         "envs/multiqc.yaml"
     shell:
         """
-        indir=input
-        outdir="$(dirname {output})"
-        multiqc -fm fastqc -o "$outdir" "$indir" 2> {log}
+        outdir="$(dirname "{output}")"
+        multiqc -fm fastqc -o "$outdir" "{input.fastqc}" 2> {log}
+        (cd "$outdir" && zip -FSqr -rm multiqc_data.zip multiqc_data) 2> {log}
+        """
+
+
+ruleorder:
+    multiqc_fastqc_pooled_workdir > multiqc_link_workdir
+
+
+rule multiqc_link_workdir:
+    input:
+        fastqc=rules.multiqc_fastqc.input.fastqc,
+    output:
+        "results/{workflow}/workflow_{pipeline}/{run}_{layout}/_qc/multiqc_report.html",
+    log:
+        "logs/{workflow}/qiime/workflow_{pipeline}/{run}_{layout}/qc/multiqc_report.log",
+    priority:
+        -1
+    shell:
+        """
+        ln -srf {input.existing} {output} 2> {log}
+        """
+
+
+rule multiqc_fastqc_pooled_workdir:
+    input:
+        fastqc=lambda wildcards: rules.fastqc.output.qc_dir.format(
+            demux="demux",
+            **cfg.get_run_data(**wildcards)
+        ),
+    output:
+        "results/{workflow}/workflow_{pipeline}/{run}_{layout}/_qc/multiqc_report.html",
+    log:
+        "logs/{workflow}/qiime/workflow_{pipeline}/{run}_{layout}/qc/multiqc_report.log",
+    priority:
+        -1
+    shell:
+        """
+        outdir="$(dirname "{output}")"
+        multiqc -fm fastqc -o "$outdir" "{input.fastqc}" 2> {log}
         (cd "$outdir" && zip -FSqr -rm multiqc_data.zip multiqc_data) 2> {log}
         """

@@ -1,20 +1,12 @@
-import os
-import shutil
-
 import yaml
 
 from utils import file_logging
 from utils.sample_list import SampleList
 
 
-def make_pooling_list(run_config, sample_file_out, info_file_out):
+def make_pooling_list(sample_files, sample_file_out, info_file_out):
     # read sample files
     # TODO: indexes.tsv for demultiplexing
-    sample_files = [os.path.join(d, "samples.tsv") for d in run_config]
-    for f in sample_files:
-        if not os.path.exists(f):
-            shutil.rmtree(os.path.dirname(f))
-            raise Exception(f"Sample file {sample_files[0]} does not exist")
     sample_lists = [SampleList(f) for f in sample_files]
     # there should be only one layout present (paired or single)
     unique_layout = set(l.layout for l in sample_lists)
@@ -37,6 +29,8 @@ def make_pooling_list(run_config, sample_file_out, info_file_out):
         sample_list_out.add(sample, out_reads)
         sample_pools[sample] = {f"R{i+1}": f for i, f in enumerate(run_files)}
     # write new sample list to files
+    # TODO: we only list file names, not paths. This sample list is mostly needed
+    # for the pipeline to work, but the paths are unimportant since already known
     with open(sample_file_out, "w") as f:
         sample_list_out.write(f)
     # write YAML file with all pooling info
@@ -47,6 +41,6 @@ def make_pooling_list(run_config, sample_file_out, info_file_out):
 
 
 with file_logging(snakemake.log[0]):
-    make_pooling_list(run_config=snakemake.input.run_config,
-                sample_file_out=snakemake.output.sample_file,
-                info_file_out=snakemake.output.yml)
+    make_pooling_list(sample_files=snakemake.input.sample_files,
+                      sample_file_out=snakemake.output.sample_file,
+                      info_file_out=snakemake.output.yml)

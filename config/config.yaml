@@ -3,15 +3,21 @@
 # For QIIME and Amptk, it is possible to configure the
 # Conda environment, where the software is installed,
 # allowing to switch between different versions.
-# Note: qiime or amptk entries can be missing if clustering/
-#  taxonomy assignment methods from these pipelines are
-#  not used in the pipelines definition below.
+# Note: only pipelines that are effectively used in the 'workflows'
+# definition have to be listed here. Removing the others can actually
+# speed up Snakemake
 software:
   usearch:
-    # Any path to USEARCH can be specified
-    # (download here: https://drive5.com/usearch/)
-    # By default, assuming that the binary is in PATH under that name
+    # Path to USEARCH  (download here: https://drive5.com/usearch/)
+    # By default, assuming that the binary is in $PATH as 'usearch'
     binary: usearch
+    # optional, if Snakemake was installed in Conda; otherwise it should be in $PATH
+    snakemake_env: snakemake
+    # https://github.com/markschl/uvsnake source and/or version
+    uvsnake:
+      tag: v0.1
+      # commit: afec00c
+      # path: <local path to downloaded repo>
   qiime:
     conda_env: qiime2-2022.11
   amptk:
@@ -21,35 +27,21 @@ software:
 #### Input files ####
 
 input:
-  # Lists of directories and/or glob patterns can be specified.
-  # There is no problem if some files are matched by both, they will only
-  # be included once..
-  # Non-absolute paths are interpreted as being relative to
-  # the directory, which contains the configuration (`config` dir)
-  # and in which all other directories (input, processing, results)
-  # are created.
-  directories:
-    - test/gz
-  patterns:
-    - path/to/other/files/**/Abc*.gz
-  # recursive: true causes directories to be searched recursively, and
-  # glob patterns can contain /**/ to match unknown/unlimited directory depth
-  # (like the globstar option in Bash)
-  recursive: true
-  # The name pattern is an important setting that should be correctly
-  # specified.
-  # While no metadata file specifying sample names and corresponding input files
-  # is required (such as with QIIME), it is necessary to specify the correct 
-  # name pattern to obtain sample names from the file names.
-  # Options are:
-  # - sample_read: e.g. Sample_Name_R1.fastq.gz
-  # - illumina: e.g. Sample_Name_S276_L001_R1_001.fastq.gz
-  # - regular expression with two groups, the first one matches the sample name
-  #     and the second one the read number (1 = forward, 2 = reverse).
-  #     For example, the sample_read pattern looks like this:
-  #     '(.+?)_R([12])\.fastq\.gz'
-  #     The illumina pattern: "(.+?)_S\d+_L\d+_R([12])_\d{3}\.fastq\.gz"
-  name_pattern: sample_read  # {sample_read, illumina, <regex>}
+  # sample tables are grouped by sequencing technology, since
+  # pipelines usually only handle some technologies
+  illumina:
+    # Path(s) to tab-separated sample table(s) with the following columns:
+    # id, R1, R2 (R2 paths only with paired-end sequencing layout).
+    # A flexible tool that assists with creating these sample tables is:
+    # https://github.com/markschl/ngs-sample-tab
+    # Both the output format 'simple' (-f simple) and 'qiime' (-f qiime) are valid
+    run1: sample_file1.tsv
+    run2: sample_file2.tsv
+    # a special case are cases, where only reverse (R2) reads are provided:
+    # there the forward and reverse primers are exchanged, which the system needs to know
+    run3:
+      samples: sample_file1.tsv
+      reverse: true
 
 # Multiple files with the same name in different directories are
 # either pooled together before processing (if pool_duplicates is true)
@@ -125,7 +117,7 @@ compare:
     ident_threshold: 0.8  # min. identity (0 - 1)
   # The following settings apply to all comparisons unless
   # defined in the comparison settings.
-  default_settings:
+  defaults:
     # the above ident_threshold overrides this setting, but if
     # not specified there, the identity threshould would be 0.9
     ident_threshold: 0.9
@@ -172,12 +164,11 @@ primers:
       - ITS4:
           AATCCTCCGCTTATTGATATGC,
           AATCCTCCGCTGAWTAATATGC
-    # Primer combinations: either 'default' (to use all possible combinations),
-    #   or a list of combinations (see below)
-    combinations: default
-      ## Instead of 'default', a list of specific desired combinations
-      ## can be supplied. Every combination will obtain its own results directory
-      ## (named "marker__forward...reverse")
+    # (optional) Primer combinations: either missing, 'all' (has the same effect)
+    # or a list of combinations (see below)
+    combinations: all
+      ## Custom list of combinations:
+      ## Every combination will obtain its own results directory
       ## The primer combination format must be: "forward...reverse"
       # - ITS3-KYO2...ITS4
       # - fITS7...ITS4

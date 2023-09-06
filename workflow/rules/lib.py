@@ -1,18 +1,29 @@
+from collections import defaultdict
 from hashlib import sha256
 from itertools import product
-import os
-from copy import deepcopy
-from os.path import dirname
+import copy
 from typing import *
 
-from snakemake.workflow import srcdir
 
-# Set environment variable of workflow root dir to allow post-deploy
-# scripts to run other scripts stored in that directory
-os.environ['PIPELINE_DIR'] = dirname(dirname(dirname(srcdir('.'))))
+from scripts.utils.sample_list import SampleList
 
 
-#### Setup ####
+def list_runs(input_cfg):
+    for technology, data in input_cfg.items():
+        for run, data in data.items():
+            if isinstance(data, str):
+                sample_file = data
+                reverse = False
+            else:
+                sample_file = data["samples"]
+                reverse = data.get("reverse", False)
+            yield {
+                "technology": technology,
+                "run": run,
+                "sample_file": sample_file,
+                "orientation": "reverse" if reverse else "forward"
+            }
+
 
 class Config(object):
     # strategy_names = ['merged', 'notmerged_R1', 'notmerged_R2']
@@ -28,32 +39,64 @@ class Config(object):
     def __init__(self, config):
         self.config = config
         self.workflow = config['workflows']
+        self._init_input()
         self._get_primer_combinations()
-        self._get_cmp_files()
         self._init_taxonomy()
         self._init_config()
         self._assemble_taxonomy()
         # from pprint import pprint; pprint(vars(self))
 
-    def _get_cmp_files(self):
-        # reads files that may be compared with ASVs/OTUS
-        if 'compare' in self.config:
-            self.cmp_files = deepcopy(self.config['compare'])
-            cfg = self.cmp_files.pop('default_settings', {
-                # TODO: investigate, how default settings can be taken from config.schema.yaml
-                'maxaccepts': 64,
-                'maxrejects': 64,
-                'maxhits': 1,
-            })
-            for d in self.cmp_files.values():
-                d.update(cfg)
-        else:
-            self.cmp_files = {}
-    
-    # def _init_dirs(self):
-    #     # c_dir because the primers are placed there
-    #     if not os.path.isdir(self.working_dir):
-    #         os.makedirs(self.working_dir)
+    def _init_input(self):
+        grouped = defaultdict(lambda: defaultdict(dict))  # technology -> layout -> metadata
+        self.runs = self.run_pools = OrderedDict()  # (run, layout) -> metadata
+        for d in list_runs(self.config["input"]):
+            run = d["run"]
+            # read sample list and add some more metadata
+            assert not run in self.runs, (
+                f"Duplicate run name found: {run}. This is not allowed, "
+                "even acros different sequencing technologies."
+            )
+            d["layout"] = layout = SampleList.infer_layout(d["sample_file"])
+            if layout == "single" and d["orientation"] == "reverse":
+                d["layout"] = layout = "single_rev"
+            grouped[d["technology"]][layout][run] = d
+            self.runs[(run, layout)] = d
+
+        # the 'run_pools' dict should contain pooled runs if pool_raw: true
+        if self.config["pool_raw"] is True:
+            self.run_pools = OrderedDict()
+            for technology, data in sorted(grouped.items()):
+                for layout, runs in sorted(data.items()):
+                    run_concat = "_".join(sorted(runs))
+                    run = run_concat + "_pool"
+                    self.run_pools[(run, layout)] = {
+                        "technology": technology,
+                        "run_list": run_concat,
+                        "run": run,
+                        "layout": layout,
+                        "sample_files": sorted(r["sample_file"] for r in runs.values())
+                    }
+
+    def _get_runs(self, workflow=None, pooled=True):
+        if pooled and (workflow is None or self[workflow]["settings"]["pool_raw"]):
+            return self.run_pools
+        return self.runs
+
+    def get_runs(self, workflow=None, pooled=True):
+        for d in self._get_runs(workflow, pooled).values():
+            is_pool = d["run"].endswith("_pool")
+            # print(workflow, pooled, d, is_pool)
+            if pooled or not is_pool:
+                yield d
+
+    def get_run_data(self, workflow=None, run=None, layout=None, pooled=True, **unused):
+        return self._get_runs(workflow, pooled=pooled)[(run, layout)]
+
+    def read_samples(self, path, workflow=None, run=None, layout=None, pooled=True, **unused):
+        d = self.get_run_data(workflow, run, layout, pooled=pooled)
+        path = path.format(workflow=workflow, **d)
+        l = SampleList(path)
+        return {"sample": [s for s, _ in l.samples()], "read": [str(i+1) for i in range(l.n_reads)]}
 
     def _get_primer_combinations(self):
         """
@@ -64,6 +107,7 @@ class Config(object):
         self.primers = {}
         self.primer_combinations = {}
         self.primer_combinations_flat = []
+        self.primer_combinations_nomarker = set()
         self.markers = list(self.config['primers'])
         for marker, primers in self.config['primers'].items():
             if marker == 'trim_settings':
@@ -79,10 +123,10 @@ class Config(object):
             if combinations == 'default':
                 self.primer_combinations[marker] = []
                 for fwd, rev in product(pr['forward'], pr['reverse']):
-                    self.primer_combinations[marker].append(
-                        '{}...{}'.format(fwd, rev))
-                    self.primer_combinations_flat.append(
-                        '{}__{}...{}'.format(marker, fwd, rev))
+                    comb = f'{fwd}...{rev}'
+                    self.primer_combinations[marker].append(comb)
+                    self.primer_combinations_nomarker.add(comb)
+                    self.primer_combinations_flat.append(f'{marker}__{comb}')
             else:
                 assert isinstance(combinations, list), \
                     'Primer combinations of marker {} are not in list form'.format(marker)
@@ -97,6 +141,7 @@ class Config(object):
                     assert (s[1] in self.primers['reverse']), \
                         'Unknown reverse primer: {}'.format(s[1])
                     self.primer_combinations_flat.append('{}__{}'.format(marker, c))
+                    self.primer_combinations_nomarker.add(c)
         # make sure the same primer combinations don't occur in different markers
         comb = [c for _, comb in self.primer_combinations.items()
                 for c in comb]
@@ -154,10 +199,10 @@ class Config(object):
             # copy settings over, add extra settings overriding the defaults
             if 'settings' in p:
                 settings = p['settings']
-                p['settings'] = deepcopy(self.config)
+                p['settings'] = copy.deepcopy(self.config)
                 recursive_update(p['settings'], settings)
             else:
-                p['settings'] = deepcopy(self.config)
+                p['settings'] = copy.deepcopy(self.config)
 
     def _assemble_taxonomy(self):
         """

@@ -3,5 +3,5 @@
 snakemake -d test --rulegraph \
     config samples unique_samples quality \
     ITS taxonomy denoise cmp \
-    clean clean_all clean_taxdb clean_tax clean_cmp clean_itsx | 
+    clean clean_all clean_tax clean_cmp clean_itsx | 
     dot -Tpng > rulegraph.png

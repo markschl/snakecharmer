@@ -5,28 +5,29 @@ import lib
 
 localrules:
     amptk_stats_paired,
-    amptk_multiqc,
+
+
+amptk_workdir = "processing/{workflow}/amptk/{run}/paired"
 
 
 rule amptk_merge_trim:
     params:
         err_rate=lambda w: cfg[w.workflow]["settings"]["primers"]["trim_settings"]["max_error_rate"],
-        min_len=lambda w: cfg[w.workflow]["settings"]["filter"]["min_length"],
-        program=lambda w: cfg[w.workflow]["settings"]["usearch"]["merge"]["program"],
+        min_len=lambda w: cfg[w.workflow]["settings"]["usearch"]["filter"]["min_length"] \
+            if cfg[w.workflow]["cluster"] == "amptk_unoise3" \
+            else cfg[w.workflow]["settings"]["dada2"]["min_length"],
+        program=lambda w: with_default(cfg[w.workflow]["settings"]["usearch"], "merge", "program"),
         usearch_bin=config["software"]["usearch"]["binary"],
     input:
         primers_yaml="processing/primers/primers.yaml",
-        fq=lambda wildcards: expand_samples(
-            "processing/{workflow}/input/{technology}/{layout}/{run}/{sample}_R{read}.fastq.gz",
-            technology="illumina",
-            layout="paired",
-            pool=cfg[wildcards.workflow]["settings"]["pool_raw"],
-            **wildcards
+        sample_tab=lambda wildcards: "processing/{{workflow}}/input/sample_config/{technology}/paired/{run}/samples.tsv".format(
+            **cfg.get_run_data(layout="paired", **wildcards)
         ),
+        fq=lambda wildcards: expand_input_files(layout="paired", **wildcards),
     output:
-        demux="processing/{workflow}/amptk/{run}/paired/{marker}__{f_primer}...{r_primer}/illumina.demux.fq.gz",
-        mapping="processing/{workflow}/amptk/{run}/paired/{marker}__{f_primer}...{r_primer}/illumina.mapping_file.txt",
-        log="processing/{workflow}/amptk/{run}/paired/{marker}__{f_primer}...{r_primer}/illumina.amptk-demux.log",
+        demux=amptk_workdir + "/{marker}__{f_primer}...{r_primer}/illumina.demux.fq.gz",
+        mapping=amptk_workdir + "/{marker}__{f_primer}...{r_primer}/illumina.mapping_file.txt",
+        log=amptk_workdir + "/{marker}__{f_primer}...{r_primer}/illumina.amptk-demux.log",
     log:
         "logs/{workflow}/amptk/{run}/paired/{marker}__{f_primer}...{r_primer}/trim_merge.log",
     group:
@@ -40,16 +41,20 @@ rule amptk_merge_trim:
     script:
         "../scripts/amptk_trim_paired.py"
 
+# ruleorder:
+#     amptk_denoise > otutab_to_biom
 
 rule amptk_denoise:
     params:
         method=lambda wildcards: wildcards.method,
         usearch_par=lambda wildcards: cfg[wildcards.workflow]["settings"]["usearch"],
         dada2_par=lambda wildcards: cfg[wildcards.workflow]["settings"]["dada2"],
+        unoise_program=lambda w: with_default(cfg[w.workflow]["settings"]["usearch"], "unoise3", "program"),
         usearch_bin=config["software"]["usearch"]["binary"],
     input:
-        demux="processing/{workflow}/amptk/{run}/paired/{primers}/illumina.demux.fq.gz",
+        demux=amptk_workdir + "/{primers}/illumina.demux.fq.gz",
     output:
+        # directory("results/{workflow}/workflow_amptk_{method}/{run}_paired/{primers}"),
         denoised="results/{workflow}/workflow_amptk_{method}/{run}_paired/{primers}/denoised.fasta",
         tab="results/{workflow}/workflow_amptk_{method}/{run}_paired/{primers}/denoised_otutab.txt.gz",
     log:
@@ -70,16 +75,6 @@ rule amptk_denoise:
 #### QC
 ##########################
 
-
-rule amptk_multiqc:
-    input:
-        rules.multiqc_fastqc.output,
-    output:
-        "results/{workflow}/validation/multiqc_amptk/multiqc_report.html",
-    log:
-        "logs/{workflow}/multiqc_amptk.log",
-    shell:
-        "ln -srf {input} {output} 2> {log}"
 
 
 # TODO: not implemented

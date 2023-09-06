@@ -21,9 +21,6 @@ def do_pooling(data):
             assert len(source_paths) == 1
             os.symlink(abspath(source_paths[0]), abspath(target_path))
         else:
-            d = os.path.dirname(target_path)
-            if not os.path.exists(d):
-                os.makedirs(d)
             check_call(["zcat {} | gzip -c > {}".format(" ".join(source_paths), target_path)], shell=True)
             # with gzip.open(target_path, 'w') as out:
             #     for path in source_paths:
@@ -36,6 +33,7 @@ def do_pooling(data):
 
 
 def pool_raw(pooling_info, outdir, processes=1):
+    os.makedirs(outdir, exist_ok=True)
     # list of input -> output paths
     with open(pooling_info) as f:
         pool_files = yaml.safe_load(f)

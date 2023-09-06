@@ -79,30 +79,30 @@ outdir=~/path/to/analysis
 After running, a few additional directories will have appeared next to `config`. The most important one is the `results` directory, which roughly has the following structure ([more details here](docs/output.md)):
 
 ```
-📦<my_analysis>
- ├─ 📂 config
+📦<my_analysis>/
+ ├─ 📂 config/
  │  ├─ 🗋 config.yaml
  │  └─ 🗋 taxonomy.yaml
  │  (...)
- ├─ 📂 results
- │  ├─ 📂 <workflow name>
- │  │  ├─ 📂 data
+ ├─ 📂 results/
+ │  ├─ 📂 <workflow name>/
+ │  │  ├─ 📂 data/
  │  │  │  ├─ 🗋 denoised.fasta
  │  │  │  ├─ 🗋 denoised_otutab.txt.gz
  │  │  │  ├─ 🗋 denoised.biom
  │  │  │  ├─ 🗋 denoised.hdf5.biom
  │  │  │  ├─ 🗋 denoised_search.txt.gz
- │  │  │  ├─ 📂 taxonomy
+ │  │  │  ├─ 📂 taxonomy/
  │  │  │  │  ├─ 🗋 <database>-<method>-<name>..txt.gz
  │  │  │  │  ├─ 🗋 <database>-<method>-<name>.biom.gz
  │  │  │  │  ├─ 🗋 <database>-<method>-<name>.hdf5.biom.gz
  │  │  │  │  │  (...)
- │  │  │  ├─ 📂 cmp
+ │  │  │  ├─ 📂 cmp/
  │  │  │  │  ├─ 🗋 <my_seq_comparison>.txt
  │  │  │  │  ├─ 🗋 <my_seq_comparison>_notmatched.fasta.gz
  │  │  │  │  ├─ 🗋 <my_seq_comparison>_denoised_notmatched.fasta.gz
  │  │  │  │  │  (...)
- │  │  │  ├─ 📂 [ITSx]
+ │  │  │  ├─ 📂 [ITSx/]
  │  │  │  │  ├─ 🗋 out.positions.txt
  │  │  │  │  └─ (...)
  (...)

@@ -10,9 +10,10 @@ from utils import file_logging
 def denoise_paired(method,
                 trimmed_in,
                 denoised_out, otutab_out,
-                usearch_bin,
                 usearch_par,
                 dada2_par,
+                unoise_program=None,
+                usearch_bin=None,
                 threads=1):
     
     cmd = [
@@ -33,11 +34,11 @@ def denoise_paired(method,
                 "--maxee",
                 str(maxee),
                 "--method",
-                usearch_par["unoise"]["program"],
+                unoise_program,
                 "--minsize",
-                str(usearch_par["unoise"]["min_size"]),
+                str(usearch_par["unoise3"]["min_size"]),
             ]
-        if usearch_par["unoise"]["program"] == "usearch":
+        if unoise_program == "usearch":
             assert usearch_bin is not None
             cmd += ["--usearch", usearch_bin]
     else:
@@ -74,6 +75,7 @@ with file_logging(snakemake.log[0]):
         snakemake.input.demux,
         denoised_out=snakemake.output.denoised,
         otutab_out=snakemake.output.tab,
+        unoise_program=snakemake.params.unoise_program,
         usearch_bin=snakemake.params.usearch_bin,
         usearch_par=snakemake.params.usearch_par,
         dada2_par=snakemake.params.dada2_par,

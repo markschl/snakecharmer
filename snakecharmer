@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
 import argparse
-import glob
 import os
+from os.path import join, abspath, expanduser
 import sys
 import multiprocessing
-import yaml
 
 try:
     import snakemake
@@ -55,13 +54,13 @@ $ snakecharmer -c8 outdir denoise
     d = p.add_argument_group("Data storage")
     d.add_argument(
         "--conda-dir",
-        default=os.path.join("~", "snakecharmer", "conda"),
+        default=join("~", "snakecharmer", "conda"),
         help="""
         Location to store Conda environments and archives
         """)
     d.add_argument(
         "--cache-dir",
-        default=os.path.join("~", "snakecharmer", "cache"),
+        default=join("~", "snakecharmer", "cache"),
         help="""
         Location of the between-workflow cache, which is currently used
         to keep taxonomic databases without having to re-download them
@@ -109,32 +108,9 @@ $ snakecharmer -c8 outdir denoise
     args, other_args = p.parse_known_args(argv)
 
     # set SNAKEMAKE_OUTPUT_CACHE for use with --cache
-    cache_dir = os.path.abspath(os.path.expanduser(args.cache_dir))
+    cache_dir = abspath(expanduser(args.cache_dir))
     os.makedirs(cache_dir, exist_ok=True)
     os.environ["SNAKEMAKE_OUTPUT_CACHE"] = cache_dir
-
-    # basic command
-    base_cmd = ["-d", args.directory,
-                "--use-conda", "--conda-prefix", args.conda_dir,
-                "--cache",
-                "--local-cores", str(args.local_cores),
-                "--rerun-incomplete"]
-    if args.dev:
-        base_cmd += ["--rerun-triggers", "mtime", "params", "input", "software-env"]
-    elif not args.verbose:
-        base_cmd += ["--quiet", "rules"]
-    
-    # First, we need to know the number of samples in order to being able
-    # to configure the group-components.
-    # For this, we need to run the "samples" rule first
-    # TODO: this is actually only necessary on clusters
-    cmd = base_cmd + ["-c", "1", "-j", "1", "samples"]
-    print("Running: snakemake " + " ".join(cmd), file=sys.stderr)
-    try:
-        snakemake.main(cmd)
-    except SystemExit as e:
-        if e.code > 0:
-            raise
     
     # determine resources
     n_cores = multiprocessing.cpu_count() if args.cores == 'all' else int(args.cores)
@@ -146,28 +122,23 @@ $ snakecharmer -c8 outdir denoise
     else:
         n_jobs = int(args.jobs)
 
-    # For now, we just use the maximum number of samples from any
-    # workflow to determine the group sizes, since we don't know
-    # which workflows actually have sample groups
-    nsamples = []
-    for path in glob.glob(os.path.join(args.directory, "results", "*", "samples.yaml")):
-        with open(path) as f:
-            nsamples.append(sum(
-                1
-                for layouts in yaml.safe_load(f).values()
-                for samples in layouts.values()
-                for _ in samples
-            ))
-    # Sample batch sizes are chosen in a way that the number of batches is
-    # 1.5x the number of jobs (but batch size is at least 10 samples).
-    sample_group_size = max(10, round(max(nsamples) / n_jobs * 1.5))
-
     # run Snakemake
-    cmd = args.target + base_cmd + [
+    cmd = [
+        "-d", args.directory,
         "-c", str(n_cores), "-j", str(n_jobs),
-        "--group-components", f"sample={sample_group_size}",
-    ] + other_args
-    print("Running: snakemake " + " ".join(cmd), file=sys.stderr)
+        "--local-cores", str(args.local_cores),
+        "--use-conda", "--conda-prefix", args.conda_dir,
+        "--cache",
+        "--rerun-incomplete"
+    ]
+    cmd = cmd + other_args + args.target
+
+    if args.dev:
+        cmd += ["--rerun-triggers", "mtime", "params", "input", "software-env"]
+    elif not args.verbose:
+        cmd += ["--quiet", "rules"]
+    
+    print(f"Running: SNAKEMAKE_OUTPUT_CACHE={cache_dir} snakemake " + " ".join(cmd), file=sys.stderr)
     snakemake.main(cmd)
 
 

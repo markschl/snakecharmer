@@ -11,52 +11,43 @@ from utils import file_logging
 from utils.sample_list import SampleList
 
 
-def get_samples(run_cfg_dirs):
-    # read sample files
-    # TODO: indexes.tsv for demultiplexing
-    sample_files = [os.path.join(d, "samples.tsv") for d in run_cfg_dirs]
-    for f in sample_files:
-        if not os.path.exists(f):
-            shutil.rmtree(os.path.dirname(f))
-            raise Exception(f"Sample file {sample_files[0]} does not exist")
-    sample_lists = [SampleList(f) for f in sample_files]
+def get_samples(run_meta, path_template):
+    # get all necessary metadata
+    _run_meta = [
+        (
+            (d["technology"], d["layout"], d["run"]),
+            list(SampleList(path_template.format(**d).samples()))
+        )
+        for d in run_meta
+    ]
     # get list of runs per sample
     sample2run = defaultdict(set)
-    for path, l in zip(sample_files, sample_lists):
-        # annotate run and technology
-        p = path.split(os.sep)
-        l.run = p[-2]
-        l.technology = p[-4]
-        assert l.layout == p[-3]  # layout should be correct already
-        for sample, _ in l.samples():
-            sample2run[sample].add((l.layout, l.run))
-    # Which layout/run combinations have duplicate names?
-    # Runs/layouts without dupes are set to None
-    dupes = set(comb
-                for r in sample2run.values() if len(r) > 1
-                for comb in r)
-    dupes = {r: r for r in dupes}  # convert to dict, where only values are further modified
-    if len(set(layout for layout, _ in dupes.values())) == 1:
-        dupes = {k: (None, v[1]) for k, v in dupes.items()}
-    if len(set(run for _, run in dupes.values())) == 1:
-        dupes = {k: (v[0], None) for k, v in dupes.items()}
-    combinations = sorted(set(dupes.values()))
-    assert not (None, None) in combinations
-    # assign unique suffixes
-    suffixes = {k: combinations.index(dupes[k]) + 1 for k in dupes}
+    for run, samples in _run_meta:
+        for sample in samples:
+            sample2run[sample].add(run)
+    # Which layout/run/technology combinations have duplicate samples?
+    # Runs/layouts without duplicates are set to None
+    dupes = sorted(set(
+        run
+        for runs in sample2run.values() if len(runs) > 1
+        for run in runs
+    ))
+    # Define unique suffixes for run/layout combination that have duplicate samples.
+    # For consistency, all sample names in these runs will receive a suffix, 
+    # even if some of them are not duplicated.
+    suffixes = {r: dupes.index(dupes[r]) + 1 for r in dupes}
     sample_dict = {}
-    for l in sample_lists:
+    for run, samples in _run_meta:
         try:
-            suffix = suffixes[(l.layout, l.run)]
+            suffix = suffixes[run]
         except KeyError:
             suffix = None
-        meta = (l.technology, l.layout, l.run)
-        for sample, reads in l.samples():
+        for sample, reads in samples:
             unique_sample = sample if suffix is None else f"{sample}_{suffix}"
             assert not unique_sample in sample_dict
             paths = [(path, f"{unique_sample}_R{i+1}.fastq.gz")
                      for i, path in enumerate(reads)]
-            sample_dict[unique_sample] = (sample, meta, paths)
+            sample_dict[unique_sample] = (sample, run, paths)
     # convert to flat sorted list
     samples = [(unique_sample, *other) for unique_sample, other in sample_dict.items()]
     return sorted(samples)
@@ -105,18 +96,19 @@ def dump_tsv(samples, outfile):
             w.writerow(row)
 
 
-def link_samples(run_cfg_dirs, read_dir, sample_file):
+def link_samples(run_meta, read_dir, sample_file):
     # delete output dir to make sure there are no orphan files
     if exists(read_dir):
         shutil.rmtree(read_dir)
     if not exists(read_dir):
         os.makedirs(read_dir)
     # get the sample paths
-    samples = get_samples(run_cfg_dirs)
+    samples = get_samples(run_meta)
     # do the work
     do_link((paths for _, _, _, paths in samples), read_dir)
     dump_tsv(samples, sample_file)
 
 
 with file_logging(snakemake.log[0]):
-    link_samples(snakemake.input.run_cfg_dirs,  snakemake.output.read_dir, snakemake.output.tsv)
+    link_samples(snakemake.params.run_meta, snakemake.input.path_template, 
+                 snakemake.output.read_dir, snakemake.output.tsv)

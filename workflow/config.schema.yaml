@@ -1,8 +1,8 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: https://raw.githubusercontent.com/markschl/snakecharmer/main/workflow/config.schema.yaml
 description: Snakecharmer configuration
 properties:
   software:
+    default: {}
     type: object
     properties:
       usearch:
@@ -17,6 +17,25 @@ properties:
                 in $PATH. Alternatively, an absolute or relative path
                 (relative to analysis directory containing 'config') can be
                 specified.
+          snakemake_env:
+            type: string
+            description:
+              Name of the Snakemake Conda environment (in case Snakemake was installed
+              with Conda, if always in $PATH, this can be omitted
+          uvsnake:
+            type: object
+            properties:
+              github:
+                type: string
+                default: markschl/uvsnake
+              path:
+                type: string
+                description: alternative local path instead of github repo
+              tag:
+                type: string
+              commit:
+                type: string
+          required: [binary, uvsnake]
       qiime:
         type: object
         properties:
@@ -36,67 +55,23 @@ properties:
     additionalProperties: false
 
   input:
-    $defs:
-      input:
-        type: object
-        $dynamicAnchor: input
-        properties:
-          sample_file:
-            type: string
-            description: >
-              Path to a sample file with one forward 
-          sample_pattern:
-            type: string
-            description: >
-              Naming pattern for input files (required to recognize sample name and
-              read number)
-          directories:
-            type: array
-            items: { type: string }
-            description: >
-              List of directories to search (recursively or not, depending on 
-              recursive setting)
-          patterns:
-            type: array
-            items: { type: string }
-            description: >
-              List of glob patterns that should collectively match input files
-              (in conjunction with "directories"). Unlimited directory depth matching
-              with /**/ can be done if "recursive" is true
-          recursive:
-            type: boolean
-            default: false
-            description: >
-              Activate/deactivate recursive search in directories or pattern search
-              in directories at unlimited depth using /**/ (see "directories" and 
-              "patterns")
-          paired_filter:
-            type: string
-            enum: [fwd-only, rev-only]
-            description: >
-              Keep only forward/R1 (fwd-only) or reverse/R2 
-              (rev-only) read files in a paired layout, resulting 
-              in a single-end layout. This setting does not affect 
-              samples that are already in single-end mode.
-              If only keeping reverse/R2 reads, the resulting layout name will
-              actually be "single_rev", indicating that the reads do contain
-              the reverse primer and not the forward primer.
-        additionalProperties: false
-        oneOf:
-          - required: [sample_file]
-          - required: [sample_pattern, directories]
-          - required: [sample_pattern, patterns]
     type: object
     patternProperties:
       ^(illumina)$:
-        if:
-          required: ["sample_pattern"]
-        then:
-          "$dynamicRef": "#input"
-        else:
-            patternProperties:
-              ^\w+$:
-                "$dynamicRef": "#input"                
+        patternProperties:
+          ^\w+$:
+            oneOf:
+              - {type: string}
+              -
+                type: object
+                properties:
+                  samples:
+                    type: string
+                  reverse:
+                    type: boolean
+                required: [samples]
+                additionalProperties: false    
+        additionalProperties: false
     additionalProperties: false
   
   workflows:
@@ -107,7 +82,7 @@ properties:
         properties:
           cluster:
             type: string
-            enum: [usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2]
+            enum: [usearch_unoise3, usearch_uparse, qiime_dada2, amptk_unoise3, amptk_dada2]
           taxonomy:
             oneOf:
               - { type: string, enum: [default], default: default }
@@ -134,17 +109,16 @@ properties:
                   (dbs: marker: [list of databases], and methods: [list of metods])
           settings:
             type: object
-            # note: References don't work, but referencing $anchor works.
-            #   However, validating these sub-schemas would require all
+            #   *note*: validating these sub-schemas would require all
             #   properties in "required" directives to be actually set, which
             #   is too restrictive.
             # properties:
-            #   compare: { $dynamicRef: "#/compare" }
-            #   primers: { $dynamicRef: "#/primers" }
-            #   filter: { $dynamicRef: "#/filter" }
-            #   usearch: { $dynamicRef: "#/usearch" }
-            #   dada2: { $dynamicRef: "#/dada2" }
-            #   ITSx: { $dynamicRef: "#/ITSx" }
+            #   compare: { $ref: "#/properties/compare" }
+            #   primers: { $ref: "#/properties/primers" }
+            #   filter: { $ref: "#/properties/filter" }
+            #   usearch: { $ref: "#/properties/usearch" }
+            #   dada2: { $ref: "#/properties/dada2" }
+            #   ITSx: { $ref: "#/properties/ITSx" }
             # additionalProperties: false
             description: >
               Workflow-specific settings that should override different default
@@ -175,7 +149,9 @@ properties:
 
   compare:
     type: object
-    $defs:
+    default: {}
+    properties:
+      defaults:
         defaults:
           type: object
           properties:
@@ -194,13 +170,9 @@ properties:
             maxrejects:
               type: integer
               minimum: 1
-              default: 64
-    
-    properties:
-      default_settings:
-        $dynamicRef: "#/compare/$defs/defaults"
+              default: 64    
     if:
-      required: [default_settings]
+      required: [defaults]
     else:
       patternProperties:
         ^(\w+)$:
@@ -209,10 +181,20 @@ properties:
             file:
               type: string
           additionalProperties:
-            $dynamicRef": "#/compare/$defs/defaults"
+            $ref": "#/properties/compare/properties/defaults"
         additionalProperties: false
+      properties:
+        defaults:
+          $ref: "#/properties/compare/properties/defaults"
+          type: object
+          default:
+            ident_threshold: 0
+            maxaccepts: 64
+            maxrejects: 64
+            maxhits: 1
+      additionalProperties: false
     minProperties: 1
-      
+
   primers:
     type: object
     properties:
@@ -301,18 +283,29 @@ properties:
         additionalProperties: false
     additionalProperties: false
 
-  filter:
-    type: object
-    properties:
-      min_length:
-        type: integer
-        minimum: 1
-    required: [min_length]
-    additionalProperties: false
-
+  # This is almost identical with the workflow/config.schema.yaml
+  # here: https://github.com/markschl/uvsnake
   usearch:
     type: object
+    default: {}
     properties:
+      # repeatedly used settings
+      defaults:
+        type: object
+        properties:
+          program:
+            type: string
+            enum: [vsearch, usearch]
+            default: vsearch
+          maxaccepts:
+            type: integer
+            minimum: 1
+            default: 1
+          maxrejects:
+            type: integer
+            minimum: 1
+            default: 1
+          
       merge:
         type: object
         properties:
@@ -327,11 +320,10 @@ properties:
             type: integer
             minimum: 1
           program:
-            type: string
-            enum: [vsearch, usearch]
-            default: vsearch
+            $ref: "#/properties/usearch/properties/defaults/properties/program"
         required: [overlap_ident, max_diffs, expected_length]
         additionalProperties: false
+      
       filter:
         type: object
         properties:
@@ -339,43 +331,66 @@ properties:
             type: number
             minimum: 0
             maximum: 1
+          min_length:
+            type: integer
+            minimum: 1
+            default: 1
         required: [max_error_rate]
         additionalProperties: false
-      unoise:
+      
+      unoise3:
         type: object
         properties:
           min_size:
-            type: number
+            type: integer
             minimum: 1
           program:
-            type: string
-            enum: [vsearch, usearch]
-            default: vsearch
+            $ref: "#/properties/usearch/properties/defaults/properties/program"
+          maxaccepts:
+            $ref: "#/properties/usearch/properties/defaults/properties/maxaccepts"
+          maxrejects:
+            $ref: "#/properties/usearch/properties/defaults/properties/maxrejects"
         required: [min_size]
         additionalProperties: false
+      
+      uparse:
+        type: object
+        properties:
+          min_size:
+            type: integer
+            minimum: 1
+            default: 2
+          program:
+            $ref: "#/properties/usearch/properties/defaults/properties/program"
+          maxaccepts:
+            $ref: "#/properties/usearch/properties/defaults/properties/maxaccepts"
+          maxrejects:
+            $ref: "#/properties/usearch/properties/defaults/properties/maxrejects"
+        required: [min_size]
+        additionalProperties: false
+      
       otutab:
         type: object
         properties:
-          maxaccepts:
-            type: integer
-            minimum: 1
-          maxrejects:
-            type: integer
-            minimum: 1
           ident_threshold:
             type: number
             minimum: 0
-            maximum: 1
+            maximum: 100
+          extra:
+            type: boolean
+            default: false
           program:
-            type: string
-            enum: [vsearch, usearch]
-            default: vsearch
-        required: [maxaccepts, maxrejects, ident_threshold]
+            $ref: "#/properties/usearch/properties/defaults/properties/program"
+          maxaccepts:
+            $ref: "#/properties/usearch/properties/defaults/properties/maxaccepts"
+          maxrejects:
+            $ref: "#/properties/usearch/properties/defaults/properties/maxrejects"
+        required: [ident_threshold]
         additionalProperties: false
-    additionalProperties: false
-    
+
   dada2:
     type: object
+    default: {}
     properties:
       trunc_qual:
         type: number
@@ -401,11 +416,15 @@ properties:
       merge_maxdiffs:
         type: integer
         minimum: 0
-    required: [trunc_qual, max_err_fwd, max_err_rev, trunclen_fwd, trunclen_rev, pooling_method, chimera_method, merge_maxdiffs]
+      min_length:
+        type: integer
+        minimum: 1
+    required: [trunc_qual, max_err_fwd, max_err_rev, trunclen_fwd, trunclen_rev, pooling_method, chimera_method, merge_maxdiffs, min_length]
     additionalProperties: false
 
   ITSx:
     type: object
+    default: {}
     properties:
       organism_groups:
         type: string
@@ -468,6 +487,6 @@ properties:
 
 additionalProperties: false
 
-required: [software, input, workflows, primers, pool_raw, compare,
-          taxonomy_dbs, taxonomy_methods, filter, usearch, dada2,
+required: [input, workflows, primers,
+          taxonomy_dbs, taxonomy_methods,
           taxonomy_db_sources]

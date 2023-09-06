@@ -5,7 +5,10 @@ from utils import file_logging
 
 
 def denoise_paired(
-        input, seq_out, tab_out, stats_out,
+        input, 
+        seq_out, 
+        tab_out, 
+        stats_out,
         trunc_qual=None,
         trunclen_fwd=None,
         trunclen_rev=None,
@@ -15,7 +18,8 @@ def denoise_paired(
         merge_maxdiffs=0,
         chimera_method=None,
         pooling_method=None,
-        threads=1
+        threads=1,
+        **unused
 ):
     if chimera_method is None:
         chimera_method = "consensus"

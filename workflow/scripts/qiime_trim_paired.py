@@ -5,7 +5,7 @@ from subprocess import check_call
 from utils import file_logging
 
 
-def trim_paired(primer_file, input, output, f_primer, r_primer, err_rate=None, threads=None, min_len=None):
+def trim_paired(primer_file, input, output, f_primer, r_primer, err_rate=None, threads=None, min_length=None):
     with open(primer_file) as f:
         primers = yaml.safe_load(f)
         
@@ -24,7 +24,7 @@ def trim_paired(primer_file, input, output, f_primer, r_primer, err_rate=None, t
         ),
         "--p-error-rate", str(err_rate),
         "--p-overlap", "10", # TODO: configure
-        "--p-minimum-length", str(min_len),
+        "--p-minimum-length", str(min_length),
         "--p-discard-untrimmed",
         "--verbose",
         "--o-trimmed-sequences", output
@@ -35,9 +35,12 @@ def trim_paired(primer_file, input, output, f_primer, r_primer, err_rate=None, t
 
 with file_logging(snakemake.log[0]):
     trim_paired(
-        snakemake.input.yaml, snakemake.input.demux, snakemake.output.qza,
-        f_primer=snakemake.wildcards.f_primer, r_primer=snakemake.wildcards.r_primer,
+        snakemake.input.yaml, 
+        snakemake.input.demux, 
+        snakemake.output.qza,
+        f_primer=snakemake.wildcards.f_primer, 
+        r_primer=snakemake.wildcards.r_primer,
         err_rate=snakemake.params.err_rate,
-        min_len=snakemake.params.min_len,
+        min_length=snakemake.params.min_length,
         threads=snakemake.threads,
     )

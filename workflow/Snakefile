@@ -1,9 +1,9 @@
 from snakemake.utils import min_version
 from snakemake.utils import validate
 
-##### set minimum snakemake version #####
 
-min_version("6.1.4")
+min_version("7.14.0")
+
 
 ##### configuration #####
 
@@ -13,6 +13,7 @@ configfile: "config/taxonomy.yaml"
 
 
 validate(config, "config.schema.yaml")
+
 
 ##### load rules #####
 
@@ -39,46 +40,12 @@ include: "rules/other.smk"
 #### Paths ####
 
 
-results = lambda sub_path: list(
-    chain(
-        *[
-            expand_runs(
-                "results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/{sub_path}",
-                workflow=name,
-                cluster=p["cluster"],
-                marker=marker,
-                primers=primer_comb,
-                sub_path=sub_path,
-                pool=p["settings"]["pool_raw"],
-                #allow_missing=True,
-            )
-            for name, p in cfg.workflows.items()
-            for marker, primer_comb in cfg.primer_combinations.items()
-        ]
-    )
-)
-
-
-taxdirs = lambda sub_path, ext: list(
-    chain(
-        *[
-            expand_runs(
-                "results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/{sub_path}/{tax[db_name]}-{tax[assign][method]}-{tax[method_name]}.{ext}",
-                workflow=name,
-                cluster=p["cluster"],
-                marker=marker,
-                primers=primer_comb,
-                sub_path=sub_path,
-                tax=p["taxonomy"][marker].values(),
-                ext=ext,
-                pool=p["settings"]["pool_raw"],
-                # allow_missing=True,
-            )
-            for name, p in cfg.workflows.items()
-            for marker, primer_comb in cfg.primer_combinations.items()
-        ]
-    )
-)
+taxdirs = lambda sub_path, ext: result_paths(lambda marker, _, p: expand(
+    "/{sub_path}/{name}.{ext}",
+    sub_path=sub_path,
+    ext=ext,
+    name=expand("{tax[db_name]}-{tax[assign][method]}-{tax[method_name]}", tax=p["taxonomy"][marker].values())
+))
 
 
 #### target rules #####
@@ -103,26 +70,25 @@ rule unique_samples:
 
 rule quality:
     input:
-        expand("results/{workflow}/validation/multiqc/multiqc_report.html", workflow=cfg.workflows),
-        expand("results/{workflow}/validation/multiqc_{cluster}/multiqc_report.html",
-               zip, workflow=cfg.workflows,
-               cluster=[w["cluster"].split('_', 1)[0] for w in cfg.workflows.values()],
-               allow_missing=True)
-        # rules.config.input,
+        multiqc=[
+            "results/_qc/multiqc_{run}_{layout}/multiqc_report.html".format(**r)
+            for r in cfg.get_runs(pooled=False)
+        ],
 
 
 rule denoise:
     input:
-        rules.config.input,
-        rules.samples.input,
-        rules.quality.input,
-        lambda _: results((
-            "denoised.fasta",
-            "denoised_otutab.txt.gz",
-            "denoised.biom",
+        config=rules.config.input,
+        samples=rules.samples.input,
+        qual=rules.quality.input,
+        multiqc=list(run_results("/_qc/multiqc_report.html", pooled=True)),
+        results=lambda _: result_paths((
+            "/denoised.fasta",
+            "/denoised_otutab.txt.gz",
+            "/denoised.biom",
         )),
-        expand("results/{workflow}/sample_report.tsv", workflow=cfg.workflows),
-        expand("results/{workflow}/.outdirs", workflow=cfg.workflows, allow_missing=True),
+        stats=expand("results/{workflow}/sample_report.tsv", workflow=cfg.workflows, allow_missing=True),
+        data_dir=expand("results/{workflow}/.outdirs", workflow=cfg.workflows, allow_missing=True),
 
 
 rule taxonomy:
@@ -130,17 +96,19 @@ rule taxonomy:
         lambda _: taxdirs("taxonomy", ("txt.gz", "biom.gz")),
         lambda _: taxdirs("taxonomy/fasta", ("fasta.gz"))
 
+
 rule ITS:
     input:
-        lambda _: results("ITSx/out.positions.txt"),
+        lambda _: result_paths("/ITSx/out.positions.txt"),
 
 
 rule cmp:
     input:
-        lambda _: results(
-            expand("cmp/{db}.{ext}", db=cfg.cmp_files, ext=("txt", "bam"))
-        ),
-
+        lambda _: result_paths(lambda _m, _p, _config: expand(
+                "/cmp/{db}.{ext}",
+                db=[cmp for cmp in _config["settings"]["compare"] if cmp != "defaults"],
+                ext=("txt", "bam")
+        )),
 
 
 # commands for cleaning up

@@ -40,17 +40,20 @@ rule itsx:
 
 rule vsearch_global:
     params:
-        par=lambda w: cfg.cmp_files[w.db],
-        maxhits=lambda w: cfg.cmp_files[w.db].get("maxhits", 0),  # 0 = unlimited
+        db=lambda w: with_default(cfg[w.workflow]["settings"]["compare"], w.comparison, "file"),
+        threshold=lambda w: with_default(cfg[w.workflow]["settings"]["compare"], w.comparison, "ident_threshold"),
+        maxaccepts=lambda w: with_default(cfg[w.workflow]["settings"]["compare"], w.comparison, "maxaccepts"),
+        maxrejects=lambda w: with_default(cfg[w.workflow]["settings"]["compare"], w.comparison, "maxrejects"),
+        maxhits=lambda w: with_default(cfg[w.workflow]["settings"]["compare"], w.comparison, "maxhits"),
     input:
         otus="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/denoised.fasta",
     output:
-        map="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{db}.txt",
-        bam="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{db}.bam",
-        denoised_notmatched="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{db}_denoised_notmatched.fasta.gz",
-        notmatched="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{db}_notmatched.fasta.gz",
+        map="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{comparison}.txt",
+        bam="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{comparison}.bam",
+        denoised_notmatched="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{comparison}_denoised_notmatched.fasta.gz",
+        notmatched="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{comparison}_notmatched.fasta.gz",
     log:
-        "logs/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp_{db}.log",
+        "logs/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp_{comparison}.log",
     group:
         "cmp"
     # TODO: resources? usually pretty fast
@@ -61,27 +64,26 @@ rule vsearch_global:
         """
         bam={output.bam}
         sam=${{bam%.*}}
-        db="{params.par[file]}"
         notmatched={output.notmatched}; notmatched=${{notmatched%.gz}}
         denoised_notmatched={output.denoised_notmatched}; denoised_notmatched=${{denoised_notmatched%.gz}}
-        vsearch -usearch_global {input.otus} -db "$db" \
+        vsearch -usearch_global {input.otus} -db "{params.db}" \
             -userout {output.map} \
             -samout $sam \
             -userfields 'query+target+id' \
             -notmatched $denoised_notmatched \
             -dbnotmatched $notmatched \
             -threads {threads} \
-            -maxaccepts {params.par[maxaccepts]} \
-            -maxrejects {params.par[maxaccepts]} \
+            -maxaccepts {params.maxaccepts} \
+            -maxrejects {params.maxrejects} \
             -maxhits {params.maxhits} \
-            -id {params.par[ident_threshold]} &> {log}
+            -id {params.threshold} &> {log}
         # compress not-matched files
         gzip -nf $notmatched $denoised_notmatched 2> {log}
         # make BAM file
-        rm -f "$db.fai" $bam.bai
-        samtools view -T "$db" -b $sam |
+        rm -f "{params.db}.fai" $bam.bai
+        samtools view -T "{params.db}" -b $sam |
           samtools sort -@ {threads} > $bam 2> {log}
-        rm -f $sam "$db.fai"
+        rm -f $sam "{params.db}.fai"
         samtools index $bam 2> {log}
         """
 

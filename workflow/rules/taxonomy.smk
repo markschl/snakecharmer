@@ -112,6 +112,22 @@ rule filter_taxdb:
         "../scripts/taxonomy/filter_taxdb.py"
 
 
+rule uncompress_taxdb:
+    input:
+        db="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/{format}.fasta.zst",
+    output:
+        db=temp("refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/{format}.fasta"),
+    log:
+        "logs/taxonomy/db_regular_{source_id}/flt_{filter_id}/uncompress_{format}.log",
+    group:
+        "taxonomy"
+    conda:
+        "envs/basic.yaml"
+    shell:
+        """
+        zstd -dcqf "{input.db}" > "{output.db}"
+        """
+
 rule make_tax_fasta:
     input:
         fa="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/denoised.fasta",
@@ -156,28 +172,28 @@ rule make_tax_biom:
         "taxonomy"
     shell:
         """
-        {{
-            mkdir -p $(dirname {output.tax_tmp})
-            gzip -dc {input.tax} | 
-            sed 's/Taxon/taxonomy/g' |
-            sed 's/Feature ID/# Feature ID/g' > {output.tax_tmp}
-            if [[ $(wc -l < "{output.tax_tmp}") -ge 2 ]]; then
-                    biom add-metadata -i {input.biom}  \
-                        -o /dev/stdout \
-                        --observation-metadata-fp {output.tax_tmp} \
-                        --sc-separated taxonomy --float-fields Confidence --output-as-json |
-                    gzip -nc > {output.biom}
-                    biom add-metadata -i {input.biom_hdf5}  \
-                        -o {output.biom_tmp} \
-                        --observation-metadata-fp {output.tax_tmp} \
-                        --sc-separated taxonomy --float-fields Confidence
-                    gzip -nc {output.biom_tmp} > {output.biom_hdf5}
-            else
-                # no taxa
-                echo -n | gzip -nc > {output.biom}
-                echo -n | gzip -nc > {output.biom_hdf5}
-            fi
-        }} 2> {log}
+        exec &> {log}
+        set -xeuo pipefail
+        mkdir -p $(dirname {output.tax_tmp})
+        gzip -dc {input.tax} | 
+        sed 's/Taxon/taxonomy/g' |
+        sed 's/Feature ID/# Feature ID/g' > {output.tax_tmp}
+        if [[ $(wc -l < "{output.tax_tmp}") -ge 2 ]]; then
+                biom add-metadata -i {input.biom}  \
+                    -o /dev/stdout \
+                    --observation-metadata-fp {output.tax_tmp} \
+                    --sc-separated taxonomy --float-fields Confidence --output-as-json |
+                gzip -nc > {output.biom}
+                biom add-metadata -i {input.biom_hdf5}  \
+                    -o {output.biom_tmp} \
+                    --observation-metadata-fp {output.tax_tmp} \
+                    --sc-separated taxonomy --float-fields Confidence
+                gzip -nc {output.biom_tmp} > {output.biom_hdf5}
+        else
+            # no taxa
+            echo -n | gzip -nc > {output.biom}
+            echo -n | gzip -nc > {output.biom_hdf5}
+        fi
         """
 
 

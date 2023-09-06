@@ -2,6 +2,9 @@
 software:
   usearch:
     binary: usearch
+    snakemake_env: snakemake
+    uvsnake:
+      commit: bc31e78 
   qiime:
     conda_env: qiime2-2022.11
   amptk:
@@ -10,12 +13,9 @@ software:
 # Input files
 input:
   illumina:
-    directories:
-      - gz/{run}
-    # recursive: true
-    sample_pattern: sample_read  # {sample_read, illumina}
-    # run2:
-    #   sample_file: run1.tsv
+    run1: gz/samples_run1.tsv
+    run2: gz/samples_run2.tsv
+
 # Workflow definition
 workflows:
   # UNOISE3 pipeline using VSEARCH for denoising
@@ -42,9 +42,7 @@ workflows:
     taxonomy: default
     settings:
       usearch:
-        merge: { program: usearch }
-        unoise: { program: usearch }
-        otutab: { program: usearch }
+        defaults: { program: usearch }
   # QIIME / DADA2
   qiime_dada2:
     cluster: qiime_dada2
@@ -105,12 +103,11 @@ taxonomy_methods:
   #   method: qiime_sklearn  # { sintax_usearch, qiime_sklearn }
   #   confidence: 0.7
 
-# General filter settings
-filter:
-  min_length: 100
-
 # Usearch pipeline specific settings
 usearch:
+  defaults:
+    program: vsearch
+
   # paired end merging
   merge:
     overlap_ident: 75  # percent
@@ -119,15 +116,19 @@ usearch:
 
   # read filtering before denoising
   filter:
+    min_length: 100
     max_error_rate: 0.002  #  0.8 errors per 400 bp
 
-  unoise:
+  unoise3:
     min_size: 8
 
+  uparse:
+    min_size: 2
+
   otutab:
+    ident_threshold: 0.97
     maxaccepts: 64
     maxrejects: 64
-    ident_threshold: 0.97
 
 # DADA2 specific settings
 dada2:
@@ -139,6 +140,7 @@ dada2:
   pooling_method: independent  # { independent, pseudo, pooled }
   chimera_method: consensus  # { consensus, per-sample, pooled }
   merge_maxdiffs: 1
+  min_length: 100
 
 # ITS recognition (fungi)
 ITSx:

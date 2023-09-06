@@ -1,3 +1,4 @@
 dependencies:
   - biopython=1.81
   - zstandard=0.19.0
+  - pyyaml=6.0
