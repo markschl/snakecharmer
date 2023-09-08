@@ -111,7 +111,10 @@ $ snakecharmer -c8 outdir denoise
     cache_dir = abspath(expanduser(args.cache_dir))
     os.makedirs(cache_dir, exist_ok=True)
     os.environ["SNAKEMAKE_OUTPUT_CACHE"] = cache_dir
-    
+    # even though we supply --conda-prefix, we also define the env. var in order
+    # to set the prefix for Snakemake subprocesses
+    os.environ["SNAKEMAKE_CONDA_PREFIX"] = args.conda_dir
+
     # determine resources
     n_cores = multiprocessing.cpu_count() if args.cores == 'all' else int(args.cores)
     if args.jobs == 'unlimited':

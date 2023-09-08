@@ -63,7 +63,7 @@ def expand_input_files(path=None, **wildcards):
     w = glob_wildcards(full_path)
     d = cfg.read_samples(tab, **wildcards)
     assert sorted(set(w.sample)) == sorted(d["sample"]) and \
-        sorted(set(w.read)) == sorted(d["read"]), (
+        sorted(set(w.read)) == d["read"], (
         "Sample tab does not align with actual files, "
         "try deleting processing/<workflow>/input and re-run")
     return expand(full_path if path is None else path, **wildcards, **d)
@@ -89,7 +89,8 @@ def run_results(sub_path="", workflows=cfg.workflows, **param):
 # requires sub-path in the results dir, or a function that accepts all workflow settings and returns a sub-path
 # TODO: redundancy with run_results
 def result_paths(sub_path="", workflows=cfg.workflows, pooled=True, allow_missing=True):
-    for workflow, p in cfg.workflows.items():
+    for workflow in workflows:
+        p = cfg.workflows[workflow]
         for marker, primer_comb in cfg.primer_combinations.items():
             for r in cfg.get_runs(workflow, pooled=pooled):
                 yield from expand(

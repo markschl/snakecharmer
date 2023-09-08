@@ -24,11 +24,13 @@ def get_uvsnake_location():
     base_url = "https://github.com/{github}/archive".format(**uvcfg)
     if tag is not None:
         url = f"{base_url}/refs/tags/{tag}.zip"
+        id_ = tag
     elif commit is not None:
         url = f"{base_url}/{commit}.zip"
+        id_ = commit
     assert url is not None or path is not None, \
         "Either tag or commit or path must be defined with uvsnake source"
-    return path, url
+    return path, url, id_
 
 
 def download_uvsnake(url, target_dir):
@@ -57,11 +59,12 @@ def download_uvsnake(url, target_dir):
     shutil.copytree(extr_dir, target_dir, dirs_exist_ok=True)
     shutil.rmtree(extr_dir)
 
+
 # paths
 uvsnake_workdir = "processing/{workflow}/uvsnake/{run}_{layout}"
-uvsnake_path, uvsnake_url = get_uvsnake_location()
+uvsnake_path, uvsnake_url, uvsnake_id = get_uvsnake_location()
 if uvsnake_path is None:
-    uvsnake_path = "processing/_uvsnake"
+    uvsnake_path = f"processing/_uvsnake/{uvsnake_id}"
     if not exists(uvsnake_path):
         download_uvsnake(uvsnake_url, uvsnake_path)
 uvsnakefile_path = abspath(f"{uvsnake_path}/workflow/Snakefile")

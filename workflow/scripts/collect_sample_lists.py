@@ -7,7 +7,7 @@ def collect_sample_lists(run_meta, reserved_chars, path_template):
         tsv_out = path_template.format(ext="tsv", **d)
         l = SampleList(d["sample_file"], reserved_chars=reserved_chars)
         with open(tsv_out, "w") as o:
-            l.write(o)
+            l.write(o, sort_by_sample=True)
         yaml_out = path_template.format(ext="yaml", **d)
         with open(yaml_out, "w") as o:
             l.write_yaml(o)

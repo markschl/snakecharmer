@@ -14,7 +14,7 @@ def make_pooling_list(sample_files, sample_file_out, info_file_out):
     layout = next(iter(unique_layout))
     # get a map of sample -> read files
     sample_dicts = [dict(l.samples()) for l in sample_lists]
-    unique_names = set(s for d in sample_dicts for s in d)
+    unique_names = sorted(set(s for d in sample_dicts for s in d))
     # write sample lists
     sample_list_out = SampleList(layout=layout)
     sample_pools = {}

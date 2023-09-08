@@ -4,9 +4,12 @@ import sys
 
 from utils import file_logging
 
+
 def run_uvsnake(snakefile, command, threads=1):
     cmd = [
         "snakemake",
+        "--use-conda",
+        "--cache",
         "--cores", str(threads),
         "--snakefile", abspath(snakefile),
         f"uvsnake_{command}"

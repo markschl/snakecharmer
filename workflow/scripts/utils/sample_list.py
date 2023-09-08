@@ -81,14 +81,17 @@ class SampleList(object):
         for row in self._samples:
             yield row[0], row[1:]
 
-    def write(self, handle, qiime_style=False, out_pattern=None, absolute_paths=False):
+    def write(self, handle, sort_by_sample=False, qiime_style=False, out_pattern=None, absolute_paths=False):
         wtr = csv.writer(handle, delimiter="\t")
         header = self.qiime_header if qiime_style else self.default_header
         wtr.writerow(header[self.layout])
-        for row in self._samples:
+        _samples = self._samples
+        if sort_by_sample:
+            _samples = sorted(self._samples, key=lambda x: x[0])
+        for row in _samples:
             if out_pattern is not None:
                 row[1:] = [out_pattern.format(sample=row[0], read=i+1)
-                            for i in range(self.n_reads)]
+                           for i in range(self.n_reads)]
             if absolute_paths:
                 row[1:] = [abspath(f) for f in row[1:]]
             wtr.writerow(row)         

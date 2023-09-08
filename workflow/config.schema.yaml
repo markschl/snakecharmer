@@ -374,8 +374,14 @@ properties:
         properties:
           ident_threshold:
             type: number
-            minimum: 0
+            minimum: 2
             maximum: 100
+            description:
+              (number, percent) Identity threshold used for constructing the OTU 
+              table by comparing the (unfiltered) sequencing reads against the
+              OTUs. The minimum is 2 in order to prevent the accidental use of
+              fractional identity (which is actually internally used and may
+              be familiar to users of USEARCH/VSEARCH.
           extra:
             type: boolean
             default: false
