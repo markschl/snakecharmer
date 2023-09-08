@@ -28,6 +28,9 @@ def get_uvsnake_location():
     elif commit is not None:
         url = f"{base_url}/{commit}.zip"
         id_ = commit
+    else:
+        id_ = "local"
+        url = None
     assert url is not None or path is not None, \
         "Either tag or commit or path must be defined with uvsnake source"
     return path, url, id_
@@ -61,7 +64,8 @@ def download_uvsnake(url, target_dir):
 
 
 # paths
-uvsnake_workdir = "processing/{workflow}/uvsnake/{run}_{layout}"
+uvsnake_workdir = "processing/{workflow}/uvsnake/{run}_paired"
+uvsnake_outdir_q = "processing/{{workflow}}/uvsnake/{{run}}_paired"
 uvsnake_path, uvsnake_url, uvsnake_id = get_uvsnake_location()
 if uvsnake_path is None:
     uvsnake_path = f"processing/_uvsnake/{uvsnake_id}"
@@ -76,7 +80,7 @@ rule uvsnake_gen_config:
         usearch_config=lambda wildcards: cfg[wildcards.workflow]["settings"]["usearch"],
         snakefile=uvsnakefile_path,
     input:
-        sample_tab=lambda wildcards: "processing/{{workflow}}/input/sample_config/{technology}/{layout}/{run}/samples.tsv".format(
+        sample_tab=lambda wildcards: "processing/{{workflow}}/input/sample_config/{technology}/paired/{run}/samples.tsv".format(
             **cfg.get_run_data(**wildcards)
         ),
     output:
@@ -84,7 +88,7 @@ rule uvsnake_gen_config:
         config=uvsnake_workdir + "/config.yaml", 
         snakefile=uvsnake_workdir + "/Snakefile", 
     log:
-        "logs/{workflow}/usearch/{run}_{layout}/gen_config.log",
+        "logs/{workflow}/usearch/{run}_paired/gen_config.log",
     wildcard_constraints:
         workflow = r"[^/ ]+",
         technology = r"[^/ ]+",
@@ -108,7 +112,7 @@ rule uvsnake_prepare:
         trim_dir=directory(rules.uvsnake_gen_config.output.workdir + "/workdir/prepare_paired/2_trim"),
         stats=rules.uvsnake_gen_config.output.workdir + "/results/sample_report.tsv",
     log:
-        "logs/{workflow}/usearch/{run}_{layout}/trim.log",
+        "logs/{workflow}/usearch/{run}_paired/trim.log",
     conda:
         "snakemake"
     group:
@@ -119,6 +123,7 @@ rule uvsnake_prepare:
         "../scripts/uvsnake_run.py"
 
 
+
 rule uvsnake_cluster:
     params:
         command=lambda wildcards: wildcards.cluster_method,
@@ -127,12 +132,13 @@ rule uvsnake_cluster:
         _trim=rules.uvsnake_prepare.output.trim_dir,
     output:
         results=expand(
-            "processing/{{workflow}}/uvsnake/{{run}}_{{layout}}/results/{primers}/{{cluster_method}}{rest}", 
+            uvsnake_outdir_q + "/results/{primers}/{{cluster_method}}{rest}", 
             primers=cfg.primer_combinations_nomarker,
             rest=[".fasta", "_otutab.txt.gz", ".biom"],
         ),
+        combined_log=uvsnake_outdir_q + "/logs/cluster_{{cluster_method}}_all.log",
     log:
-        "logs/{workflow}/usearch/{run}_{layout}/{cluster_method}.log",
+        "logs/{workflow}/usearch/{run}_paired/{cluster_method}.log",
     conda:
         "snakemake"
     group:
@@ -145,11 +151,7 @@ rule uvsnake_cluster:
 
 rule uvsnake_copy_results:
     input:
-        results=expand(
-            "processing/{{workflow}}/uvsnake/{{run}}_paired/results/{primers}/{{cluster_method}}{rest}", 
-            primers=cfg.primer_combinations_nomarker,
-            rest=[".fasta", "_otutab.txt.gz", ".biom"],
-        ),
+        results=rules.uvsnake_cluster.output.results,
         stats="processing/{workflow}/uvsnake/{run}_paired/results/sample_report.tsv",
     output:
         results=expand(
@@ -196,9 +198,9 @@ rule usearch_multiqc:
         ),
         cutadapt_dir=rules.uvsnake_prepare.output.trim_dir,
     output:
-        "results/{workflow}/workflow_usearch_{cluster}/{run}_{layout}/_qc/multiqc_report.html",
+        "results/{workflow}/workflow_usearch_{cluster}/{run}_paired/_qc/multiqc_report.html",
     log:
-        "logs/{workflow}/usearch/workflow_usearch_{cluster}/{run}_{layout}_paired_multiqc.log",
+        "logs/{workflow}/usearch/workflow_usearch_{cluster}/{run}_paired_paired_multiqc.log",
     conda:
         "envs/multiqc.yaml"
     shell:
