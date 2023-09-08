@@ -355,7 +355,7 @@ rule link_data_dir:
     input:
         clust=lambda wildcards: result_paths("/denoised.fasta", workflows=[wildcards.workflow]),
     output:
-        touch("results/{workflow}/.outdirs"),
+        out_list="results/{workflow}/.outdirs",
     log:
         "logs/{workflow}/link_data_dir.log",
     script:

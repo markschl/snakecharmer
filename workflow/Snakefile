@@ -88,7 +88,7 @@ rule denoise:
             "/denoised.biom",
         )),
         stats=expand("results/{workflow}/sample_report.tsv", workflow=cfg.workflows, allow_missing=True),
-        data_dir=expand("results/{workflow}/.outdirs", workflow=cfg.workflows, allow_missing=True),
+        data_dir=expand("results/{workflow}/.outdirs", workflow=cfg.workflows),
 
 
 rule taxonomy:
