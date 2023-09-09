@@ -130,12 +130,12 @@ rule uncompress_taxdb:
 
 rule make_tax_fasta:
     input:
-        fa="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/denoised.fasta",
-        tax="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/taxonomy/{tax_name}.txt.gz",
+        fa="results/{workflow}/workflow_{cluster}/{run}/{primers}/denoised.fasta",
+        tax="results/{workflow}/workflow_{cluster}/{run}/{primers}/taxonomy/{tax_name}.txt.gz",
     output:
-        "results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/taxonomy/fasta/{tax_name}.fasta.gz",
+        "results/{workflow}/workflow_{cluster}/{run}/{primers}/taxonomy/fasta/{tax_name}.fasta.gz",
     log:
-        "logs/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/taxonomy/fasta/make_tax_fasta_{tax_name}.log",
+        "logs/{workflow}/{run}/{primers}/taxonomy/{cluster}_make_tax_fasta_{tax_name}.log",
     conda:
         "envs/basic.yaml"
     group:
@@ -152,20 +152,20 @@ rule make_tax_fasta:
 
 rule make_tax_biom:
     input:
-        biom="results/{name}/{workflow}/{primers}/{layout}/denoised.biom",
-        biom_hdf5="results/{name}/{workflow}/{primers}/{layout}/denoised.hdf5.biom",
-        tax="results/{name}/{workflow}/{primers}/{layout}/taxonomy/{tax_name}.txt.gz",
+        biom="results/{workflow}/workflow_{cluster}/{run}/{primers}/denoised.biom",
+        biom_hdf5="results/{workflow}/workflow_{cluster}/{run}/{primers}/denoised.hdf5.biom",
+        tax="results/{workflow}/workflow_{cluster}/{run}/{primers}/taxonomy/{tax_name}.txt.gz",
     output:
         tax_tmp=temp(
-            "processing/{name}/{workflow}/{primers}/{layout}/_tax_tmp/{tax_name}.txt"
+            "processing/{workflow}/workflow_{cluster}/{run}/{primers}/_tax_tmp/{tax_name}.txt"
         ),
         biom_tmp=temp(
-            "processing/{name}/{workflow}/{primers}/{layout}/_tax_tmp/{tax_name}.biom"
+            "processing/{workflow}/{run}/{primers}/{cluster}_tax_tmp/{tax_name}.biom"
         ),
-        biom="results/{name}/{workflow}/{primers}/{layout}/taxonomy/{tax_name}.biom.gz",
-        biom_hdf5="results/{name}/{workflow}/{primers}/{layout}/taxonomy/{tax_name}.hdf5.biom.gz",
+        biom="results/{workflow}/workflow_{cluster}/{run}/{primers}/taxonomy/{tax_name}.biom.gz",
+        biom_hdf5="results/{workflow}/workflow_{cluster}/{run}/{primers}/taxonomy/{tax_name}.hdf5.biom.gz",
     log:
-        "logs/{name}/other/{layout}/{workflow}/{primers}/make_tax_biom/{tax_name}.log",
+        "logs/{workflow}/{run}/{primers}/taxonomy/{cluster}_make_tax_biom_{tax_name}.log",
     conda:
         "envs/biom.yaml"
     group:

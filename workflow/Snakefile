@@ -70,11 +70,10 @@ rule unique_samples:
 
 rule quality:
     input:
-        multiqc=[
-            "results/_qc/multiqc_{run}_{layout}/multiqc_report.html".format(**r)
-            for r in cfg.get_runs(pooled=False)
-        ],
-
+        multiqc=expand_runs(
+            "results/_qc/multiqc_{run}_{layout}/multiqc_report.html",
+            pooled=False
+        )
 
 rule denoise:
     input:
@@ -86,9 +85,11 @@ rule denoise:
             "/denoised.fasta",
             "/denoised_otutab.txt.gz",
             "/denoised.biom",
+            "/denoised.hdf5.biom",
         )),
-        stats=expand("results/{workflow}/sample_report.tsv", workflow=cfg.workflows, allow_missing=True),
+        stats=expand("results/{workflow}/sample_report.tsv", workflow=cfg.workflows),
         data_dir=expand("results/{workflow}/.outdirs", workflow=cfg.workflows),
+        log=expand_runs("logs/{workflow}/{run}_paired_{cluster}_all.log"),
 
 
 rule taxonomy:

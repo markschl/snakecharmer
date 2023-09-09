@@ -5,7 +5,7 @@ rule fastqc:
     output:
         qc_dir=directory("input/fastqc/{technology}/{layout}/{demux}/{run}")
     log:
-        "logs/qc/{technology}/{layout}/{demux}/{run}.log",
+        "logs/input/{technology}/{layout}/{run}/fastqc_{demux}.log",
     threads: workflow.cores,
     group:
         "run"
@@ -27,13 +27,13 @@ rule multiqc_fastqc:
     output:
         "results/_qc/multiqc_{run}_{layout}/multiqc_report.html",
     log:
-        "logs/qc/multiqc_{run}_{layout}.log",
+        "logs/input/qc/multiqc_{run}_{layout}.log",
     conda:
         "envs/multiqc.yaml"
     shell:
         """
         outdir="$(dirname "{output}")"
-        multiqc -fm fastqc -o "$outdir" "{input.fastqc}" 2> {log}
+        multiqc -fm fastqc -o "$outdir" "{input.fastqc}" &> {log}
         (cd "$outdir" && zip -FSqr -rm multiqc_data.zip multiqc_data) 2> {log}
         """
 
@@ -46,9 +46,9 @@ rule multiqc_link_workdir:
     input:
         fastqc=rules.multiqc_fastqc.input.fastqc,
     output:
-        "results/{workflow}/workflow_{pipeline}/{run}_{layout}/_qc/multiqc_report.html",
+        "results/{workflow}/workflow_{cluster}/{run}_{layout}/_qc/multiqc_report.html",
     log:
-        "logs/{workflow}/qiime/workflow_{pipeline}/{run}_{layout}/qc/multiqc_report.log",
+        "logs/{workflow}/{run}_{layout}/{cluster}_multiqc_report.log",
     priority:
         -1
     shell:
@@ -64,14 +64,14 @@ rule multiqc_fastqc_pooled_workdir:
             **cfg.get_run_data(**wildcards)
         ),
     output:
-        "results/{workflow}/workflow_{pipeline}/{run}_{layout}/_qc/multiqc_report.html",
+        "results/{workflow}/workflow_{cluster}/{run}_{layout}/_qc/multiqc_report.html",
     log:
-        "logs/{workflow}/qiime/workflow_{pipeline}/{run}_{layout}/qc/multiqc_report.log",
+        "logs/{workflow}/{run}_{layout}/{cluster}_runpool_multiqc_report.log",
     priority:
         -1
     shell:
         """
         outdir="$(dirname "{output}")"
-        multiqc -fm fastqc -o "$outdir" "{input.fastqc}" 2> {log}
+        multiqc -fm fastqc -o "$outdir" "{input.fastqc}" &> {log}
         (cd "$outdir" && zip -FSqr -rm multiqc_data.zip multiqc_data) 2> {log}
         """

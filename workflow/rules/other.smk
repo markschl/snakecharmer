@@ -9,11 +9,11 @@ rule itsx:
     params:
         par=config["ITSx"],
     input:
-        fa="results/{workflow}/workflow_{cluster}/{run}_{layout}/ITS__{primers}/denoised.fasta",
+        fa="results/{workflow}/workflow_{cluster}/{run}/ITS__{primers}/denoised.fasta",
     output:
-        pos="results/{workflow}/workflow_{cluster}/{run}_{layout}/ITS__{primers}/ITSx/out.positions.txt",
+        pos="results/{workflow}/workflow_{cluster}/{run}/ITS__{primers}/ITSx/out.positions.txt",
     log:
-        "logs/results/{workflow}/workflow_{cluster}/{run}_{layout}/ITS__{primers}/ITSx.log",
+        "logs/{workflow}/{run}/ITS__{primers}/{cluster}_ITSx.log",
     group:
         "ITS"
     conda:
@@ -46,14 +46,14 @@ rule vsearch_global:
         maxrejects=lambda w: with_default(cfg[w.workflow]["settings"]["compare"], w.comparison, "maxrejects"),
         maxhits=lambda w: with_default(cfg[w.workflow]["settings"]["compare"], w.comparison, "maxhits"),
     input:
-        otus="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/denoised.fasta",
+        otus="results/{workflow}/workflow_{cluster}/{run}/{primers}/denoised.fasta",
     output:
-        map="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{comparison}.txt",
-        bam="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{comparison}.bam",
-        denoised_notmatched="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{comparison}_denoised_notmatched.fasta.gz",
-        notmatched="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{comparison}_notmatched.fasta.gz",
+        map="results/{workflow}/workflow_{cluster}/{run}/{primers}/cmp/{comparison}.txt",
+        bam="results/{workflow}/workflow_{cluster}/{run}/{primers}/cmp/{comparison}.bam",
+        denoised_notmatched="results/{workflow}/workflow_{cluster}/{run}/{primers}/cmp/{comparison}_denoised_notmatched.fasta.gz",
+        notmatched="results/{workflow}/workflow_{cluster}/{run}/{primers}/cmp/{comparison}_notmatched.fasta.gz",
     log:
-        "logs/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp_{comparison}.log",
+        "logs/{workflow}/{run}/{primers}/{cluster}_cmp_{comparison}.log",
     group:
         "cmp"
     # TODO: resources? usually pretty fast

@@ -1,4 +1,4 @@
-from os.path import abspath
+from os.path import relpath, dirname
 
 import yaml
 
@@ -11,7 +11,6 @@ configfile: "{configfile}"
 module uvsnake:
     snakefile: "{snakefile}"
     config: config
-    prefix: "{workdir}"
 
 use rule * from uvsnake as uvsnake_*
 
@@ -20,18 +19,19 @@ use rule * from uvsnake as uvsnake_*
 rule uvsnake_prepare:
     input:
         trim_dir=expand(
-            "{workdir}/workdir/prepare_paired/2_trim/{{sample}}/{{sample}}_{{dir_}}.log",
+            "workdir/prepare_paired/2_trim/{{sample}}/{{sample}}_{{dir_}}.log",
             sample=uvsnake.config["_sample_names"],
             dir_=["fwd", "rev"]
         ),
-        report="{workdir}/results/sample_report.tsv",
+        report="results/sample_report.tsv",
 """
 
 
-def write_config(sample_tab, workdir, config_out, snakefile, snakefile_out, primer_config, usearch_config):
+def write_config(sample_tab, config_out, snakefile, snakefile_out, primer_config, usearch_config):
     # generate the configuration
     out = {}
-    out["input"] = {"sample_file": abspath(sample_tab)}
+    workdir = dirname(snakefile_out)
+    out["input"] = {"sample_file": relpath(sample_tab, workdir)}
     # prepare primers:
     # uvsnake has almost the same configuration,  but does not have the
     # marker concept of, so we merge primers from all markers.
@@ -51,15 +51,13 @@ def write_config(sample_tab, workdir, config_out, snakefile, snakefile_out, prim
         out[k] = usearch_config[k]
     out["merge"].pop("expected_length", None)
 
-    config_out = abspath(config_out)
     with open(config_out, "w") as f:
         yaml.safe_dump(out, f, sort_keys=False)
 
     # generate the Snakefile
-    with open(abspath(snakefile_out), "w") as o:
+    with open(snakefile_out, "w") as o:
         o.write(snakefile_content.format(
-            configfile=config_out,
-            workdir=abspath(workdir),
+            configfile=relpath(config_out, workdir),
             snakefile=snakefile,
         ))
     
@@ -67,7 +65,6 @@ def write_config(sample_tab, workdir, config_out, snakefile, snakefile_out, prim
 with file_logging(snakemake.log[0]):
     write_config(
         sample_tab=snakemake.input.sample_tab,
-        workdir=snakemake.output.workdir,
         config_out=snakemake.output.config,
         snakefile_out=snakemake.output.snakefile,
         **snakemake.params

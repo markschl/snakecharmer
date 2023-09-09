@@ -1,7 +1,7 @@
 
 localrules:
     qiime_make_manifest,
-    qiime_stats_paired,
+    qiime_combine_sample_reports,
 
 
 rule qiime_make_manifest:
@@ -12,9 +12,9 @@ rule qiime_make_manifest:
         tab=lambda wildcards: "processing/{{workflow}}/input/sample_config/{technology}/{layout}/{run}/samples.tsv".format(**cfg.get_run_data(**wildcards)),
         sample_dir=lambda wildcards: "processing/{{workflow}}/input/{technology}/{layout}/{run}".format(**cfg.get_run_data(**wildcards)),
     output:
-        tab="processing/{workflow}/qiime/manifest/{run}_{layout}.txt",
+        tab="processing/{workflow}/{run}_{layout}/qiime_manifest.txt",
     log:
-        "logs/{workflow}/qiime/{run}/{layout}/make_manifest.log",
+        "logs/{workflow}/{run}_{layout}/qiime_make_manifest.log",
     script:
         "../scripts/make_new_sample_tab.py"
 
@@ -30,9 +30,9 @@ rule qiime_import:
     input:
         manifest=rules.qiime_make_manifest.output.tab,
     output:
-        "processing/{workflow}/qiime/{run}/{layout}/demux.qza",
+        "processing/{workflow}/{run}_{layout}/demux.qza",
     log:
-        "logs/{workflow}/qiime/manifest/{run}/{layout}/import.log",
+        "logs/{workflow}/{run}_{layout}/qiime_import.log",
     group:
         "prepare"
     resources:
@@ -55,11 +55,11 @@ rule qiime_trim_paired:
         min_length=lambda w: cfg[w.workflow]["settings"]["dada2"]["min_length"],
     input:
         yaml="processing/primers/primers.yaml",
-        demux="processing/{workflow}/qiime/{run}/paired/demux.qza",
+        demux="processing/{workflow}/{run}_paired/demux.qza",
     output:
-        qza="processing/{workflow}/qiime/{run}/paired/{marker}__{f_primer}...{r_primer}/trim.qza",
+        qza="processing/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/trim.qza",
     log:
-        "logs/{workflow}/qiime/{run}/paired/{marker}__{f_primer}...{r_primer}/trim.log",
+        "logs/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/qiime_trim.log",
     group:
         "prepare"
     conda:
@@ -71,17 +71,17 @@ rule qiime_trim_paired:
         "../scripts/qiime_trim_paired.py"
 
 
-rule qiime_denoise_paired:
+rule qiime_dada2_paired:
     params:
         par=lambda w: cfg[w.workflow]["settings"]["dada2"],
     input:
-        trim="processing/{workflow}/qiime/{run}/paired/{primers}/trim.qza",
+        trim="processing/{workflow}/{run}_paired/{primers}/trim.qza",
     output:
-        denoised0="processing/{workflow}/qiime/dada2/{run}/paired/{primers}/dada2.qza",
-        tab0="processing/{workflow}/qiime/dada2/{run}/paired/{primers}/dada2_tab.qza",
-        stats="processing/{workflow}/qiime/dada2/{run}/paired/{primers}/dada2_stats.qza",
+        denoised0="processing/{workflow}/{run}_paired/{primers}/dada2.qza",
+        tab0="processing/{workflow}/{run}_paired/{primers}/dada2_tab.qza",
+        stats="processing/{workflow}/{run}_paired/{primers}/dada2_stats.qza",
     log:
-        "logs/{workflow}/qiime/dada2/{run}/paired/{primers}/dada2.log",
+        "logs/{workflow}/{run}_paired/{primers}/dada2_qiime.log",
     conda:
         config["software"]["qiime"]["conda_env"]
     group:
@@ -95,52 +95,107 @@ rule qiime_denoise_paired:
 
 
 ruleorder:
-    qiime_denoised_export > otutab_to_biom > biom_to_hdf5
+    qiime_export > otutab_to_biom > biom_to_hdf5
 
 
-rule qiime_denoised_export:
+rule qiime_export:
     input:
-        denoised0="processing/{workflow}/qiime/dada2/{run}/{layout}/{primers}/dada2.qza",
-        tab0="processing/{workflow}/qiime/dada2/{run}/{layout}/{primers}/dada2_tab.qza",
+        denoised="processing/{workflow}/{run}/{primers}/{cluster}.qza",
+        tab="processing/{workflow}/{run}/{primers}/{cluster}_tab.qza",
+        stats="processing/{workflow}/{run}/{primers}/dada2_stats.qza",
     output:
-        # directory("results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}"),
-        denoised="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.fasta",
-        tab="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised_otutab.txt.gz",
-        biom_json="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.biom",
-        biom_hdf5="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/denoised.hdf5.biom",
+        # directory("results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}"),
+        denoised="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/denoised.fasta",
+        tab="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/denoised_otutab.txt.gz",
+        biom_json="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/denoised.biom",
+        biom_hdf5="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/denoised.hdf5.biom",
+        stats=temp("results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/sample_report.tsv"),
         tmp=temp(
-            directory("processing/{workflow}/qiime/dada2/{run}/{layout}/{primers}/denoised_convert_tmp")
+            directory("processing/{workflow}/{run}/{primers}/{cluster}_export_tmp")
         ),
     log:
-        "logs/{workflow}/qiime/dada2/{run}/{layout}/{primers}/denoised_convert.log",
+        "logs/{workflow}/{run}/{primers}/{cluster}_qiime_export.log",
     conda:
         config["software"]["qiime"]["conda_env"]
     group:
         "denoise"
     shell:
         """
+        exec &> {log}
         # export table
         mkdir -p {output.tmp}
         tab={output.tab}
         tab=${{tab%.gz}}
         qiime tools export \
-            --input-path {input.tab0} \
-            --output-path {output.tmp} &> {log}
+            --input-path {input.tab} \
+            --output-path {output.tmp}
         mv {output.tmp}/feature-table.biom {output.biom_hdf5}
         biom convert -i {output.biom_hdf5}  \
             -o {output.biom_json} \
-            --to-json --table-type "OTU table" &> {log}
+            --to-json --table-type "OTU table"
         biom convert -i {output.biom_hdf5}  \
             -o $tab \
-            --to-tsv --table-type "OTU table" &> {log}
+            --to-tsv --table-type "OTU table"
         sed -i '1,1d' $tab
         gzip -nf $tab
 
         # export seqs
         qiime tools export \
-            --input-path {input.denoised0} \
-            --output-path {output.tmp} &> {log}
+            --input-path {input.denoised} \
+            --output-path {output.tmp}
         cat {output.tmp}/dna-sequences.fasta > {output.denoised}
+
+        # export stats
+        qiime metadata tabulate \
+            --m-input-file {input.stats} \
+            --o-visualization {output.tmp}/stats.qzv
+        qiime tools export \
+            --input-path {output.tmp}/stats.qzv \
+            --output-path {output.tmp}/stats
+        statfile={output.tmp}/stats/metadata.tsv
+        head -n1 $statfile > {output.stats}
+        tail -n+3 $statfile >> {output.stats}
+        """
+
+
+rule qiime_combine_sample_reports:
+    params:
+        path_pattern="/(?P<primers>[^/]+?)/sample_report\.tsv",
+    input:
+        reports=expand(
+            "results/{{workflow}}/workflow_qiime_{{cluster}}/{{run}}/{primers}/sample_report.tsv", 
+            primers=cfg.primer_combinations_flat,
+        ),
+    output:
+        report="results/{workflow}/workflow_qiime_{cluster}/{run}/sample_report.tsv"
+    log:
+        "logs/{workflow}/{run}/{cluster}_qiime_combine_sample_reports.log"
+    script:
+        "../scripts/combine_sample_reports.py"
+
+
+rule qiime_combine_logs:
+    input:
+        trim=expand(
+            "logs/{{workflow}}/{{run}}/{primers}/qiime_trim.log",
+            primers=cfg.primer_combinations_flat
+        ),
+        denoise=expand(
+            "logs/{{workflow}}/{{run}}/{primers}/{{cluster}}_qiime.log",
+            primers=cfg.primer_combinations_flat
+        ),
+    output:
+        "logs/{workflow}/{run}_qiime_{cluster}_all.log",
+    shell:
+        """
+        exec 1> "{output}"
+        echo "Primer trimming"
+        echo "==============="
+        cat {input.trim:q}
+        printf "\n\n\n"
+        echo "Denoising"
+        echo "=========="
+        cat {input.denoise:q}
         """
 
 
@@ -167,6 +222,7 @@ rule qiime_taxdb_import:
         "taxonomy"
     shell:
         """
+        exec &> {log}
         mkdir -p {output.tmp}
         zstd -dcqf {input.seq} > {output.tmp}/seq.fasta 2> {log}
         # extract taxonomic lineages from FASTA for import in QIIME
@@ -174,12 +230,12 @@ rule qiime_taxdb_import:
         qiime tools import \
             --type 'FeatureData[Sequence]' \
             --input-path {output.tmp}/seq.fasta \
-            --output-path {output.seq} &> {log}
+            --output-path {output.seq}
         qiime tools import \
             --type 'FeatureData[Taxonomy]' \
             --input-format HeaderlessTSVTaxonomyFormat \
             --input-path {output.tmp}/tax.txt \
-            --output-path {output.tax} &> {log}
+            --output-path {output.tax}
         """
 
 
@@ -205,7 +261,7 @@ rule qiime_taxdb_train_nb:
         qiime feature-classifier fit-classifier-naive-bayes \
             --i-reference-reads {input.seq} \
             --i-reference-taxonomy {input.tax} \
-            --o-classifier {output.trained}
+            --o-classifier {output.trained} 2> {log}
         """
 
 
@@ -213,19 +269,19 @@ rule assign_taxonomy_qiime_sklearn:
     params:
         par=lambda w: cfg[w.workflow]["taxonomy"][w.marker][(w.db_name, w.tax_method)]["assign"],
     input:
-        seq="results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/denoised.fasta",
+        seq="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/denoised.fasta",
         db=lambda w: "refdb/taxonomy/db_{preformatted}_{source_id}/flt_{filter_id}/qiime_nb.qza".format(
             **cfg[w.workflow]["taxonomy"][w.marker][(w.db_name, w.tax_method)]
         ),
     output:
         tmp=temp(
             directory(
-                "processing/{workflow}/workflow_{cluster}/qiime_sklearn/{run}/{layout}/{marker}__{primers}/{db_name}-{tax_method}"
+                "processing/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/qiime_sklearn_{db_name}-{tax_method}"
             )
         ),
-        tax="results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/taxonomy/{db_name}-qiime_sklearn-{tax_method}.txt.gz",
+        tax="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/taxonomy/{db_name}-qiime_sklearn-{tax_method}.txt.gz",
     log:
-        "logs/processing/{workflow}/workflow_{cluster}/qiime_sklearn/{run}/{layout}/{marker}__{primers}/{db_name}-{tax_method}.log",
+        "logs/{workflow}/{run}/{marker}__{primers}/taxonomy/{cluster}_{db_name}-{tax_method}.log",
     conda:
         config["software"]["qiime"]["conda_env"]
     threads: 1  # needs a LOT of memory depending on the database
@@ -234,6 +290,7 @@ rule assign_taxonomy_qiime_sklearn:
         runtime=36 * 60,
     shell:
         """
+        exec &> {log}
         mkdir -p {output.tmp}
         # lowercase letters cause problems -> convert to uppercase
         # (cannot use 'st upper' because seqtool is not in conda environment,
@@ -243,7 +300,7 @@ rule assign_taxonomy_qiime_sklearn:
             --input-path {output.tmp}/input.fasta \
             --type 'FeatureData[Sequence]' \
             --input-format DNAFASTAFormat \
-            --output-path {output.tmp}/seqs.qza &> {log}
+            --output-path {output.tmp}/seqs.qza
 
         qiime feature-classifier classify-sklearn \
             --i-classifier {input.db} \
@@ -252,24 +309,11 @@ rule assign_taxonomy_qiime_sklearn:
             --p-reads-per-batch 1000 \
             --p-confidence {params.par[confidence]} \
             --p-n-jobs {threads} \
-            --verbose &> {log}
+            --verbose
 
         qiime tools export \
         --input-path {output.tmp}/classified.qza \
-        --output-path {output.tmp} &> {log}
+        --output-path {output.tmp}
 
         gzip -nc {output.tmp}/taxonomy.tsv > {output.tax}
         """
-
-
-##########################
-#### QC
-##########################
-
-
-# TODO: not implemented
-rule qiime_stats_paired:
-    output:
-        touch("results/{workflow}/workflow_qiime_{cluster}/{run}_paired/sample_report.tsv"),
-    log:
-        "logs/{workflow}/workflow_qiime_{cluster}/{run}_paired/sample_report.log",

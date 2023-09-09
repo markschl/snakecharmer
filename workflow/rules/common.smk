@@ -36,8 +36,8 @@ ruleorder:
 cfg = lib.Config(config)
 
 # commonly used
-run_config = "input/sample_config/{technology}/{layout}/{run}"
-
+run_config_path = "input/sample_config/{technology}/{layout}/{run}"
+run_result_path = "results/{workflow}/workflow_{cluster}/{run}_{layout}"
 
 #### Helper functions related to rules ####
 
@@ -69,20 +69,30 @@ def expand_input_files(path=None, **wildcards):
     return expand(full_path if path is None else path, **wildcards, **d)
 
 
+def expand_workflows(path, workflows=cfg.workflows, **param):
+    for workflow in workflows:
+        yield from expand(
+            path,
+            workflow=workflow,
+            **cfg.workflows[workflow],
+            **param
+        )
+
+
 def expand_runs(path, workflows=cfg.workflows, pooled=True, **param):
     for workflow in workflows:
         for run_data in cfg.get_runs(workflow, pooled=pooled):
             yield from expand(
                 path,
                 workflow=workflow,
-                cluster=cfg.workflows[workflow]["cluster"],
+                **cfg.workflows[workflow],
                 **run_data,
                 **param
             )
 
 
 def run_results(sub_path="", workflows=cfg.workflows, **param):
-    return expand_runs("results/{workflow}/workflow_{cluster}/{run}_{layout}{sub_path}", workflows=workflows, sub_path=sub_path, **param)
+    return expand_runs(run_result_path + "{sub_path}", workflows=workflows, sub_path=sub_path, **param)
 
 
 # assists in listing results files
@@ -94,7 +104,7 @@ def result_paths(sub_path="", workflows=cfg.workflows, pooled=True, allow_missin
         for marker, primer_comb in cfg.primer_combinations.items():
             for r in cfg.get_runs(workflow, pooled=pooled):
                 yield from expand(
-                    "results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}{sub_path}",
+                    run_result_path + "/{marker}__{primers}{sub_path}",
                     workflow=workflow,
                     cluster=p["cluster"],
                     marker=marker,
@@ -116,18 +126,18 @@ rule collect_sample_lists:
     params:
         run_meta = lambda _: list(cfg.get_runs(pooled=False)),
         reserved_chars = ".- ",  # TODO: hardcoded, should it be configurable?
-        path_template = lambda _: run_config + "/samples.{ext}",
+        path_template = lambda _: run_config_path + "/samples.{ext}",
     output:
         sample_files=sorted(chain(*[
             expand(
-                run_config + "/samples.{ext}",
+                run_config_path + "/samples.{ext}",
                 ext=["tsv", "yaml"],
                 **d
             )
             for d in cfg.get_runs(pooled=False)
         ])),
     log:
-        "logs/prepare/collect_sample_lists.log",
+        "logs/input/collect_sample_lists.log",
     script:
         "../scripts/collect_sample_lists.py"
 
@@ -138,7 +148,7 @@ rule dump_config:
     output:
         "results/{workflow}/config.yaml",
     log:
-        "logs/prepare/{workflow}/dump_config.log",
+        "logs/{workflow}/dump_config.log",
     script:
         "../scripts/dump_config.py"
 
@@ -151,7 +161,7 @@ rule prepare_primers:
     output:
         yaml="processing/primers/primers.yaml",
     log:
-        "logs/prepare/prepare_primers.log",
+        "logs/prepare_primers.log",
     conda:
         "envs/consensus.yaml"
     script:
@@ -166,7 +176,7 @@ rule prepare_primers:
 # # input options
 # rule collect_raw:
 #     input:
-#         indexes=run_config + "/indexes.tsv"
+#         indexes=run_config_path + "/indexes.tsv"
 #     output:
 #         fq=expand(
 #             "input/{{technology}}/{{layout}}/{{run}}/raw/R{read}.fastq.gz",
@@ -183,7 +193,7 @@ rule prepare_primers:
 #             "input/{{technology}}/{{layout}}/{{run}}/raw/R{read}.fastq.gz",
 #             read=[1, 2]
 #         ),
-#         indexes=run_config + "/indexes.tsv"
+#         indexes=run_config_path + "/indexes.tsv"
 #     output:
 #         fq=directory("input/{technology}/{layout}/demux_prog1_{method}/{run}"),
 #     run:
@@ -203,11 +213,11 @@ rule prepare_primers:
 # TODO: demuxing not yet implemented
 rule collect_sample_files:
     input:
-        sample_tab=run_config + "/samples.tsv"
+        sample_tab=run_config_path + "/samples.tsv"
     output:
         sample_dir=directory("input/{technology}/{layout}/demux/{run}"),
     log:
-        "logs/prepare/collect_samples/{technology}/demux/{layout}_{run}.log",
+        "logs/input/{technology}/{layout}/{run}/collect_sample_files.log",
     wildcard_constraints:
         technology = r"\w+",
         layout = r"(single|paired)",
@@ -232,7 +242,7 @@ rule make_pooling_list:
         yml="input/sample_config/{technology}/{layout}/{run_list}_pool/samples.yml",
         sample_file="input/sample_config/{technology}/{layout}/{run_list}_pool/samples.tsv",
     log:
-        "logs/input/{technology}/{layout}/{run_list}_make_pooling_list.log",
+        "logs/input/{technology}/{layout}/{run_list}_pool/make_pooling_list.log",
     conda:
         "envs/basic.yaml"
     script:
@@ -247,11 +257,11 @@ rule make_pooling_list:
 # (which may be problematic with pipelines such as DADA2)
 rule pool_runs_raw:
     input:
-        yml=run_config + "_pool/samples.yml",
+        yml=run_config_path + "_pool/samples.yml",
     output:
         fq=directory(rules.collect_sample_files.output.sample_dir + "_pool"),
     log:
-        "logs/input/{technology}/{layout}/demux/{run}_pool_raw.log",
+        "logs/input/{technology}/{layout}/{run}_pool/pool_raw.log",
     wildcard_constraints:
         technology = r"\w+",
         layout = r"(single|paired)",
@@ -276,10 +286,6 @@ rule link_input:
         # run_dir=lambda w: directory(expand("input/{{technology}}/{{layout}}/{demux_method}/{{run}}", demux_method=cfg[w.workflow]["demux_method"])),
     output:
         sample_dir=directory("processing/{workflow}/input/{technology}/{layout}/{run}"),
-    wildcard_constraints:
-        technology = r"\w+",
-        layout = r"(single|paired)",
-        run = r"\w+",
     shell:
         """
         mkdir -p {output}
@@ -292,12 +298,12 @@ checkpoint final_sample_tab:
         # we actually have samples in input.sample_dir / subdir
         subdir="nested"
     input:
-        tab=run_config + "/samples.tsv",
+        tab=run_config_path + "/samples.tsv",
         sample_dir=rules.link_input.output.sample_dir
     output:
         tab="processing/{workflow}/input/sample_config/{technology}/{layout}/{run}/samples.tsv",
     log:
-        "logs/{workflow}/prepare/{technology}_{run}_{layout}/make_final_sample_tab.log",
+        "logs/{workflow}/{run}_{layout}/{technology}_make_final_sample_tab.log",
     script:
         "../scripts/make_new_sample_tab.py"
 
@@ -305,13 +311,13 @@ checkpoint final_sample_tab:
 rule list_samples_yaml:
     input:
         sample_files=lambda wildcards: [
-            (run_config + "/samples.yaml").format(**d)
+            (run_config_path + "/samples.yaml").format(**d)
             for d in cfg.get_runs(wildcards.workflow, pooled=False)
         ],
     output:
         yml="results/{workflow}/samples.yaml",
     log:
-        "logs/{workflow}/prepare/list_samples_yaml.log",
+        "logs/{workflow}/list_samples_yaml.log",
     script:
         "../scripts/list_samples_yaml.py"
 
@@ -319,10 +325,10 @@ rule list_samples_yaml:
 rule collect_unique_files:
     params:
         run_meta=lambda _: list(cfg.get_runs(pooled=False)),
-        path_template=lambda _: run_config + "/samples.tsv",
+        path_template=lambda _: run_config_path + "/samples.tsv",
     input:
         sample_files=[
-            (run_config + "/samples.tsv").format(**d)
+            (run_config_path + "/samples.tsv").format(**d)
             for d in cfg.get_runs(pooled=False)
         ],
         # fq=lambda wildcards: expand_runs(
@@ -368,12 +374,12 @@ rule link_data_dir:
 
 rule otutab_to_biom:
     input:
-        otutab="{prefix}/denoised_otutab.txt.gz",
+        otutab="results/{workflow}/workflow_{cluster}/{run}/{sub_path}/denoised_otutab.txt.gz",
     output:
-        tmp_tab=temp("{prefix}/denoised_otutab_tmp.txt"),
-        biom="{prefix}/denoised.biom",
+        tmp_tab=temp("results/{workflow}/workflow_{cluster}/{run}/{sub_path}/denoised_otutab_tmp.txt"),
+        biom="results/{workflow}/workflow_{cluster}/{run}/{sub_path}/denoised.biom",
     log:
-        "logs/convert_biom/biom_{prefix}.log",
+        "logs/{workflow}/{run}/{sub_path}/{cluster}_otutab_to_biom.log",
     group:
         "denoise"
     priority: -100
@@ -387,22 +393,20 @@ rule otutab_to_biom:
           --table-type 'OTU table' --to-json &> {log}
         """
 
+
 rule biom_to_hdf5:
     input:
-        biom="{prefix}/denoised.biom",
+        biom="results/{workflow}/workflow_{cluster}/{run}/{sub_path}/denoised.biom",
     output:
-        biom_hdf5="{prefix}/denoised.hdf5.biom",
+        biom_hdf5="results/{workflow}/workflow_{cluster}/{run}/{sub_path}/denoised.hdf5.biom",
     log:
-        "logs/convert_biom/hdf5_{prefix}.log",
+        "logs/{workflow}/{run}/{sub_path}/{cluster}_biom_to_hdf5.log",
     group:
         "denoise"
     priority: -100
     conda:
         "envs/biom.yaml"
     shell:
-        # biom convert -i {input.tab} \
-        #   -o {output.biom} \
-        #   --table-type 'OTU table' --to-json &> {log}
         """
         biom convert -i {input.biom}  \
           -o {output.biom_hdf5} \
@@ -411,17 +415,13 @@ rule biom_to_hdf5:
 
 
 rule combine_sample_reports:
+    params:
+        path_pattern="(?P<run>[^/]+?)_(?P<layout>single|paired)/sample_report\.tsv",
     input:
-        reports=lambda wildcards: run_results("/sample_report.tsv", workflows=[wildcards.workflow], allow_missing=True),
+        reports=lambda wildcards: run_results("/sample_report.tsv", workflows=[wildcards.workflow]),
     output:
         report="results/{workflow}/sample_report.tsv"
     log:
         "logs/{workflow}/combine_sample_reports.log"
-    wildcard_constraints:
-        workflow = r"\w+",
-        technology = r"\w+",
-        layout = r"(single|paired)",
-        run = r"\w+",
     script:
         "../scripts/combine_sample_reports.py"
-

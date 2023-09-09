@@ -64,8 +64,8 @@ def download_uvsnake(url, target_dir):
 
 
 # paths
-uvsnake_workdir = "processing/{workflow}/uvsnake/{run}_paired"
-uvsnake_outdir_q = "processing/{{workflow}}/uvsnake/{{run}}_paired"
+uvsnake_workdir = "processing/{workflow}/{run}_paired"
+uvsnake_workdir_q = "processing/{{workflow}}/{{run}}_paired"
 uvsnake_path, uvsnake_url, uvsnake_id = get_uvsnake_location()
 if uvsnake_path is None:
     uvsnake_path = f"processing/_uvsnake/{uvsnake_id}"
@@ -81,20 +81,13 @@ rule uvsnake_gen_config:
         snakefile=uvsnakefile_path,
     input:
         sample_tab=lambda wildcards: "processing/{{workflow}}/input/sample_config/{technology}/paired/{run}/samples.tsv".format(
-            **cfg.get_run_data(**wildcards)
+            **cfg.get_run_data(layout="paired", **wildcards)
         ),
     output:
-        workdir=directory(uvsnake_workdir),
         config=uvsnake_workdir + "/config.yaml", 
         snakefile=uvsnake_workdir + "/Snakefile", 
     log:
-        "logs/{workflow}/usearch/{run}_paired/gen_config.log",
-    wildcard_constraints:
-        workflow = r"[^/ ]+",
-        technology = r"[^/ ]+",
-        cluster_method = r"[^/ ]+",
-        layout = r"(single|paired)",
-        run = r"[^/ ]+",
+        "logs/{workflow}/{run}_paired/uvsnake_gen_config.log",
     conda:
         "envs/basic.yaml"
     group:
@@ -109,10 +102,10 @@ rule uvsnake_prepare:
     input:
         snakefile=rules.uvsnake_gen_config.output.snakefile,
     output:
-        trim_dir=directory(rules.uvsnake_gen_config.output.workdir + "/workdir/prepare_paired/2_trim"),
-        stats=rules.uvsnake_gen_config.output.workdir + "/results/sample_report.tsv",
+        trim_dir=directory(uvsnake_workdir + "/workdir/prepare_paired/2_trim"),
+        stats=uvsnake_workdir + "/results/sample_report.tsv",
     log:
-        "logs/{workflow}/usearch/{run}_paired/trim.log",
+        "logs/{workflow}/{run}_paired/uvsnake_trim.log",
     conda:
         "snakemake"
     group:
@@ -123,7 +116,6 @@ rule uvsnake_prepare:
         "../scripts/uvsnake_run.py"
 
 
-
 rule uvsnake_cluster:
     params:
         command=lambda wildcards: wildcards.cluster_method,
@@ -132,13 +124,13 @@ rule uvsnake_cluster:
         _trim=rules.uvsnake_prepare.output.trim_dir,
     output:
         results=expand(
-            uvsnake_outdir_q + "/results/{primers}/{{cluster_method}}{rest}", 
+            uvsnake_workdir_q + "/results/{primers}/{{cluster_method}}{rest}", 
             primers=cfg.primer_combinations_nomarker,
             rest=[".fasta", "_otutab.txt.gz", ".biom"],
         ),
-        combined_log=uvsnake_outdir_q + "/logs/cluster_{{cluster_method}}_all.log",
+        combined_log=uvsnake_workdir + "/logs/cluster_{cluster_method}_all.log",
     log:
-        "logs/{workflow}/usearch/{run}_paired/{cluster_method}.log",
+        "logs/{workflow}/{run}_paired/{cluster_method}_uvsnake.log",
     conda:
         "snakemake"
     group:
@@ -152,7 +144,8 @@ rule uvsnake_cluster:
 rule uvsnake_copy_results:
     input:
         results=rules.uvsnake_cluster.output.results,
-        stats="processing/{workflow}/uvsnake/{run}_paired/results/sample_report.tsv",
+        stats=uvsnake_workdir + "/results/sample_report.tsv",
+        log=rules.uvsnake_cluster.output.combined_log,
     output:
         results=expand(
             "results/{{workflow}}/workflow_usearch_{{cluster_method}}/{{run}}_paired/{primers}/denoised{rest}", 
@@ -160,8 +153,9 @@ rule uvsnake_copy_results:
             rest=[".fasta", "_otutab.txt.gz", ".biom"],
         ),
         stats="results/{workflow}/workflow_usearch_{cluster_method}/{run}_paired/sample_report.tsv",
+        log="logs/{workflow}/{run}_paired_usearch_{cluster_method}_all.log",
     log:
-        "logs/{workflow}/usearch/{run}_paired/copy_{cluster_method}.log",
+        "logs/{workflow}/{run}_paired/uvsearch_copy_{cluster_method}.log",
     group:
         "denoise"
     shell:
@@ -174,6 +168,7 @@ rule uvsnake_copy_results:
             cp -f "$f" "$outdir/$out_name"
         done
         cp "{input.stats}" "{output.stats}"
+        cp "{input.log}" "{output.log}"
         """
 
 ruleorder:
@@ -200,13 +195,13 @@ rule usearch_multiqc:
     output:
         "results/{workflow}/workflow_usearch_{cluster}/{run}_paired/_qc/multiqc_report.html",
     log:
-        "logs/{workflow}/usearch/workflow_usearch_{cluster}/{run}_paired_paired_multiqc.log",
+        "logs/{workflow}/{run}_paired/usearch_{cluster}_paired_multiqc.log",
     conda:
         "envs/multiqc.yaml"
     shell:
         """
         outdir="$(dirname "{output}")"
-        multiqc -f -m fastqc -m cutadapt -o "$outdir" "{input.fastqc}" "{input.cutadapt_dir}" 2> {log}
+        multiqc -f -m fastqc -m cutadapt -o "$outdir" "{input.fastqc}" "{input.cutadapt_dir}" &> {log}
         """
 
 
@@ -252,15 +247,15 @@ use rule assign_taxonomy_sintax from uvsnake with:
         maxaccepts=1,
         maxrejects=1,
     input:
-        fa="results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/denoised.fasta",
+        fa="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/denoised.fasta",
         db=lambda w: "refdb/taxonomy/db_{source[preformatted]}_{source[source_id]}/flt_{filter_id}/utax.fasta".format(
             **cfg[w.workflow]["taxonomy"][w.marker][(w.db_name, w.tax_method)]
         ),
     output:
-        taxtab="results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/taxonomy/{db_name}-sintax_usearch-{tax_method}.txt.gz",
-        sintax="results/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/taxonomy/sintax/{db_name}-sintax_usearch-{tax_method}.txt.gz",
+        taxtab="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/taxonomy/{db_name}-sintax_usearch-{tax_method}.txt.gz",
+        sintax="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/taxonomy/sintax/{db_name}-sintax_usearch-{tax_method}.txt.gz",
     log:
-        "logs/{workflow}/workflow_{cluster}/{run}_{layout}/{marker}__{primers}/taxonomy_sintax/{db_name}-{tax_method}.log",
+        "logs/{workflow}/{run}/{marker}__{primers}/taxonomy/{cluster}_{db_name}-{tax_method}.log",
     group:
         "taxonomy"
     conda:

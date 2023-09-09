@@ -11,10 +11,10 @@ freq = read_tsv('mock/mock_data.txt') %>%
   mutate(sample = gsub('rel_abund_m', 'mock', sample))
 
 dirs = list.dirs('results')
-dirs = dirs[grepl('^results(/[^/]+){3,3}/(single|paired)$', dirs, perl=T)]
+dirs = dirs[grepl('^results/.+?/workflow_.+?/.+?/[^/]+?__[^/]+?\\.{3,3}[^/]+?$', dirs, perl=T)]
 
 if (length(dirs) > 0) {
-  primer_combs = basename(dirname(dirs))
+  primer_combs = basename(dirs)
   s = split(dirs, primer_combs)
 
   for (primer_comb in names(s)) {

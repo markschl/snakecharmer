@@ -1,15 +1,17 @@
+from collections import OrderedDict
 from copy import copy
 import csv
+import re
 
 from utils import file_logging
 
 
-class SampleFile(object):
-    def __init__(self, path):
-        # parse path
-        p = path.split("/")
-        self.run, self.layout = p[-2].split("_", 1)
+class SampleReport(object):
+    def __init__(self, path, pattern):
         # read data
+        params = pattern.parse(path)
+        self.group_header = list(params)
+        self.groups = list(params.values())
         with open(path) as f:
             rdr = csv.reader(f, delimiter="\t")
             try:
@@ -18,9 +20,21 @@ class SampleFile(object):
                 self.header = []
             self.rows = [row for row in rdr if row]
 
+class PathPattern(object):
+    def __init__(self, pattern):
+        self._pattern = re.compile(pattern)
+    
+    def parse(self, path):
+        out = OrderedDict()
+        for m in re.finditer(self._pattern, path):
+            out.update(m.groupdict())
+        return out
 
-def combine_reports(sample_reports, outfile):
-    sample_files = [SampleFile(path) for path in sample_reports]
+
+def combine_reports(sample_reports, path_pattern, outfile):
+    pattern = PathPattern(path_pattern)
+    sample_files = [SampleReport(path, pattern) for path in sample_reports]
+    assert all(f.group_header == sample_files[0].group_header for f in sample_files[1:])
     # obtain header
     header = []
     for f in sample_files:
@@ -34,17 +48,19 @@ def combine_reports(sample_reports, outfile):
     # write data
     with open(outfile, "w") as o:
         w = csv.writer(o, delimiter="\t")
-        w.writerow(["run", "layout"] + header)
-        empty_row = [""] * (2 + len(header))
+        w.writerow(f.group_header + header)
+        empty_row = [""] * len(header)
         for f in sample_files:
             for row in f.rows:
                 out = copy(empty_row)
-                out[0] = f.run
-                out[1] = f.layout
                 for i, field in zip(f.field_idx, row):
-                    out[2 + i] = field
-                w.writerow(out)
+                    out[i] = field
+                w.writerow(f.groups + out)
 
 
 with file_logging(snakemake.log[0]):
-    combine_reports(snakemake.input.reports, snakemake.output.report)
+    combine_reports(
+        snakemake.input.reports,
+        snakemake.params.path_pattern,
+        snakemake.output.report
+    )

@@ -7,9 +7,6 @@ localrules:
     amptk_stats_paired,
 
 
-amptk_workdir = "processing/{workflow}/amptk/{run}/paired"
-
-
 rule amptk_merge_trim:
     params:
         err_rate=lambda w: cfg[w.workflow]["settings"]["primers"]["trim_settings"]["max_error_rate"],
@@ -25,11 +22,11 @@ rule amptk_merge_trim:
         ),
         fq=lambda wildcards: expand_input_files(layout="paired", **wildcards),
     output:
-        demux=amptk_workdir + "/{marker}__{f_primer}...{r_primer}/illumina.demux.fq.gz",
-        mapping=amptk_workdir + "/{marker}__{f_primer}...{r_primer}/illumina.mapping_file.txt",
-        log=amptk_workdir + "/{marker}__{f_primer}...{r_primer}/illumina.amptk-demux.log",
+        demux="processing/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/illumina.demux.fq.gz",
+        mapping="processing/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/illumina.mapping_file.txt",
+        log="processing/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/illumina.amptk-demux.log",
     log:
-        "logs/{workflow}/amptk/{run}/paired/{marker}__{f_primer}...{r_primer}/trim_merge.log",
+        "logs/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/amptk_trim_merge.log",
     group:
         "prepare"
     conda:
@@ -46,19 +43,18 @@ rule amptk_merge_trim:
 
 rule amptk_denoise:
     params:
-        method=lambda wildcards: wildcards.method,
+        method=lambda wildcards: wildcards.cluster,
         usearch_par=lambda wildcards: cfg[wildcards.workflow]["settings"]["usearch"],
         dada2_par=lambda wildcards: cfg[wildcards.workflow]["settings"]["dada2"],
         unoise_program=lambda w: with_default(cfg[w.workflow]["settings"]["usearch"], "unoise3", "program"),
         usearch_bin=config["software"]["usearch"]["binary"],
     input:
-        demux=amptk_workdir + "/{primers}/illumina.demux.fq.gz",
+        demux="processing/{workflow}/{run}_paired/{primers}/illumina.demux.fq.gz",
     output:
-        # directory("results/{workflow}/workflow_amptk_{method}/{run}_paired/{primers}"),
-        denoised="results/{workflow}/workflow_amptk_{method}/{run}_paired/{primers}/denoised.fasta",
-        tab="results/{workflow}/workflow_amptk_{method}/{run}_paired/{primers}/denoised_otutab.txt.gz",
+        denoised="results/{workflow}/workflow_amptk_{cluster}/{run}_paired/{primers}/denoised.fasta",
+        tab="results/{workflow}/workflow_amptk_{cluster}/{run}_paired/{primers}/denoised_otutab.txt.gz",
     log:
-        "logs/{workflow}/amptk/{run}/paired/{primers}/{method}.log",
+        "logs/{workflow}/{run}_paired/{primers}/{cluster}_amptk_denoise.log",
     conda:
         config["software"]["amptk"]["conda_env"]
     group:
@@ -69,6 +65,31 @@ rule amptk_denoise:
         runtime=36 * 60,
     script:
         "../scripts/amptk_denoise_paired.py"
+
+
+rule amptk_combine_logs:
+    input:
+        merge_trim=expand(
+            "logs/{{workflow}}/{{run}}_paired/{primers}/amptk_trim_merge.log",
+            primers=cfg.primer_combinations_flat
+        ),
+        denoise=expand(
+            "logs/{{workflow}}/{{run}}_paired/{primers}/{{cluster}}_amptk_denoise.log",
+            primers=cfg.primer_combinations_flat
+        ),
+    output:
+        "logs/{workflow}/{run}_paired_amptk_{cluster}_all.log",
+    shell:
+        """
+        exec 1> "{output}"
+        echo "Read merging and primer trimming"
+        echo "================================"
+        cat {input.merge_trim:q}
+        printf "\n\n\n"
+        echo "Denoising"
+        echo "=========="
+        cat {input.denoise:q}
+        """
 
 
 ##########################
@@ -82,4 +103,4 @@ rule amptk_stats_paired:
     output:
         touch("results/{workflow}/workflow_amptk_{cluster}/{run}_paired/sample_report.tsv"),
     log:
-        "logs/{workflow}/workflow_amptk_{cluster}/{run}/paired/sample_report.log",
+        "logs/{workflow}/{run}_paired/amptk_{cluster}_sample_report.log",

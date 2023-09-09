@@ -1,4 +1,4 @@
-from os.path import abspath
+from os.path import abspath, dirname
 from subprocess import check_call
 import sys
 
@@ -8,6 +8,7 @@ from utils import file_logging
 def run_uvsnake(snakefile, command, threads=1):
     cmd = [
         "snakemake",
+        "--directory", dirname(snakefile),
         "--use-conda",
         "--cache",
         "--cores", str(threads),

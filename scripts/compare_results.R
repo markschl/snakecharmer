@@ -28,7 +28,7 @@ self_cmp = read_tsv(file.path(pipeline_dir, 'cmp', 'self_cmp.txt'),
 
 # get list of results directories
 dirs = list.dirs(file.path(pipeline_dir, 'results'))
-dirs = dirs[grepl('results(/[^/]+){2,2}/.+?(single|paired)/[^/]+$', dirs, perl=T)]
+dirs = dirs[grepl('^results/.+?/workflow_.+?/.+?/[^/]+?__[^/]+?\\.{3,3}[^/]+?$', dirs, perl=T)]
 
 if (length(dirs) > 0) {
   primer_combs = basename(dirname(dirs))
