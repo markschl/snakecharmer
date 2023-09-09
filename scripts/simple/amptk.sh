@@ -21,7 +21,7 @@ f_primer="$1" && shift
 r_primer="$1" && shift
 threads="$1" && shift
 
-out="$outdir"/processing/amptk_simple
+out="$outdir"/workdir/amptk_simple
 # obtain settings from config file
 eval $(parse_yaml "$outdir/config/config.yaml")
 

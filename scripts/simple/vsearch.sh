@@ -21,7 +21,7 @@ f_primer="$1" && shift
 r_primer="$1" && shift
 THREADS="$1" && shift
 
-out="$outdir"/processing/vsearch_simple
+out="$outdir"/workdir/vsearch_simple
 # obtain settings from config file
 eval $(parse_yaml "$outdir/config/config.yaml")
 set -x
@@ -77,7 +77,7 @@ for f in "$@"; do
         -a "$r_primer" \
         --error-rate $primers_trim_settings_max_error_rate \
         --overlap $primers_trim_settings_min_overlap \
-        --minimum-length $filter_min_length \
+        --minimum-length $usearch_filter_min_length \
         --cores $THREADS \
         --discard-untrimmed \
         -o "$out"/$s.trimmed.fastq
@@ -102,7 +102,7 @@ for f in "$@"; do
 
     $VSEARCH --fastq_filter "$out"/$s.trimmed.fastq \
         --fastq_maxee_rate $usearch_filter_max_error_rate \
-        --fastq_minlen $filter_min_length \
+        --fastq_minlen $usearch_filter_min_length \
         --fastaout "$out"/$s.filtered.fasta \
         --fasta_width 0
     ## these options from the example workflow are not used:
@@ -186,7 +186,7 @@ $VSEARCH --cluster_unoise derep.fasta \
     --threads $THREADS \
     --sizein \
     --sizeout \
-    --minsize $usearch_unoise_min_size \
+    --minsize $usearch_unoise3_min_size \
     --centroids zotus_chim.fasta
 
 $VSEARCH --sortbysize zotus_chim.fasta \
@@ -268,7 +268,7 @@ echo
 $VSEARCH --usearch_global all.fasta \
     --threads $THREADS \
     --db otus.fasta \
-    --id $usearch_otutab_ident_threshold \
+    --id $(bc <<< "scale=4; $usearch_otutab_ident_threshold / 100") \
     --strand plus \
     --sizein \
     --sizeout \
@@ -286,7 +286,7 @@ cat *.trimmed.fasta >  trimmed.fasta
 $VSEARCH --usearch_global trimmed.fasta \
     --threads $THREADS \
     --db otus.fasta \
-    --id $usearch_otutab_ident_threshold \
+    --id $(bc <<< "scale=4; $usearch_otutab_ident_threshold / 100") \
     --strand plus \
     --sizein \
     --sizeout \

@@ -23,7 +23,7 @@ f_primer="$1" && shift
 r_primer="$1" && shift
 threads="$1" && shift
 
-out="$outdir"/processing/usearch_simple
+out="$outdir"/workdir/usearch_simple
 # obtain settings from config file
 eval $(parse_yaml "$outdir/config/config.yaml")
 
@@ -60,7 +60,7 @@ cutadapt "$out/trimmed_fwd.fq" \
     -a "$r_primer" \
     --error-rate $primers_trim_settings_max_error_rate \
     --overlap $primers_trim_settings_min_overlap \
-    --minimum-length $filter_min_length \
+    --minimum-length $usearch_filter_min_length \
     --cores $threads \
     --discard-untrimmed \
     -o "$out/trimmed.fq"
@@ -85,7 +85,7 @@ $usearch -cluster_otus uniques.fa -otus otus.fa -relabel Otu \
 
 # Run UNOISE algorithm to get denoised sequences (ZOTUs)
 $usearch -unoise3 uniques.fa -zotus zotus.fa \
-  -minsize $usearch_unoise_min_size \
+  -minsize $usearch_unoise3_min_size \
   -threads $threads
 # (minsize added based on pipeline config)
 
@@ -96,7 +96,7 @@ $usearch -unoise3 uniques.fa -zotus zotus.fa \
 
 # Make OTU table
 $usearch -otutab trimmed.fq -otus zotus.fa -otutabout otutab_raw.txt \
-  -id $usearch_otutab_ident_threshold \
+  -id $(bc <<< "scale=4; $usearch_otutab_ident_threshold / 100") \
   -maxaccepts $usearch_otutab_maxaccepts \
   -maxrejects $usearch_otutab_maxrejects \
   -biomout otutab_raw.biom \
