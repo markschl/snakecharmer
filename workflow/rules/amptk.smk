@@ -16,15 +16,15 @@ rule amptk_merge_trim:
         program=lambda w: with_default(cfg[w.workflow]["settings"]["usearch"], "merge", "program"),
         usearch_bin=config["software"]["usearch"]["binary"],
     input:
-        primers_yaml="processing/primers/primers.yaml",
-        sample_tab=lambda wildcards: "processing/{{workflow}}/input/sample_config/{technology}/paired/{run}/samples.tsv".format(
+        primers_yaml="workdir/primers/primers.yaml",
+        sample_tab=lambda wildcards: "workdir/{{workflow}}/input/sample_config/{technology}/paired/{run}/samples.tsv".format(
             **cfg.get_run_data(layout="paired", **wildcards)
         ),
         fq=lambda wildcards: expand_input_files(layout="paired", **wildcards),
     output:
-        demux="processing/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/illumina.demux.fq.gz",
-        mapping="processing/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/illumina.mapping_file.txt",
-        log="processing/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/illumina.amptk-demux.log",
+        demux="workdir/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/illumina.demux.fq.gz",
+        mapping="workdir/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/illumina.mapping_file.txt",
+        log="workdir/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/illumina.amptk-demux.log",
     log:
         "logs/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/amptk_trim_merge.log",
     group:
@@ -49,7 +49,7 @@ rule amptk_denoise:
         unoise_program=lambda w: with_default(cfg[w.workflow]["settings"]["usearch"], "unoise3", "program"),
         usearch_bin=config["software"]["usearch"]["binary"],
     input:
-        demux="processing/{workflow}/{run}_paired/{primers}/illumina.demux.fq.gz",
+        demux="workdir/{workflow}/{run}_paired/{primers}/illumina.demux.fq.gz",
     output:
         denoised="results/{workflow}/workflow_amptk_{cluster}/{run}_paired/{primers}/denoised.fasta",
         tab="results/{workflow}/workflow_amptk_{cluster}/{run}_paired/{primers}/denoised_otutab.txt.gz",

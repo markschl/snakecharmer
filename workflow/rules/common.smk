@@ -65,7 +65,7 @@ def expand_input_files(path=None, **wildcards):
     assert sorted(set(w.sample)) == sorted(d["sample"]) and \
         sorted(set(w.read)) == d["read"], (
         "Sample tab does not align with actual files, "
-        "try deleting processing/<workflow>/input and re-run")
+        "try deleting workdir/<workflow>/input and re-run")
     return expand(full_path if path is None else path, **wildcards, **d)
 
 
@@ -159,7 +159,7 @@ rule prepare_primers:
     params:
         primers=cfg.primers,
     output:
-        yaml="processing/primers/primers.yaml",
+        yaml="workdir/primers/primers.yaml",
     log:
         "logs/prepare_primers.log",
     conda:
@@ -273,7 +273,7 @@ rule pool_runs_raw:
         "../scripts/pool_raw.py"
 
 
-# Symlinks run directories from input to processing/{workflow}/input, selecting
+# Symlinks run directories from input to workdir/{workflow}/input, selecting
 # the ones that were demultiplexed as configured in the workflow.
 # *note*: we actually create a "nested" directory, which is used then further.
 # The reason is that .snakemake_timestamp in the source directory will interfere
@@ -285,7 +285,7 @@ rule link_input:
         # with demultiplexing implemented:
         # run_dir=lambda w: directory(expand("input/{{technology}}/{{layout}}/{demux_method}/{{run}}", demux_method=cfg[w.workflow]["demux_method"])),
     output:
-        sample_dir=directory("processing/{workflow}/input/{technology}/{layout}/{run}"),
+        sample_dir=directory("workdir/{workflow}/input/{technology}/{layout}/{run}"),
     shell:
         """
         mkdir -p {output}
@@ -301,7 +301,7 @@ checkpoint final_sample_tab:
         tab=run_config_path + "/samples.tsv",
         sample_dir=rules.link_input.output.sample_dir
     output:
-        tab="processing/{workflow}/input/sample_config/{technology}/{layout}/{run}/samples.tsv",
+        tab="workdir/{workflow}/input/sample_config/{technology}/{layout}/{run}/samples.tsv",
     log:
         "logs/{workflow}/{run}_{layout}/{technology}_make_final_sample_tab.log",
     script:
@@ -345,7 +345,7 @@ rule collect_unique_files:
 
 
 
-#### Processing ####
+#### Workdir ####
 
 
 # Creates a directory called 'data' inside the workflow results dir 

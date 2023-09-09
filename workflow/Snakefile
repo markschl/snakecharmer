@@ -122,9 +122,9 @@ localrules:
 
 rule clean:
     shell:
-        "rm -Rf input processing logs"
+        "rm -Rf input workdir logs"
 
 
 rule clean_all:
     shell:
-        "rm -Rf results input unique_samples processing logs refdb"
+        "rm -Rf results input unique_samples workdir logs refdb"

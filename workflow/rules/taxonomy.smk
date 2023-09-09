@@ -1,6 +1,6 @@
 """
-Rules for obtaining and processing taxonomy databases, and some taxonomy-related
-sequence processing code.
+Rules for obtaining and workdir taxonomy databases, and some taxonomy-related
+sequence workdir code.
 
 Directory structure of 'refdb':
 refdb:
@@ -157,10 +157,10 @@ rule make_tax_biom:
         tax="results/{workflow}/workflow_{cluster}/{run}/{primers}/taxonomy/{tax_name}.txt.gz",
     output:
         tax_tmp=temp(
-            "processing/{workflow}/workflow_{cluster}/{run}/{primers}/_tax_tmp/{tax_name}.txt"
+            "workdir/{workflow}/workflow_{cluster}/{run}/{primers}/_tax_tmp/{tax_name}.txt"
         ),
         biom_tmp=temp(
-            "processing/{workflow}/{run}/{primers}/{cluster}_tax_tmp/{tax_name}.biom"
+            "workdir/{workflow}/{run}/{primers}/{cluster}_tax_tmp/{tax_name}.biom"
         ),
         biom="results/{workflow}/workflow_{cluster}/{run}/{primers}/taxonomy/{tax_name}.biom.gz",
         biom_hdf5="results/{workflow}/workflow_{cluster}/{run}/{primers}/taxonomy/{tax_name}.hdf5.biom.gz",

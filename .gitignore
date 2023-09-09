@@ -1,6 +1,6 @@
 input/
 unique_samples/
-processing/
+workdir/
 logs/
 refdb/
 

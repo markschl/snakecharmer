@@ -27,7 +27,7 @@ def list_runs(input_cfg):
 
 class Config(object):
     # strategy_names = ['merged', 'notmerged_R1', 'notmerged_R2']
-    # working_dir = 'processing'
+    # working_dir = 'workdir'
     # read_num_map = {'single': [1], 'paired': [1, 2]}
     
     # The following database types can be used directly

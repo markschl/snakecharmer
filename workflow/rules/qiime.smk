@@ -9,10 +9,10 @@ rule qiime_make_manifest:
         qiime_style=True,
         subdir="nested"
     input:
-        tab=lambda wildcards: "processing/{{workflow}}/input/sample_config/{technology}/{layout}/{run}/samples.tsv".format(**cfg.get_run_data(**wildcards)),
-        sample_dir=lambda wildcards: "processing/{{workflow}}/input/{technology}/{layout}/{run}".format(**cfg.get_run_data(**wildcards)),
+        tab=lambda wildcards: "workdir/{{workflow}}/input/sample_config/{technology}/{layout}/{run}/samples.tsv".format(**cfg.get_run_data(**wildcards)),
+        sample_dir=lambda wildcards: "workdir/{{workflow}}/input/{technology}/{layout}/{run}".format(**cfg.get_run_data(**wildcards)),
     output:
-        tab="processing/{workflow}/{run}_{layout}/qiime_manifest.txt",
+        tab="workdir/{workflow}/{run}_{layout}/qiime_manifest.txt",
     log:
         "logs/{workflow}/{run}_{layout}/qiime_make_manifest.log",
     script:
@@ -30,7 +30,7 @@ rule qiime_import:
     input:
         manifest=rules.qiime_make_manifest.output.tab,
     output:
-        "processing/{workflow}/{run}_{layout}/demux.qza",
+        "workdir/{workflow}/{run}_{layout}/demux.qza",
     log:
         "logs/{workflow}/{run}_{layout}/qiime_import.log",
     group:
@@ -54,10 +54,10 @@ rule qiime_trim_paired:
         err_rate=lambda w: cfg[w.workflow]["settings"]["primers"]["trim_settings"]["max_error_rate"],
         min_length=lambda w: cfg[w.workflow]["settings"]["dada2"]["min_length"],
     input:
-        yaml="processing/primers/primers.yaml",
-        demux="processing/{workflow}/{run}_paired/demux.qza",
+        yaml="workdir/primers/primers.yaml",
+        demux="workdir/{workflow}/{run}_paired/demux.qza",
     output:
-        qza="processing/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/trim.qza",
+        qza="workdir/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/trim.qza",
     log:
         "logs/{workflow}/{run}_paired/{marker}__{f_primer}...{r_primer}/qiime_trim.log",
     group:
@@ -75,11 +75,11 @@ rule qiime_dada2_paired:
     params:
         par=lambda w: cfg[w.workflow]["settings"]["dada2"],
     input:
-        trim="processing/{workflow}/{run}_paired/{primers}/trim.qza",
+        trim="workdir/{workflow}/{run}_paired/{primers}/trim.qza",
     output:
-        denoised0="processing/{workflow}/{run}_paired/{primers}/dada2.qza",
-        tab0="processing/{workflow}/{run}_paired/{primers}/dada2_tab.qza",
-        stats="processing/{workflow}/{run}_paired/{primers}/dada2_stats.qza",
+        denoised0="workdir/{workflow}/{run}_paired/{primers}/dada2.qza",
+        tab0="workdir/{workflow}/{run}_paired/{primers}/dada2_tab.qza",
+        stats="workdir/{workflow}/{run}_paired/{primers}/dada2_stats.qza",
     log:
         "logs/{workflow}/{run}_paired/{primers}/dada2_qiime.log",
     conda:
@@ -100,9 +100,9 @@ ruleorder:
 
 rule qiime_export:
     input:
-        denoised="processing/{workflow}/{run}/{primers}/{cluster}.qza",
-        tab="processing/{workflow}/{run}/{primers}/{cluster}_tab.qza",
-        stats="processing/{workflow}/{run}/{primers}/dada2_stats.qza",
+        denoised="workdir/{workflow}/{run}/{primers}/{cluster}.qza",
+        tab="workdir/{workflow}/{run}/{primers}/{cluster}_tab.qza",
+        stats="workdir/{workflow}/{run}/{primers}/dada2_stats.qza",
     output:
         # directory("results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}"),
         denoised="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/denoised.fasta",
@@ -111,7 +111,7 @@ rule qiime_export:
         biom_hdf5="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/denoised.hdf5.biom",
         stats=temp("results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/sample_report.tsv"),
         tmp=temp(
-            directory("processing/{workflow}/{run}/{primers}/{cluster}_export_tmp")
+            directory("workdir/{workflow}/{run}/{primers}/{cluster}_export_tmp")
         ),
     log:
         "logs/{workflow}/{run}/{primers}/{cluster}_qiime_export.log",
@@ -208,7 +208,7 @@ rule qiime_taxdb_import:
     input:
         seq="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime.fasta.zst",
     output:
-        tmp=temp(directory("processing/qiime_taxdb/db_regular_{source_id}/flt_{filter_id}")),
+        tmp=temp(directory("workdir/qiime_taxdb/db_regular_{source_id}/flt_{filter_id}")),
         seq="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime-seqdb.qza",
         tax="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime-taxonomy.qza",
     wildcard_constraints:
@@ -276,7 +276,7 @@ rule assign_taxonomy_qiime_sklearn:
     output:
         tmp=temp(
             directory(
-                "processing/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/qiime_sklearn_{db_name}-{tax_method}"
+                "workdir/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/qiime_sklearn_{db_name}-{tax_method}"
             )
         ),
         tax="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/taxonomy/{db_name}-qiime_sklearn-{tax_method}.txt.gz",

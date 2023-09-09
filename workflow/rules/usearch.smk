@@ -64,11 +64,11 @@ def download_uvsnake(url, target_dir):
 
 
 # paths
-uvsnake_workdir = "processing/{workflow}/{run}_paired"
-uvsnake_workdir_q = "processing/{{workflow}}/{{run}}_paired"
+uvsnake_workdir = "workdir/{workflow}/{run}_paired"
+uvsnake_workdir_q = "workdir/{{workflow}}/{{run}}_paired"
 uvsnake_path, uvsnake_url, uvsnake_id = get_uvsnake_location()
 if uvsnake_path is None:
-    uvsnake_path = f"processing/_uvsnake/{uvsnake_id}"
+    uvsnake_path = f"workdir/_uvsnake/{uvsnake_id}"
     if not exists(uvsnake_path):
         download_uvsnake(uvsnake_url, uvsnake_path)
 uvsnakefile_path = abspath(f"{uvsnake_path}/workflow/Snakefile")
@@ -80,7 +80,7 @@ rule uvsnake_gen_config:
         usearch_config=lambda wildcards: cfg[wildcards.workflow]["settings"]["usearch"],
         snakefile=uvsnakefile_path,
     input:
-        sample_tab=lambda wildcards: "processing/{{workflow}}/input/sample_config/{technology}/paired/{run}/samples.tsv".format(
+        sample_tab=lambda wildcards: "workdir/{{workflow}}/input/sample_config/{technology}/paired/{run}/samples.tsv".format(
             **cfg.get_run_data(layout="paired", **wildcards)
         ),
     output:
