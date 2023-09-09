@@ -5,11 +5,11 @@
 #' @param input_dir: path of the input directory
 #' @param ...: Additional parameters are passed on to `read_qiime_taxonomy()`
 read_pipeline_results = function(input_dir,
-                                 otutab = file.path(input_dir, 'denoised_otutab.txt'),
+                                 otutab = file.path(input_dir, 'otutab.txt'),
                                  taxonomy_dir = file.path(input_dir, 'taxonomy'),
-                                 denoised_seqs = file.path(input_dir, 'denoised.fasta'),
+                                 cluster_seqs = file.path(input_dir, 'clusters.fasta'),
                                  cmp_dir = file.path(input_dir, 'cmp'),
-                                 tree_file = file.path(input_dir, 'denoised_tree.tre'),
+                                 tree_file = file.path(input_dir, 'tree.tre'),
                                  itsx_prefix = file.path(input_dir, 'ITSx', 'out'),
                                  verbose = F,
                                  ...) {
@@ -58,8 +58,8 @@ read_pipeline_results = function(input_dir,
   # OTU sequences
   if (verbose)
     cat('Reading OTU sequences...\n', file = stderr())
-  denoised_seqs = maybe_gz(denoised_seqs, stop='Denoised sequences not found')
-  out$refseq = Biostrings::readDNAStringSet(denoised_seqs)
+  cluster_seqs = maybe_gz(cluster_seqs, stop='Clustered/denoised sequences not found')
+  out$refseq = Biostrings::readDNAStringSet(cluster_seqs)
   
   # Phylogenetic tree
   tree_file = maybe_gz(tree_file)

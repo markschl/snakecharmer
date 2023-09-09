@@ -83,7 +83,7 @@ $usearch -fastx_uniques filtered.fa -sizeout -relabel Uniq -fastaout uniques.fa
 $usearch -cluster_otus uniques.fa -otus otus.fa -relabel Otu \
     -threads $threads
 
-# Run UNOISE algorithm to get denoised sequences (ZOTUs)
+# Run UNOISE algorithm to get clustered sequences (ZOTUs)
 $usearch -unoise3 uniques.fa -zotus zotus.fa \
   -minsize $usearch_unoise3_min_size \
   -threads $threads
@@ -135,6 +135,6 @@ $usearch -otutab trimmed.fq -otus zotus.fa -otutabout otutab_raw.txt \
 
 out=../../results/unoise_usearch_simple/workflow_usearch_unoise3_simple/run1_run2_pool_paired/ITS__ITS3-KYO2...ITS4
 mkdir -p $out
-cp zotus.fa $out/denoised.fasta
-gzip -cn otutab_raw.txt > $out/denoised_otutab.txt.gz
-cp otutab_raw.biom $out/denoised.biom
+cp zotus.fa $out/clusters.fasta
+gzip -cn otutab_raw.txt > $out/otutab.txt.gz
+cp otutab_raw.biom $out/otutab.biom

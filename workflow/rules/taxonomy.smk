@@ -130,7 +130,7 @@ rule uncompress_taxdb:
 
 rule make_tax_fasta:
     input:
-        fa="results/{workflow}/workflow_{cluster}/{run}/{primers}/denoised.fasta",
+        fa="results/{workflow}/workflow_{cluster}/{run}/{primers}/clusters.fasta",
         tax="results/{workflow}/workflow_{cluster}/{run}/{primers}/taxonomy/{tax_name}.txt.gz",
     output:
         "results/{workflow}/workflow_{cluster}/{run}/{primers}/taxonomy/fasta/{tax_name}.fasta.gz",
@@ -152,8 +152,8 @@ rule make_tax_fasta:
 
 rule make_tax_biom:
     input:
-        biom="results/{workflow}/workflow_{cluster}/{run}/{primers}/denoised.biom",
-        biom_hdf5="results/{workflow}/workflow_{cluster}/{run}/{primers}/denoised.hdf5.biom",
+        biom="results/{workflow}/workflow_{cluster}/{run}/{primers}/otutab.biom",
+        biom_hdf5="results/{workflow}/workflow_{cluster}/{run}/{primers}/otutab.hdf5.biom",
         tax="results/{workflow}/workflow_{cluster}/{run}/{primers}/taxonomy/{tax_name}.txt.gz",
     output:
         tax_tmp=temp(

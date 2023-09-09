@@ -49,29 +49,29 @@ The `snakecharmer` script is used as follows:
 
 Before running the first time, the command `conda activate snakemake` is necessary if [Conda was used](INSTALL.md).
 
-The target rules (or "commands") define, which output should be generated. Only one or several rules can be specified. Some depend on output of other rules. For instance, the `taxonomy` rule requires the clustering/denoising to happen before (`denoise` command). A complete list of commands is [found here](docs/rules.md).
+The target rules (or "commands") define, which output should be generated. Only one or several rules can be specified. Some depend on output of other rules. For instance, the `taxonomy` rule requires the clustering/denoising to happen before (`cluster` command). A complete list of commands is [found here](docs/rules.md).
 
 The most important are:
 
 * `quality`: Reports sequencing read statistics in `results/<workflow>/validation`, which may help in deciding on setting the workflow parameters.
-* `denoise`: Does the clustering/denoising for all workflows defined in `config.yaml`.
+* `cluster`: Does the clustering/denoising for all workflows defined in `config.yaml`.
 * `taxonomy`: Applies all taxonomy assignment methods defined in `config.yaml` to the output of all clustering workflows.
 * `clean`: Removes working directories that are not strictly needed (retaining the `results` dir)
 
 ### Example
 
-The following command processes a test dataset (fungal mock comunities in the [`test` directory](test/)) using 6 cores on a local computer. The  [target rules](docs/rules.md) to be run are `denoise`, `cmp`, `taxonomy` and `ITS`.
+The following command processes a test dataset (fungal mock comunities in the [`test` directory](test/)) using 6 cores on a local computer. The  [target rules](docs/rules.md) to be run are `cluster`, `cmp`, `taxonomy` and `ITS`.
 
 ```sh
 conda activate snakemake
-./snakecharmer test denoise cmp taxonomy  --cores 6
+./snakecharmer test cluster cmp taxonomy  --cores 6
 ```
 
 On a computer cluster, the command may look different ([see documentation here](https://snakemake.readthedocs.io/en/latest/executing/cluster.html)). The `snakecharmer` script is just a simple wrapper for Snakemake, but otherwise accepts all arguments that Snakemake does. Example for running with SLURM:
 
 ```sh
 outdir=~/path/to/analysis
-./snakecharmer --cores 20 --jobs 20 --slurm $outdir denoise cmp taxonomy
+./snakecharmer --cores 20 --jobs 20 --slurm $outdir cluster cmp taxonomy
 ```
 
 ### Output
@@ -87,11 +87,10 @@ After running, a few additional directories will have appeared next to `config`.
  ├─ 📂 results/
  │  ├─ 📂 <workflow name>/
  │  │  ├─ 📂 data/
- │  │  │  ├─ 🗋 denoised.fasta
- │  │  │  ├─ 🗋 denoised_otutab.txt.gz
- │  │  │  ├─ 🗋 denoised.biom
- │  │  │  ├─ 🗋 denoised.hdf5.biom
- │  │  │  ├─ 🗋 denoised_search.txt.gz
+ │  │  │  ├─ 🗋 clusters.fasta
+ │  │  │  ├─ 🗋 otutab.txt.gz
+ │  │  │  ├─ 🗋 otutab.biom
+ │  │  │  ├─ 🗋 otutab.hdf5.biom
  │  │  │  ├─ 📂 taxonomy/
  │  │  │  │  ├─ 🗋 <database>-<method>-<name>..txt.gz
  │  │  │  │  ├─ 🗋 <database>-<method>-<name>.biom.gz
@@ -100,7 +99,7 @@ After running, a few additional directories will have appeared next to `config`.
  │  │  │  ├─ 📂 cmp/
  │  │  │  │  ├─ 🗋 <my_seq_comparison>.txt
  │  │  │  │  ├─ 🗋 <my_seq_comparison>_notmatched.fasta.gz
- │  │  │  │  ├─ 🗋 <my_seq_comparison>_denoised_notmatched.fasta.gz
+ │  │  │  │  ├─ 🗋 <my_seq_comparison>_clusters_notmatched.fasta.gz
  │  │  │  │  │  (...)
  │  │  │  ├─ 📂 [ITSx/]
  │  │  │  │  ├─ 🗋 out.positions.txt
@@ -108,7 +107,7 @@ After running, a few additional directories will have appeared next to `config`.
  (...)
 ```
 
-Whether the output are ASVs/ESVs or OTUs from a fixed threshold clustering (not yet implemented), the resulting FASTA file is always called `denoised.fasta`. The sample/OTU count matrix is returned both in the traditional tabular format (`denoised_otutab.txt.gz`) and [BIOM](https://biom-format.org/documentation/biom_format.html). The taxonomic annotations are named by taxonomy database and assignment method (multiple combinations possible) and returned in a QIIME-style tabular format as well as the BIOM format. Furthermore, there can be results of sequence comparisons (`cmp`) or marker-specific data such as ITSx results.
+Whether the output are ASVs/ESVs or OTUs from a fixed threshold clustering (not yet implemented), the resulting FASTA file is always called `clusters.fasta`. The sample/OTU count matrix is returned both in the traditional tabular format (`otutab.txt.gz`) and [BIOM](https://biom-format.org/documentation/biom_format.html). The taxonomic annotations are named by taxonomy database and assignment method (multiple combinations possible) and returned in a QIIME-style tabular format as well as the BIOM format. Furthermore, there can be results of sequence comparisons (`cmp`) or marker-specific data such as ITSx results.
 
 With the simplest scenario (one run/layout and one primer combination), the relevant results directory is `<my_analysis>/results/<workflow_name>/data`. With multi-workflow/marker setups, the `data` directory will not be present, and the individual workflow results are placed in the nested directories ([more here](docs/output.md)).
 
@@ -118,7 +117,7 @@ The R source file [`R/read_amplicon.R`](R/read_amplicon.R) provides code for rea
 
 ## Comparison of denoising/clustering pipelines
 
-There is a separate bash script `scripts/compare_results.sh`, which creates an Excel file comparing the number of reads assigned to 98% clusters of the already denoised sequences by each pipeline. A separate workbook is created for each sample. The script requires VSEARCH, as well as R with the following packages: `ggplot2`, `tidyverse`, `data.table` and `openxlsx`.
+There is a separate bash script `scripts/compare_results.sh`, which creates an Excel file comparing the number of reads assigned to 98% clusters of the already clustered sequences by each pipeline. A separate workbook is created for each sample. The script requires VSEARCH, as well as R with the following packages: `ggplot2`, `tidyverse`, `data.table` and `openxlsx`.
 
 ## Further steps...
 

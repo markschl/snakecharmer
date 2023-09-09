@@ -9,7 +9,7 @@ rule itsx:
     params:
         par=config["ITSx"],
     input:
-        fa="results/{workflow}/workflow_{cluster}/{run}/ITS__{primers}/denoised.fasta",
+        fa="results/{workflow}/workflow_{cluster}/{run}/ITS__{primers}/clusters.fasta",
     output:
         pos="results/{workflow}/workflow_{cluster}/{run}/ITS__{primers}/ITSx/out.positions.txt",
     log:
@@ -46,11 +46,11 @@ rule vsearch_global:
         maxrejects=lambda w: with_default(cfg[w.workflow]["settings"]["compare"], w.comparison, "maxrejects"),
         maxhits=lambda w: with_default(cfg[w.workflow]["settings"]["compare"], w.comparison, "maxhits"),
     input:
-        otus="results/{workflow}/workflow_{cluster}/{run}/{primers}/denoised.fasta",
+        otus="results/{workflow}/workflow_{cluster}/{run}/{primers}/clusters.fasta",
     output:
         map="results/{workflow}/workflow_{cluster}/{run}/{primers}/cmp/{comparison}.txt",
         bam="results/{workflow}/workflow_{cluster}/{run}/{primers}/cmp/{comparison}.bam",
-        denoised_notmatched="results/{workflow}/workflow_{cluster}/{run}/{primers}/cmp/{comparison}_denoised_notmatched.fasta.gz",
+        clusters_notmatched="results/{workflow}/workflow_{cluster}/{run}/{primers}/cmp/{comparison}_clusters_notmatched.fasta.gz",
         notmatched="results/{workflow}/workflow_{cluster}/{run}/{primers}/cmp/{comparison}_notmatched.fasta.gz",
     log:
         "logs/{workflow}/{run}/{primers}/{cluster}_cmp_{comparison}.log",
@@ -65,12 +65,12 @@ rule vsearch_global:
         bam={output.bam}
         sam=${{bam%.*}}
         notmatched={output.notmatched}; notmatched=${{notmatched%.gz}}
-        denoised_notmatched={output.denoised_notmatched}; denoised_notmatched=${{denoised_notmatched%.gz}}
+        clusters_notmatched={output.clusters_notmatched}; clusters_notmatched=${{clusters_notmatched%.gz}}
         vsearch -usearch_global {input.otus} -db "{params.db}" \
             -userout {output.map} \
             -samout $sam \
             -userfields 'query+target+id' \
-            -notmatched $denoised_notmatched \
+            -notmatched $clusters_notmatched \
             -dbnotmatched $notmatched \
             -threads {threads} \
             -maxaccepts {params.maxaccepts} \
@@ -78,7 +78,7 @@ rule vsearch_global:
             -maxhits {params.maxhits} \
             -id {params.threshold} &> {log}
         # compress not-matched files
-        gzip -nf $notmatched $denoised_notmatched 2> {log}
+        gzip -nf $notmatched $clusters_notmatched 2> {log}
         # make BAM file
         rm -f "{params.db}.fai" $bam.bai
         samtools view -T "{params.db}" -b $sam |

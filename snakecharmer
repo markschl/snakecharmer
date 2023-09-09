@@ -26,7 +26,7 @@ specific use case. Additional options are directly passed on to snakemake.
 
 Available rules:
 * preparation: samples, unique_samples, config, quality
-* main rules: denoise, taxonomy
+* main rules: cluster, taxonomy
 * additional/special: cmp, ITS
 * cleanup: clean, clean_all, clean_tax, clean_taxdb, clean_fastqc, clean_cmp, clean_itsx
 
@@ -36,7 +36,7 @@ Running on a local computer with 8 cores
 
 $ cd snakecharmer-main
 $ conda activate snakemake
-$ snakecharmer -c8 outdir denoise
+$ snakecharmer -c8 outdir cluster
 """)
     p.add_argument(
         "directory",

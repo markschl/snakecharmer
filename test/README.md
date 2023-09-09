@@ -11,8 +11,8 @@ conda activate snakemake
 
 # Run denoising, ITSx, seqence comparisons and taxonomy assignment;
 # to make sure that the order of ASVs does not change between runs,
-# we use only one core (-c1).
-./snakecharmer test denoise ITS cmp taxonomy
+# we use only one core (which is the defualt in the 'snakecharmer' script).
+./snakecharmer test cluster ITS cmp taxonomy
 
 # (optional) remove working directories
 ./snakecharmer test clean

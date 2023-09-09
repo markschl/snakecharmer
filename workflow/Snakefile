@@ -75,17 +75,17 @@ rule quality:
             pooled=False
         )
 
-rule denoise:
+rule cluster:
     input:
         config=rules.config.input,
         samples=rules.samples.input,
         qual=rules.quality.input,
         multiqc=list(run_results("/_qc/multiqc_report.html", pooled=True)),
         results=lambda _: result_paths((
-            "/denoised.fasta",
-            "/denoised_otutab.txt.gz",
-            "/denoised.biom",
-            "/denoised.hdf5.biom",
+            "/clusters.fasta",
+            "/otutab.txt.gz",
+            "/otutab.biom",
+            "/otutab.hdf5.biom",
         )),
         stats=expand("results/{workflow}/sample_report.tsv", workflow=cfg.workflows),
         data_dir=expand("results/{workflow}/.outdirs", workflow=cfg.workflows),

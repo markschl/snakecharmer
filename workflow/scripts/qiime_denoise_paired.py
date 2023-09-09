@@ -60,8 +60,8 @@ def denoise_paired(
 with file_logging(snakemake.log[0]):
     denoise_paired(
         snakemake.input.trim,
-        seq_out=snakemake.output.denoised0,
-        tab_out=snakemake.output.tab0,
+        seq_out=snakemake.output.asvs,
+        tab_out=snakemake.output.tab,
         stats_out=snakemake.output.stats,
         threads=snakemake.threads,
         **snakemake.params.par

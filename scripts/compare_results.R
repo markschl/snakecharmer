@@ -36,8 +36,8 @@ if (length(dirs) > 0) {
   
   for (primer_comb in names(s)) {
     primer_dirs = s[[primer_comb]]
-    seqs = file.path(primer_dirs, 'denoised.fasta')
-    tabs = file.path(primer_dirs, 'denoised_otutab.txt.gz')
+    seqs = file.path(primer_dirs, 'clusters.fasta')
+    tabs = file.path(primer_dirs, 'otutab.txt.gz')
     sel = file.exists(seqs)
     primer_dirs = primer_dirs[sel]
     tabs = tabs[sel]

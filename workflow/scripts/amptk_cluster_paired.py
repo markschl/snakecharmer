@@ -7,9 +7,9 @@ from subprocess import check_call
 from utils import file_logging
 
 
-def denoise_paired(method,
+def cluster_paired(method,
                 trimmed_in,
-                denoised_out, otutab_out,
+                clustered_out, otutab_out,
                 usearch_par,
                 dada2_par,
                 unoise_program=None,
@@ -60,20 +60,20 @@ def denoise_paired(method,
     check_call(cmd, cwd=outdir, stdout=sys.stdout, stderr=sys.stderr)
 
     # copy files
-    results_dir = os.path.dirname(denoised_out)
+    results_dir = os.path.dirname(clustered_out)
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
-    shutil.copy2(os.path.join(outdir, method + '.ASVs.fa'), denoised_out)
+    shutil.copy2(os.path.join(outdir, method + '.ASVs.fa'), clustered_out)
     with open(os.path.join(outdir, method + '.otu_table.txt'), 'rb') as i:
         with gzip.open(otutab_out, 'wb') as o:
             shutil.copyfileobj(i, o)
 
 
 with file_logging(snakemake.log[0]):
-    denoise_paired(
+    cluster_paired(
         snakemake.params.method,
         snakemake.input.demux,
-        denoised_out=snakemake.output.denoised,
+        clustered_out=snakemake.output.clustered,
         otutab_out=snakemake.output.tab,
         unoise_program=snakemake.params.unoise_program,
         usearch_bin=snakemake.params.usearch_bin,

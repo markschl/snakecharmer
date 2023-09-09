@@ -113,7 +113,7 @@ workflows:
 
 compare:
   my_comparison:
-    file: path/to/seqs.fasta  # searched against denoised.fasta
+    file: path/to/seqs.fasta  # searched against clusters.fasta
     ident_threshold: 0.8  # min. identity (0 - 1)
   # The following settings apply to all comparisons unless
   # defined in the comparison settings.
@@ -276,7 +276,7 @@ usearch:
     program: vsearch  # { vsearch, usearch }
 
 # DADA2 specific settings (still incomplete)
-# for QIIME2 DADA2 plugin docs, see https://docs.qiime2.org/2022.11/plugins/available/dada2/denoise-paired/
+# for QIIME2 DADA2 plugin docs, see https://docs.qiime2.org/2022.11/plugins/available/dada2/cluster-paired/
 dada2:
   # quality score at which sequences are truncated (--p-trunc-q)
   # (if the result is shorter than trunclen_fwd/trunclen_rev, the read is discarded)

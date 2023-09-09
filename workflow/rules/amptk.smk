@@ -38,10 +38,8 @@ rule amptk_merge_trim:
     script:
         "../scripts/amptk_trim_paired.py"
 
-# ruleorder:
-#     amptk_denoise > otutab_to_biom
 
-rule amptk_denoise:
+rule amptk_cluster:
     params:
         method=lambda wildcards: wildcards.cluster,
         usearch_par=lambda wildcards: cfg[wildcards.workflow]["settings"]["usearch"],
@@ -51,20 +49,20 @@ rule amptk_denoise:
     input:
         demux="workdir/{workflow}/{run}_paired/{primers}/illumina.demux.fq.gz",
     output:
-        denoised="results/{workflow}/workflow_amptk_{cluster}/{run}_paired/{primers}/denoised.fasta",
-        tab="results/{workflow}/workflow_amptk_{cluster}/{run}_paired/{primers}/denoised_otutab.txt.gz",
+        clustered="results/{workflow}/workflow_amptk_{cluster}/{run}_paired/{primers}/clusters.fasta",
+        tab="results/{workflow}/workflow_amptk_{cluster}/{run}_paired/{primers}/otutab.txt.gz",
     log:
-        "logs/{workflow}/{run}_paired/{primers}/{cluster}_amptk_denoise.log",
+        "logs/{workflow}/{run}_paired/{primers}/{cluster}_amptk_cluster.log",
     conda:
         config["software"]["amptk"]["conda_env"]
     group:
-        "denoise"
+        "cluster"
     threads: max(10, workflow.cores)  # dereplication/clustering only use one core, only mapping uses all -> don't claim too much (will be slower, though)
     resources:
         mem_mb=30000,
         runtime=36 * 60,
     script:
-        "../scripts/amptk_denoise_paired.py"
+        "../scripts/amptk_cluster_paired.py"
 
 
 rule amptk_combine_logs:
@@ -73,8 +71,8 @@ rule amptk_combine_logs:
             "logs/{{workflow}}/{{run}}_paired/{primers}/amptk_trim_merge.log",
             primers=cfg.primer_combinations_flat
         ),
-        denoise=expand(
-            "logs/{{workflow}}/{{run}}_paired/{primers}/{{cluster}}_amptk_denoise.log",
+        cluster=expand(
+            "logs/{{workflow}}/{{run}}_paired/{primers}/{{cluster}}_amptk_cluster.log",
             primers=cfg.primer_combinations_flat
         ),
     output:
@@ -88,7 +86,7 @@ rule amptk_combine_logs:
         printf "\n\n\n"
         echo "Denoising"
         echo "=========="
-        cat {input.denoise:q}
+        cat {input.cluster:q}
         """
 
 

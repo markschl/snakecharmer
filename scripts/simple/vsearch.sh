@@ -314,6 +314,6 @@ echo Done
 
 out=../../results/unoise_vsearch_simple/workflow_usearch_unoise3_simple/run1_run2_pool_paired/ITS__ITS3-KYO2...ITS4
 mkdir -p $out
-cp otus.fasta $out/denoised.fasta
-gzip -cn otutab.txt > $out/denoised_otutab.txt.gz
-cp otutab.biom $out/denoised.biom
+cp otus.fasta $out/clusters.fasta
+gzip -cn otutab.txt > $out/otutab.txt.gz
+cp otutab.biom $out/otutab.biom

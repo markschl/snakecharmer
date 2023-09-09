@@ -91,7 +91,7 @@ rule uvsnake_gen_config:
     conda:
         "envs/basic.yaml"
     group:
-        "denoise"
+        "cluster"
     script:
         "../scripts/uvsnake_gen_config.py"
 
@@ -109,7 +109,7 @@ rule uvsnake_prepare:
     conda:
         "snakemake"
     group:
-        "denoise"
+        "cluster"
     threads:
         workflow.cores
     script:
@@ -134,7 +134,7 @@ rule uvsnake_cluster:
     conda:
         "snakemake"
     group:
-        "denoise"
+        "cluster"
     threads:
         workflow.cores
     script:
@@ -148,27 +148,25 @@ rule uvsnake_copy_results:
         log=rules.uvsnake_cluster.output.combined_log,
     output:
         results=expand(
-            "results/{{workflow}}/workflow_usearch_{{cluster_method}}/{{run}}_paired/{primers}/denoised{rest}", 
+            "results/{{workflow}}/workflow_usearch_{{cluster_method}}/{{run}}_paired/{primers}/{what}", 
             primers=cfg.primer_combinations_flat,
-            rest=[".fasta", "_otutab.txt.gz", ".biom"],
+            what=["clusters.fasta", "otutab.txt.gz", "otutab.biom"],
         ),
         stats="results/{workflow}/workflow_usearch_{cluster_method}/{run}_paired/sample_report.tsv",
         log="logs/{workflow}/{run}_paired_usearch_{cluster_method}_all.log",
     log:
         "logs/{workflow}/{run}_paired/uvsearch_copy_{cluster_method}.log",
     group:
-        "denoise"
+        "cluster"
     shell:
         """
+        indir="$(dirname "{input.results[0]}")"
         outdir="$(dirname "{output.results[0]}")"
-        for f in {input.results}; do
-            name=$(basename "$f")
-            out_name=denoised${{name#{wildcards.cluster_method}}}
-            echo $name "$outdir"/$out_name
-            cp -f "$f" "$outdir/$out_name"
-        done
-        cp "{input.stats}" "{output.stats}"
-        cp "{input.log}" "{output.log}"
+        cp -f "$indir/{wildcards.cluster_method}.fasta" "$outdir/clusters.fasta"
+        cp -f "$indir/{wildcards.cluster_method}_otutab.txt.gz" "$outdir/otutab.txt.gz"
+        cp -f "$indir/{wildcards.cluster_method}.biom" "$outdir/otutab.biom"
+        cp -f "{input.stats}" "{output.stats}"
+        cp -f "{input.log}" "{output.log}"
         """
 
 ruleorder:
@@ -247,7 +245,7 @@ use rule assign_taxonomy_sintax from uvsnake with:
         maxaccepts=1,
         maxrejects=1,
     input:
-        fa="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/denoised.fasta",
+        fa="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/clusters.fasta",
         db=lambda wildcards: "refdb/taxonomy/db_{source[preformatted]}_{source[source_id]}/flt_{filter_id}/utax.fasta".format(
             **cfg.tax_config(**wildcards)
         ),

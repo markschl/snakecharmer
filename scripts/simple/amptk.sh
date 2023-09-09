@@ -54,7 +54,7 @@ amptk illumina -i "$fq_dir" -o "$out" \
     --primer_mismatch $pmismatch \
     --usearch $(which usearch)
 
-# denoise
+# cluster
 
 
 ################################################################
@@ -64,5 +64,5 @@ amptk illumina -i "$fq_dir" -o "$out" \
 
 out="$outdir"/results/unoise_vsearch_simple/pipeline_usearch_unoise3_simple/ITS__ITS3-KYO2...ITS4/paired
 mkdir -p $out
-cp otus.fasta $out/denoised.fasta
-gzip -cn otutab.txt > $out/denoised_otutab.txt.gz
+cp otus.fasta $out/clusters.fasta
+gzip -cn otutab.txt > $out/otutab.txt.gz

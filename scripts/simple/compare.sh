@@ -45,12 +45,12 @@ ures=test/results/unoise_usearch/data
 usearch_res=test/results/unoise_usearch_simple/workflow_usearch_unoise3_simple/run1_run2_pool_paired/ITS__ITS3-KYO2...ITS4
 vsearch_res=test/results/unoise_vsearch_simple/workflow_usearch_unoise3_simple/run1_run2_pool_paired/ITS__ITS3-KYO2...ITS4
 # case-insensitive sequence comparisons because of masking (our pipeline converts masked sequences to uppercase)
-if ! cmp -s <(tr '[:upper:]' '[:lower:]' < $vres/denoised.fasta) <(tr '[:upper:]' '[:lower:]' < $vsearch_res/denoised.fasta); then
-  echo "ASVs from simple vs. regular VSEARCH pipelines differ ($vres/denoised.fasta and $vsearch_res/denoised.fasta)" >&2
+if ! cmp -s <(tr '[:upper:]' '[:lower:]' < $vres/clusters.fasta) <(tr '[:upper:]' '[:lower:]' < $vsearch_res/clusters.fasta); then
+  echo "ASVs from simple vs. regular VSEARCH pipelines differ ($vres/clusters.fasta and $vsearch_res/clusters.fasta)" >&2
   exit 1
 fi
-if ! cmp -s $vres/denoised_otutab.txt.gz $vsearch_res/denoised_otutab.txt.gz; then
-  echo "ASVs from simple vs. regular VSEARCH pipelines differ ($vres/denoised_otutab.txt.gz and $vsearch_res/denoised_otutab.txt.gz)" >&2
+if ! cmp -s $vres/otutab.txt.gz $vsearch_res/otutab.txt.gz; then
+  echo "ASVs from simple vs. regular VSEARCH pipelines differ ($vres/otutab.txt.gz and $vsearch_res/otutab.txt.gz)" >&2
 fi
 # for USEARCH, direct comparisons are more difficult. This has to do with the de-replication,
 # which our pipeline does separately per sample before collecting the unique sequences
@@ -60,11 +60,11 @@ fi
 # depends on the order of the input sequences, therefore the results could be different.
 # assuming 'seqtool' is installed, we can compare sorted OTUs.
 # For the OTU counts -> have a look at the Excel file in the 'cmp' directory
-if ! cmp -s <(st . --to-tsv seq $ures/denoised.fasta | sort) <(st . --to-tsv seq $usearch_res/denoised.fasta | sort); then
-  echo "ASVs from simple vs. regular USEARCH pipelines differ ($ures/denoised.fasta and $usearch_res/denoised.fasta)" >&2
+if ! cmp -s <(st . --to-tsv seq $ures/clusters.fasta | sort) <(st . --to-tsv seq $usearch_res/clusters.fasta | sort); then
+  echo "ASVs from simple vs. regular USEARCH pipelines differ ($ures/clusters.fasta and $usearch_res/clusters.fasta)" >&2
   exit 1
 fi
 
 # for comparing biom with Meld:
-# meld <(python -m json.tool $vres/denoised.biom) <(python -m json.tool $vsearch_res/denoised.biom)
-# meld <(python -m json.tool $ures/denoised.biom) <(python -m json.tool $usearch_res/denoised.biom)
+# meld <(python -m json.tool $vres/otutab.biom) <(python -m json.tool $vsearch_res/otutab.biom)
+# meld <(python -m json.tool $ures/otutab.biom) <(python -m json.tool $usearch_res/otutab.biom)

@@ -30,14 +30,14 @@ echo -n > $project_dir/cmp/cmp.txt
 echo -n > $project_dir/cmp/self_cmp.txt
 
 # collect ASVs/OTUS by primer combination
-ls $project_dir/results/*/*/*/*/denoised.fasta | 
+ls $project_dir/results/*/*/*/*/clusters.fasta | 
   sed -E "s|$project_dir/([^/]+/){3,3}([^/]+).*|\2|g" |
   sort -u |
   while read primers; do
     echo "$primers"
     # cluster all the OTUs/ASVs together at defined threshold
     cluster_file=$project_dir/cmp/clusters.$primers.fasta
-    cat $project_dir/results/*/*/$primers/*/denoised.fasta |
+    cat $project_dir/results/*/*/$primers/*/clusters.fasta |
       vsearch -cluster_fast - \
         -id $id \
         -centroids $cluster_file \
@@ -46,7 +46,7 @@ ls $project_dir/results/*/*/*/*/denoised.fasta |
         -maxaccepts 64 -maxrejects 64
 
     # map every OTU set against these clusters
-    for f in $project_dir/results/*/*/$primers/*/denoised.fasta; do
+    for f in $project_dir/results/*/*/$primers/*/clusters.fasta; do
       strategy=$(basename $(dirname $f))
       name=$(basename $(dirname $(dirname $(dirname $(dirname $f)))))
       vsearch -usearch_global $f -db $cluster_file \

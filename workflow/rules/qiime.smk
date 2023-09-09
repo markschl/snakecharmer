@@ -77,15 +77,15 @@ rule qiime_dada2_paired:
     input:
         trim="workdir/{workflow}/{run}_paired/{primers}/trim.qza",
     output:
-        denoised0="workdir/{workflow}/{run}_paired/{primers}/dada2.qza",
-        tab0="workdir/{workflow}/{run}_paired/{primers}/dada2_tab.qza",
+        asvs="workdir/{workflow}/{run}_paired/{primers}/dada2.qza",
+        tab="workdir/{workflow}/{run}_paired/{primers}/dada2_tab.qza",
         stats="workdir/{workflow}/{run}_paired/{primers}/dada2_stats.qza",
     log:
         "logs/{workflow}/{run}_paired/{primers}/dada2_qiime.log",
     conda:
         config["software"]["qiime"]["conda_env"]
     group:
-        "denoise"
+        "cluster"
     threads: workflow.cores
     resources:
         mem_mb=30000,
@@ -100,15 +100,15 @@ ruleorder:
 
 rule qiime_export:
     input:
-        denoised="workdir/{workflow}/{run}/{primers}/{cluster}.qza",
+        clustered="workdir/{workflow}/{run}/{primers}/{cluster}.qza",
         tab="workdir/{workflow}/{run}/{primers}/{cluster}_tab.qza",
         stats="workdir/{workflow}/{run}/{primers}/dada2_stats.qza",
     output:
         # directory("results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}"),
-        denoised="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/denoised.fasta",
-        tab="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/denoised_otutab.txt.gz",
-        biom_json="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/denoised.biom",
-        biom_hdf5="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/denoised.hdf5.biom",
+        clustered="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/clusters.fasta",
+        tab="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/otutab.txt.gz",
+        biom_json="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/otutab.biom",
+        biom_hdf5="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/otutab.hdf5.biom",
         stats=temp("results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/sample_report.tsv"),
         tmp=temp(
             directory("workdir/{workflow}/{run}/{primers}/{cluster}_export_tmp")
@@ -118,7 +118,7 @@ rule qiime_export:
     conda:
         config["software"]["qiime"]["conda_env"]
     group:
-        "denoise"
+        "cluster"
     shell:
         """
         exec &> {log}
@@ -141,9 +141,9 @@ rule qiime_export:
 
         # export seqs
         qiime tools export \
-            --input-path {input.denoised} \
+            --input-path {input.clustered} \
             --output-path {output.tmp}
-        cat {output.tmp}/dna-sequences.fasta > {output.denoised}
+        cat {output.tmp}/dna-sequences.fasta > {output.clustered}
 
         # export stats
         qiime metadata tabulate \
@@ -180,7 +180,7 @@ rule qiime_combine_logs:
             "logs/{{workflow}}/{{run}}/{primers}/qiime_trim.log",
             primers=cfg.primer_combinations_flat
         ),
-        denoise=expand(
+        cluster=expand(
             "logs/{{workflow}}/{{run}}/{primers}/{{cluster}}_qiime.log",
             primers=cfg.primer_combinations_flat
         ),
@@ -195,7 +195,7 @@ rule qiime_combine_logs:
         printf "\n\n\n"
         echo "Denoising"
         echo "=========="
-        cat {input.denoise:q}
+        cat {input.cluster:q}
         """
 
 
@@ -269,7 +269,7 @@ rule assign_taxonomy_qiime_sklearn:
     params:
         par=lambda wildcards: cfg.tax_config(**wildcards)["assign"],
     input:
-        seq="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/denoised.fasta",
+        seq="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/clusters.fasta",
         db=lambda wildcards: "refdb/taxonomy/db_{preformatted}_{source_id}/flt_{filter_id}/qiime_nb.qza".format(
             **cfg.tax_config(**wildcards)
         ),

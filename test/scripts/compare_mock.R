@@ -22,8 +22,8 @@ if (length(dirs) > 0) {
     primer_dirs = s[[primer_comb]]
   # remove validation workflows, which don't have a sequence comparison file
     primer_dirs = primer_dirs[!grepl('_simple', primer_dirs, fixed=T)]
-    seqs = file.path(primer_dirs, 'denoised.fasta')
-    tabs = file.path(primer_dirs, 'denoised_otutab.txt.gz')
+    seqs = file.path(primer_dirs, 'clusters.fasta')
+    tabs = file.path(primer_dirs, 'otutab.txt.gz')
     mapping = file.path(primer_dirs, 'cmp', 'mock.txt')
     sel = file.exists(seqs)
     primer_dirs = primer_dirs[sel]

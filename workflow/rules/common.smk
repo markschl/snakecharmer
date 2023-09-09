@@ -359,7 +359,7 @@ rule link_data_dir:
     params:
         data_dir="results/{workflow}/data",
     input:
-        clust=lambda wildcards: result_paths("/denoised.fasta", workflows=[wildcards.workflow]),
+        clust=lambda wildcards: result_paths("/clusters.fasta", workflows=[wildcards.workflow]),
     output:
         out_list="results/{workflow}/.outdirs",
     log:
@@ -374,14 +374,14 @@ rule link_data_dir:
 
 rule otutab_to_biom:
     input:
-        otutab="results/{workflow}/workflow_{cluster}/{run}/{sub_path}/denoised_otutab.txt.gz",
+        otutab="results/{workflow}/workflow_{cluster}/{run}/{sub_path}/otutab.txt.gz",
     output:
-        tmp_tab=temp("results/{workflow}/workflow_{cluster}/{run}/{sub_path}/denoised_otutab_tmp.txt"),
-        biom="results/{workflow}/workflow_{cluster}/{run}/{sub_path}/denoised.biom",
+        tmp_tab=temp("results/{workflow}/workflow_{cluster}/{run}/{sub_path}/otutab_tmp.txt"),
+        biom="results/{workflow}/workflow_{cluster}/{run}/{sub_path}/otutab.biom",
     log:
         "logs/{workflow}/{run}/{sub_path}/{cluster}_otutab_to_biom.log",
     group:
-        "denoise"
+        "cluster"
     priority: -100
     conda:
         "envs/biom.yaml"
@@ -396,13 +396,13 @@ rule otutab_to_biom:
 
 rule biom_to_hdf5:
     input:
-        biom="results/{workflow}/workflow_{cluster}/{run}/{sub_path}/denoised.biom",
+        biom="results/{workflow}/workflow_{cluster}/{run}/{sub_path}/otutab.biom",
     output:
-        biom_hdf5="results/{workflow}/workflow_{cluster}/{run}/{sub_path}/denoised.hdf5.biom",
+        biom_hdf5="results/{workflow}/workflow_{cluster}/{run}/{sub_path}/otutab.hdf5.biom",
     log:
         "logs/{workflow}/{run}/{sub_path}/{cluster}_biom_to_hdf5.log",
     group:
-        "denoise"
+        "cluster"
     priority: -100
     conda:
         "envs/biom.yaml"
