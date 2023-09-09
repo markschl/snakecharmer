@@ -12,7 +12,9 @@ The configuration file lives in `config/config.yaml` of the analysis directory. 
 
 ## Examples
 
-### USEARCH/VSEARCH-based pipeline (ITS)
+### USEARCH/VSEARCH-based pipeline
+
+This example uses UNOISE3 clustering of an ITS2 amplicon and assigns taxonomy using SINTAX.
 
 ```yaml
 software:
@@ -21,8 +23,8 @@ software:
 
 input:
   illumina:
-    directories:
-      - path/to/fastq_gz_files
+    run1: path/to/run1_sample_tab.tsv
+    run2: path/to/run2_sample_tab.tsv
 
 workflows:
   # UNOISE3 pipeline using VSEARCH for denoising
@@ -56,9 +58,6 @@ primers:
     max_error_rate: 0.25
 
 # Settings for sequence processing/clustering
-filter:
-  min_length: 100
-
 usearch:
   # paired end merging
   merge:
@@ -67,6 +66,7 @@ usearch:
     expected_length: 400
 
   filter:
+    min_length: 100
     max_error_rate: 0.002  #  0.8 errors per 400 bp
 
   unoise:
@@ -75,7 +75,7 @@ usearch:
   otutab:
     maxaccepts: 64
     maxrejects: 64
-    ident_threshold: 0.97
+    ident_threshold: 97  # percent
 
 # taxonomy assignment
 taxonomy_dbs:
@@ -87,7 +87,7 @@ taxonomy_dbs:
 taxonomy_methods:
   sintax_70:
     method: sintax_usearch
-    confidence: 0.7
+    confidence: 0.8
 
 # ITS recognition (fungi)
 ITSx:
@@ -102,105 +102,88 @@ Disclaimer: This list is not complete, please refer to [this `config.yaml`](../c
 
 ### Input
 
-Input files can be specified in various ways that best suit your needs, structured by sequencing technology (currently only *Illumina* possible). 
+Input files are be specified as sample lists with read file paths. Each list has two or three columns with the sample name, forward and (optionally) reverse paths. [QIIME2 manifest files](https://docs.qiime2.org/2023.7/tutorials/importing/#fastq-manifest-formats) are accepted as well.
 
-One thing is important to note: Paths are **always** relative to the *analysis directory* (not the *Snakecharmer* software directory, within which the pipeline is acutally run). If you want to be more clear about this, use absolute paths.
+A simple way of creating a sample table given one or several directories is the [`make_sample_tab`](https://github.com/markschl/ngs-sample-tab) script. Given this directory structure with Illumina sequencing reads (names were already simplified):
 
-#### `directories`
+```
+raw_reads/
+├── run1/
+│   ├── sample1_R1.fastq.gz
+│   ├── sample1_R2.fastq.gz
+│   ├── sample2_R1.fastq.gz
+│   └── sample2_R2.fastq.gz
+├── run2/
+│   ├── sample2_R1.fastq.gz
+│   └── sample2_R2.fastq.gz
+│   ├── sample3_R1.fastq.gz
+│   ├── sample3_R2.fastq.gz
+```
 
-The simplest is to just specify directories containing the sequence files (`fastq.gz`):
+The following will create two sample files. 
+
+```sh
+make_sample_tab --recursive --directory raw_reads --format simple
+# or: make_sample_tab -rd raw_reads -f simple
+```
+
+This yields `samples_run1_paired.tsv`:
+
+```
+id	R1	R2
+sample1	raw_reads/run1/sample1_R1.fastq.gz	raw_reads/run1/sample1_R2.fastq.gz
+sample2	raw_reads/run1/sample2_R1.fastq.gz	raw_reads/run1/sample2_R2.fastq.gz
+```
+
+...and `samples_run2_paired.tsv`:
+
+```
+id	R1	R2
+sample2	raw_reads/run2/sample2_R1.fastq.gz	raw_reads/run2/sample2_R2.fastq.gz
+sample3	raw_reads/run2/sample3_R1.fastq.gz	raw_reads/run2/sample1_R2.fastq.gz
+```
+
+The corresponding entry in `config/config.yaml`:
 
 ```yaml
 input:
   illumina:
-    directories:
-      - path/to/fastq_directory
-      - path/to/another_directory
-    recursive: true  # searches subdirectories
-    sample_pattern: illumina
-```
-
-Here, the setting `name_pattern` is of vital importance for extracting the sample names from the file names. You can either specify a known pattern (currently *illumina* for recent Illumina-style names and *sample_read* for something like `sample_name_R1.fastq.gz`). More complex cases need a regular expression pattern (more details in [this `config.yaml`](../config/config.yaml)).
-
-#### `patterns`
-
-A second option is to specify a pattern (or list of patterns) to specifically select certain files (e.g. a subset of a sequencing run, belonging to a specific dataset):
-
-```yaml
-input:
-  illumina:
-    patterns:
-      - path/to/files/DatasetA*.fastq.gz
-    sample_pattern: illumina
-```
-
-It is also possible to specify both `directories` and `patterns` (the selection may even overlap).
-
-#### `sample_file`
-
-If the above doesn't work for you, specify a sample file listing all sample names and paths. Example `samples.tsv`:
-
-```
-id  R1  R2
-sample1 path/to/sample1_R1  path/to/sample1_R2
-sample2 path/to/sample2_R1  path/to/sample2_R2
-```
-
-`config.yaml`:
-
-```yaml
-input:
-  illumina:
-    sample_file: samples.tsv
-```
-
-With single-end reads, just specify a two-column file without the `R2` column.
-
-*Note*: [QIIME2 manifest files](https://docs.qiime2.org/2023.7/tutorials/importing/#fastq-manifest-formats) are accepted as well.
-
-*Note 2*: The sample files are also produced internally if `directories` and/or `patterns` is specified. They are found here: `input/sample_config/<layout>/<run>/samples.tsv`
-
-#### Sequencing runs
-
-Normally, files are assumed to belong to the same sequencing run (called "run1" in file paths). If multiple runs of the same (or different) samples should be analyzed, there are two ways of specifying this (using `directories` in this example):
-
-##### Listing each run
-
-```yaml
-input:
-  illumina:
-    run1:
-      directories: [ path/to/run1 ]
-      sample_pattern: illumina
-    run1:
-      directories: [ path/to/run2 ]
-      sample_pattern: illumina
-```
-
-##### Using {run}
-
-In the above example, we have a regular pattern (subdirectories residing next to each other), we could thus use the special `{run}` wildcard with the same result:
-
-```yaml
-input:
-  illumina:
-    directories: [ path/to/{run} ]
-    sample_pattern: illumina
+    run1: samples_run1_paired.tsv
+    run2: samples_run2_paired.tsv
 ```
 
 #### Run pooling
 
-While it is usually a good idea to analyze each sequencing run separately (especially with DADA2), it can make sense to process data from different runs together in other cases (e.g. USEARCH-based clustering). The `pool_raw` setting will do exactly this. Samples are combined into a run pool (e.g. called `run1_run2_pool`), whereby reads from samples with the same name are combined. The default is not to pool, returing a separate results subdirectory for each run.
+While it is usually a good idea to analyze each sequencing run separately (especially with DADA2), it can make sense to process data from different runs together in other cases (e.g. USEARCH-based clustering). The `pool_raw` setting will do exactly this. Samples are combined into a run pool (e.g. called `run1_run2_pool`), whereby reads from samples with the same name are combined. The default is not to pool, returing a separate results subdirectory for each run. In the above example, `sample2` would be pooled due to overlapping names.
 
 ```yaml
 input:
   illumina:
-    directories: [ path/to/{run} ]
-    sample_pattern: illumina
+    run1: samples_run1_paired.tsv
+    run2: samples_run2_paired.tsv
 
 (...)
 
 pool_raw: true
+```
+
+Alternatively, samples could be made unique with `--unique`:
+
+```sh
+make_sample_tab --unique --pattern 'pool=raw_reads/run*/*.fastq.gz' --format simple
+# short: make_sample_tab -up 'pool=raw_reads/run*/*.fastq.gz' -f simple 
+```
+
+This yields:
+
+This yields `samples_pool_paired.tsv`:
+
+```
+id	R1	R2
+sample1	raw_reads/run1/sample1_R1.fastq.gz	raw_reads/run1/sample1_R2.fastq.gz
+sample2_1	raw_reads/run1/sample2_R1.fastq.gz	raw_reads/run1/sample2_R2.fastq.gz
+sample2_2	raw_reads/run2/sample2_R1.fastq.gz	raw_reads/run2/sample2_R2.fastq.gz
+sample3	raw_reads/run2/sample3_R1.fastq.gz	raw_reads/run2/sample3_R2.fastq.gz
 ```
 
 ## Workflows
@@ -250,6 +233,9 @@ workflows:
     settings:
       cluster_method_a_settings:
         some_threshold: 0.7
+  workflow1_pooled:
+    settings:
+      pool_raw: true
   ...
 ```
 

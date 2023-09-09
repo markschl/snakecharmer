@@ -229,10 +229,6 @@ taxonomy_methods:
 # All of these settings can be overridden by individual pipelines
 # using the 'settings' key (see 'pipelines' above)
 
-# General filter settings
-filter:
-  min_length: 100
-
 # Usearch pipeline specific settings
 usearch:
   # paired end merging
@@ -256,12 +252,14 @@ usearch:
   # read filtering before denoising
   # (done by VSEARCH)
   filter:
+    # minimum trimmed product length
+    min_length: 100
     # Maximum per-base error rate
     # (e.g. 0.002 per bp means 0.8 errors per 400 bp)
     max_error_rate: 0.002
 
   # UNOISE3 options
-  unoise:
+  unoise3:
     min_size: 8
     # The program to use (optional; default: vsearch)
     program: vsearch  # { vsearch, usearch }
@@ -273,7 +271,7 @@ usearch:
   otutab:
     maxaccepts: 64
     maxrejects: 64
-    ident_threshold: 0.97
+    ident_threshold: 97  # percent
     # The program to use (optional; default: vsearch)
     program: vsearch  # { vsearch, usearch }
 

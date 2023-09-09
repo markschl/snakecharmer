@@ -18,6 +18,10 @@ input:
 
 # Workflow definition
 workflows:
+  # UPARSE pipeline (uses USEARCH)
+  uparse:
+    cluster: usearch_uparse
+    taxonomy: default
   # UNOISE3 pipeline using VSEARCH for denoising
   unoise:
     cluster: usearch_unoise3
@@ -63,6 +67,8 @@ workflows:
 # This setting may make sense with some pipelines (e.g. USEARCH-based ones)
 # e.g. if runs are known not to have a strong batch effect.
 # With other methods such as DADA2 denoising, this is not recommended.
+# Here, we activate pooling because the "run 2" actually stems from the same
+# sequencing and was only included to test multi-run and pooling features.
 pool_raw: true
 
 # Files to compare with ASVs/OTUs using usearch_global (VSEARCH)
@@ -126,7 +132,7 @@ usearch:
     min_size: 2
 
   otutab:
-    ident_threshold: 0.97
+    ident_threshold: 97  # percent
     maxaccepts: 64
     maxrejects: 64
 
