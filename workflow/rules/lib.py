@@ -77,27 +77,6 @@ class Config(object):
                         "sample_files": sorted(r["sample_file"] for r in runs.values())
                     }
 
-    def _get_runs(self, workflow=None, pooled=True):
-        if pooled and (workflow is None or self[workflow]["settings"]["pool_raw"]):
-            return self.run_pools
-        return self.runs
-
-    def get_runs(self, workflow=None, pooled=True):
-        for d in self._get_runs(workflow, pooled).values():
-            is_pool = d["run"].endswith("_pool")
-            # print(workflow, pooled, d, is_pool)
-            if pooled or not is_pool:
-                yield d
-
-    def get_run_data(self, workflow=None, run=None, layout=None, pooled=True, **unused):
-        return self._get_runs(workflow, pooled=pooled)[(run, layout)]
-
-    def read_samples(self, path, workflow=None, run=None, layout=None, pooled=True, **unused):
-        d = self.get_run_data(workflow, run, layout, pooled=pooled)
-        path = path.format(workflow=workflow, **d)
-        l = SampleList(path)
-        return {"sample": [s for s, _ in l.samples()], "read": [str(i+1) for i in range(l.n_reads)]}
-
     def _get_primer_combinations(self):
         """
         Assemble the primer settings
@@ -259,6 +238,30 @@ class Config(object):
     # allow access to workflow settings in a dict-like way
     def __getitem__(self, workflow):
         return self.workflows[workflow]
+
+    def _get_runs(self, workflow=None, pooled=True):
+        if pooled and (workflow is None or self[workflow]["settings"]["pool_raw"]):
+            return self.run_pools
+        return self.runs
+
+    def get_runs(self, workflow=None, pooled=True):
+        for d in self._get_runs(workflow, pooled).values():
+            is_pool = d["run"].endswith("_pool")
+            # print(workflow, pooled, d, is_pool)
+            if pooled or not is_pool:
+                yield d
+
+    def get_run_data(self, workflow=None, run=None, layout=None, pooled=True, **unused):
+        return self._get_runs(workflow, pooled=pooled)[(run, layout)]
+
+    def read_samples(self, path, workflow=None, run=None, layout=None, pooled=True, **unused):
+        d = self.get_run_data(workflow, run, layout, pooled=pooled)
+        path = path.format(workflow=workflow, **d)
+        l = SampleList(path)
+        return {"sample": [s for s, _ in l.samples()], "read": [str(i+1) for i in range(l.n_reads)]}
+
+    def tax_config(self, workflow, marker, db_name, tax_method, **ignored):
+        return self.workflows[workflow]["taxonomy"][marker][(db_name, tax_method)]
 
 
 #### Helpers ####

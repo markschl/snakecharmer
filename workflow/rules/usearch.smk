@@ -241,15 +241,15 @@ module uvsnake:
 
 use rule assign_taxonomy_sintax from uvsnake with:
     params:
-        confidence=lambda w: cfg[w.workflow]["taxonomy"][w.marker][(w.db_name, w.tax_method)]["assign"]["confidence"],
-        program=lambda w: cfg[w.workflow]["taxonomy"][w.marker][(w.db_name, w.tax_method)]["assign"]["program"],
+        confidence=lambda wildcards: cfg.tax_config(**wildcards)["assign"]["confidence"],
+        program=lambda wildcards: cfg.tax_config(**wildcards)["assign"]["program"],
         usearch_bin=config["software"]["usearch"]["binary"],
         maxaccepts=1,
         maxrejects=1,
     input:
         fa="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/denoised.fasta",
-        db=lambda w: "refdb/taxonomy/db_{source[preformatted]}_{source[source_id]}/flt_{filter_id}/utax.fasta".format(
-            **cfg[w.workflow]["taxonomy"][w.marker][(w.db_name, w.tax_method)]
+        db=lambda wildcards: "refdb/taxonomy/db_{source[preformatted]}_{source[source_id]}/flt_{filter_id}/utax.fasta".format(
+            **cfg.tax_config(**wildcards)
         ),
     output:
         taxtab="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/taxonomy/{db_name}-sintax_usearch-{tax_method}.txt.gz",
@@ -261,7 +261,7 @@ use rule assign_taxonomy_sintax from uvsnake with:
     conda:
         "envs/vsearch.yaml"
     threads:
-        lambda w: workflow.cores \
-        if cfg[w.workflow]["taxonomy"][w.marker][(w.db_name, w.tax_method)]["assign"]["program"] == "vsearch" \
+        lambda wildcards: workflow.cores \
+        if cfg.tax_config(**wildcards)["assign"]["program"] == "vsearch" \
         else 1
  

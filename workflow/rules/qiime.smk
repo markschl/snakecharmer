@@ -267,11 +267,11 @@ rule qiime_taxdb_train_nb:
 
 rule assign_taxonomy_qiime_sklearn:
     params:
-        par=lambda w: cfg[w.workflow]["taxonomy"][w.marker][(w.db_name, w.tax_method)]["assign"],
+        par=lambda wildcards: cfg.tax_config(**wildcards)["assign"],
     input:
         seq="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/denoised.fasta",
-        db=lambda w: "refdb/taxonomy/db_{preformatted}_{source_id}/flt_{filter_id}/qiime_nb.qza".format(
-            **cfg[w.workflow]["taxonomy"][w.marker][(w.db_name, w.tax_method)]
+        db=lambda wildcards: "refdb/taxonomy/db_{preformatted}_{source_id}/flt_{filter_id}/qiime_nb.qza".format(
+            **cfg.tax_config(**wildcards)
         ),
     output:
         tmp=temp(
