@@ -19,6 +19,10 @@ validate(config, "config.schema.yaml")
 
 
 include: "rules/common.smk"
+include: "rules/prepare.smk"
+include: "rules/stats.smk"
+include: "rules/biom.smk"
+include: "rules/cmp.smk"
 include: "rules/qc.smk"
 
 if "usearch" in config["software"]:
@@ -30,11 +34,12 @@ if "qiime" in config["software"]:
 if "amptk" in config["software"]:
     include: "rules/amptk.smk"
 
+if "ITSx" in config:
+    include: "rules/ITS.smk"
+
 
 include: "rules/taxonomy.smk"
 
-
-include: "rules/other.smk"
 
 
 #### Paths ####
