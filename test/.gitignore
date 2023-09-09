@@ -1,10 +1,9 @@
-results/_validation/
 results/*/*/*/*/*
-!results/**/denoised.*
-!results/**/denoised_otutab.txt.gz
+!results/**/clusters.fasta
+!results/**/otutab.*
 
-results/*/*/_validation/*
-!results/*/*/_validation/sample_report.tsv
+!results/*/sample_report.tsv
+!results/*/*/*/sample_report.tsv
 
 results/**/ITSx/*
 !results/**/ITSx/
@@ -18,5 +17,10 @@ results/**/cmp/*
 R_example/*
 !R_example/example.Rmd
 !R_example/example.md
+
+!logs/
+logs/*/*
+logs/*/*.log
+!logs/*/*_all.log
 
 ITSx_temp_*/
