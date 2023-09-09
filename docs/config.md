@@ -98,7 +98,7 @@ ITSx:
 
 ## Details on configuration sections
 
-Disclaimer: This list is not complete, please refer to [this `config.yaml`](../config/config.yaml) for more information on some options.
+Disclaimer: This list is not complete, please refer to [`config/config.template.yaml`](../config/config.template.yaml) for more information on some options.
 
 ### Input
 

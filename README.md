@@ -36,8 +36,8 @@ The software makes use of the [Conda package manager](https://conda.io), the ins
 
 The easiest is to copy the contents of the [config](config/) or [test/config](test/config) directory into a new analysis directory and then modify the files according to your needs. There are two YAML files:
 
-* **[`config.yaml`](config/config.yaml)**: Main configuration file containing input and workflow definitions. [See here](docs/config.md) for a description and examples (incomplete). All available options are are documented [in the file itself](config/config.yaml).
-* **[`taxonomy.yaml`](config/taxonomy.yaml)**: Defines all available taxonomcic databases. [See here for details](docs/taxonomy.md).
+* **`config.yaml`**: Main configuration file containing input and workflow definitions. [See here](docs/config.md) for a description and examples (incomplete). All available options are are documented [in `config/config.template.yaml`](config/config.template.yaml).
+* **`taxonomy.template.yaml`**: Defines all available taxonomcic databases. [See here for details](docs/taxonomy.md). See also [`config/taxonomy.template.yaml`](config/taxonomy.template.yaml).
 
 ## Running
 

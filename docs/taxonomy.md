@@ -16,7 +16,7 @@ There are two ways of specifying databases in `config/taxonomy.yaml`:
 
 ## Configuration
 
-Here a simple/typical `taxonomy.yaml` with ITS (UNITE), COI (Midori) and 16S (SILVA) databases (more details in [this `config/taxonomy.yaml`](../config/taxonomy.yaml)):
+Here a simple/typical `taxonomy.yaml` with ITS (UNITE), COI (Midori) and 16S (SILVA) databases (more details in [this `config/taxonomy.template.yaml`](../config/taxonomy.template.yaml)):
 
 ```yaml
 taxonomy_db_sources:
