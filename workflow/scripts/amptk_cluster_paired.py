@@ -16,8 +16,10 @@ def cluster_paired(method,
                 usearch_bin=None,
                 threads=1):
     
+    command = "cluster" if method == "uparse" else method
+
     cmd = [
-        "amptk", method,
+        "amptk", command,
         "-i", os.path.basename(trimmed_in),
         "-o", method,
         "--cpus", str(threads)
@@ -27,20 +29,32 @@ def cluster_paired(method,
     # TODO: inconsistent to have these settings under usearch even though used for DADA2 as well
     # (on the other hand, Amptk uses an USEACH-like procedure for DADA2 as well)
     maxee = usearch_par["merge"]["expected_length"] * usearch_par["filter"]["max_error_rate"]
-    if method == "unoise3":
+    if method in ("unoise3", "uparse"):
         cmd += [
                 "--usearch",
                 usearch_bin,
                 "--maxee",
                 str(maxee),
+            ]
+        if method == "unoise3":
+            cmd += [
                 "--method",
                 unoise_program,
                 "--minsize",
                 str(usearch_par["unoise3"]["min_size"]),
             ]
-        if unoise_program == "usearch":
+            if unoise_program == "usearch":
+                assert usearch_bin is not None
+                cmd += ["--usearch", usearch_bin]
+            cluster_file = method + '.ASVs.fa'
+        elif method == "uparse":
             assert usearch_bin is not None
-            cmd += ["--usearch", usearch_bin]
+            cmd += [
+                "--minsize",
+                str(usearch_par["uparse"]["min_size"]),
+                "--usearch", usearch_bin,
+            ]
+            cluster_file = method + '.cluster.otus.fa'
     else:
         assert method == "dada2", "Unknown / unimplemented Amptk command"
         cmd += [
@@ -54,6 +68,7 @@ def cluster_paired(method,
             cmd.append("--pool")
         elif p == "pseudo":
             cmd.append("--pseudopool")
+        cluster_file = method + '.ASVs.fa'
 
     outdir = os.path.dirname(trimmed_in)
     print("Call: " + " ".join(cmd), file=sys.stderr)
@@ -63,7 +78,7 @@ def cluster_paired(method,
     results_dir = os.path.dirname(clustered_out)
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
-    shutil.copy2(os.path.join(outdir, method + '.ASVs.fa'), clustered_out)
+    shutil.copy2(os.path.join(outdir, cluster_file), clustered_out)
     with open(os.path.join(outdir, method + '.otu_table.txt'), 'rb') as i:
         with gzip.open(otutab_out, 'wb') as o:
             shutil.copyfileobj(i, o)
@@ -71,13 +86,9 @@ def cluster_paired(method,
 
 with file_logging(snakemake.log[0]):
     cluster_paired(
-        snakemake.params.method,
-        snakemake.input.demux,
+        trimmed_in=snakemake.input.demux,
         clustered_out=snakemake.output.clustered,
         otutab_out=snakemake.output.tab,
-        unoise_program=snakemake.params.unoise_program,
-        usearch_bin=snakemake.params.usearch_bin,
-        usearch_par=snakemake.params.usearch_par,
-        dada2_par=snakemake.params.dada2_par,
         threads=snakemake.threads,
+        **snakemake.params
     )

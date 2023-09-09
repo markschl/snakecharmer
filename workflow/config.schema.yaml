@@ -82,7 +82,7 @@ properties:
         properties:
           cluster:
             type: string
-            enum: [usearch_unoise3, usearch_uparse, qiime_dada2, amptk_unoise3, amptk_dada2]
+            enum: [usearch_unoise3, usearch_uparse, qiime_dada2, amptk_uparse, amptk_unoise3, amptk_dada2]
           taxonomy:
             oneOf:
               - { type: string, enum: [default], default: default }
