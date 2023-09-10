@@ -1,7 +1,19 @@
 
+cfg.pipeline_capabilities["qiime"] = [
+    ("illumina", "single"),
+    ("illumina", "single.rev"),
+    ("illumina", "paired"),
+]
+
+
 localrules:
     qiime_make_manifest,
     qiime_combine_sample_reports,
+
+
+##########################
+#### Prepare
+##########################
 
 
 rule qiime_make_manifest:
@@ -22,10 +34,10 @@ rule qiime_make_manifest:
 rule qiime_import:
     params:
         type=lambda wildcards: "SequencesWithQuality"
-          if wildcards.layout == "single"
+          if wildcards.layout.startswith("single")
           else "PairedEndSequencesWithQuality",
         format=lambda wildcards: "SingleEndFastqManifestPhred33V2"
-          if wildcards.layout == "single"
+          if wildcards.layout.startswith("single")
           else "PairedEndFastqManifestPhred33V2",
     input:
         manifest=rules.qiime_make_manifest.output.tab,
@@ -47,6 +59,31 @@ rule qiime_import:
             --output-path {output} \
             --input-format {params.format} &> {log}
         """
+
+
+rule qiime_trim_single:
+    params:
+        err_rate=lambda w: cfg[w.workflow]["settings"]["primers"]["trim_settings"]["max_error_rate"],
+        min_length=lambda w: cfg[w.workflow]["settings"]["primers"]["trim_settings"]["min_length"],
+        rev_read=lambda wildcards: wildcards.suffix == ".rev",
+    input:
+        yaml="workdir/primers/primers.yaml",
+        demux="workdir/{workflow}/{run}_single{suffix}/demux.qza",
+    output:
+        qza="workdir/{workflow}/{run}_single{suffix}/{marker}__{f_primer}...{r_primer}/trim.qza",
+    log:
+        "logs/{workflow}/{run}_single{suffix}/{marker}__{f_primer}...{r_primer}/qiime_trim.log",
+    wildcard_constraints:
+        suffix = r"(|\.rev)",
+    group:
+        "prepare"
+    conda:
+        config["software"]["qiime"]["conda_env"]
+    threads: workflow.cores
+    resources:
+        runtime=12 * 60,
+    script:
+        "../scripts/qiime_trim_single.py"
 
 
 rule qiime_trim_paired:
@@ -71,17 +108,17 @@ rule qiime_trim_paired:
         "../scripts/qiime_trim_paired.py"
 
 
-rule qiime_dada2_paired:
+rule qiime_dada2:
     params:
         par=lambda w: cfg[w.workflow]["settings"]["dada2"],
     input:
-        trim="workdir/{workflow}/{run}_paired/{primers}/trim.qza",
+        trim="workdir/{workflow}/{run}_{layout}/{primers}/trim.qza",
     output:
-        asvs="workdir/{workflow}/{run}_paired/{primers}/dada2.qza",
-        tab="workdir/{workflow}/{run}_paired/{primers}/dada2_tab.qza",
-        stats="workdir/{workflow}/{run}_paired/{primers}/dada2_stats.qza",
+        asvs="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/clusters.qza",
+        tab="results/{workflow}/workflow_qiime_dada2/{run}_{layout}/{primers}/otutab.qza",
+        stats="workdir/{workflow}/{run}_{layout}/{primers}/dada2_stats.qza",
     log:
-        "logs/{workflow}/{run}_paired/{primers}/dada2_qiime.log",
+        "logs/{workflow}/{run}_{layout}/{primers}/dada2_qiime.log",
     conda:
         config["software"]["qiime"]["conda_env"]
     group:
@@ -91,7 +128,13 @@ rule qiime_dada2_paired:
         mem_mb=30000,
         runtime=36 * 60,
     script:
-        "../scripts/qiime_denoise_paired.py"
+        "../scripts/qiime_dada2.py"
+
+
+
+##########################
+#### After clustering
+##########################
 
 
 ruleorder:
@@ -100,8 +143,8 @@ ruleorder:
 
 rule qiime_export:
     input:
-        clustered="workdir/{workflow}/{run}/{primers}/{cluster}.qza",
-        tab="workdir/{workflow}/{run}/{primers}/{cluster}_tab.qza",
+        clustered="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/clusters.qza",
+        tab="results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}/otutab.qza",
         stats="workdir/{workflow}/{run}/{primers}/dada2_stats.qza",
     output:
         # directory("results/{workflow}/workflow_qiime_{cluster}/{run}/{primers}"),
@@ -115,6 +158,8 @@ rule qiime_export:
         ),
     log:
         "logs/{workflow}/{run}/{primers}/{cluster}_qiime_export.log",
+    wildcard_constraints:
+        layout = r"(paired|single(_rev)?)",
     conda:
         config["software"]["qiime"]["conda_env"]
     group:

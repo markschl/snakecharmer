@@ -6,6 +6,7 @@ from os.path import dirname
 import csv
 import re
 from collections import OrderedDict, defaultdict
+from itertools import chain
 from glob import glob
 import copy
 
@@ -55,47 +56,44 @@ def expand_input_files(path=None, **wildcards):
     return expand(full_path if path is None else path, **wildcards, **d)
 
 
-def expand_workflows(path, workflows=cfg.workflows, **param):
+def iter_runs(workflows=cfg.workflows, pooled=True):
     for workflow in workflows:
-        yield from expand(
-            path,
-            workflow=workflow,
-            **cfg.workflows[workflow],
-            **param
-        )
+        for run_data in cfg.get_runs(workflow, pooled=pooled):
+            wcfg = cfg.workflows[workflow]
+            if (run_data["technology"], run_data["layout"]) in cfg.pipeline_capabilities[wcfg["pipeline"]]:
+                # print(workflow, wcfg["cluster"], run_data)
+                yield workflow, wcfg, run_data
 
 
 def expand_runs(path, workflows=cfg.workflows, pooled=True, **param):
-    for workflow in workflows:
-        for run_data in cfg.get_runs(workflow, pooled=pooled):
-            yield from expand(
-                path,
-                workflow=workflow,
-                **cfg.workflows[workflow],
-                **run_data,
-                **param
-            )
-
+    for workflow, wcfg, run_data in iter_runs(workflows, pooled):
+        yield from expand(
+            path,
+            workflow=workflow,
+            **wcfg,
+            **run_data,
+            **param
+        )
 
 def run_results(sub_path="", workflows=cfg.workflows, **param):
-    return expand_runs(run_result_path + "{sub_path}", workflows=workflows, sub_path=sub_path, **param)
-
+    return expand_runs(
+        run_result_path + "{sub_path}",
+        workflows=workflows,
+        sub_path=sub_path,
+        **param
+    )
 
 # assists in listing results files
 # requires sub-path in the results dir, or a function that accepts all workflow settings and returns a sub-path
-# TODO: redundancy with run_results
-def result_paths(sub_path="", workflows=cfg.workflows, pooled=True, allow_missing=True):
-    for workflow in workflows:
-        p = cfg.workflows[workflow]
+def result_paths(sub_path="", workflows=cfg.workflows, pooled=True):
+    for workflow, wcfg, run_data in iter_runs(workflows, pooled):
         for marker, primer_comb in cfg.primer_combinations.items():
-            for r in cfg.get_runs(workflow, pooled=pooled):
-                yield from expand(
-                    run_result_path + "/{marker}__{primers}{sub_path}",
-                    workflow=workflow,
-                    cluster=p["cluster"],
-                    marker=marker,
-                    primers=primer_comb,
-                    sub_path=sub_path(marker, primer_comb, p) if callable(sub_path) else sub_path,
-                    allow_missing=allow_missing,
-                    **r
-                )
+            yield from expand(
+                run_result_path + "/{marker}__{primers}{sub_path}",
+                workflow=workflow,
+                marker=marker,
+                primers=primer_comb,
+                sub_path=sub_path(marker, primer_comb, wcfg) if callable(sub_path) else sub_path,
+                **wcfg,
+                **run_data
+            )

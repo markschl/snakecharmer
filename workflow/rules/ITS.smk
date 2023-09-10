@@ -7,7 +7,7 @@ rule itsx:
     params:
         par=config["ITSx"],
     input:
-        fa="results/{workflow}/workflow_{cluster}/{run}/ITS__{primers}/clusters.fasta",
+        fa="results/{workflow}/workflow_{cluster}/{run}/ITS__{primers}/clusters_fwd.fasta",
     output:
         pos="results/{workflow}/workflow_{cluster}/{run}/ITS__{primers}/ITSx/out.positions.txt",
     log:

@@ -48,14 +48,15 @@ def combine_reports(sample_reports, path_pattern, outfile):
     # write data
     with open(outfile, "w") as o:
         w = csv.writer(o, delimiter="\t")
-        w.writerow(f.group_header + header)
-        empty_row = [""] * len(header)
-        for f in sample_files:
-            for row in f.rows:
-                out = copy(empty_row)
-                for i, field in zip(f.field_idx, row):
-                    out[i] = field
-                w.writerow(f.groups + out)
+        if sample_files:
+            w.writerow(sample_files[0].group_header + header)
+            empty_row = [""] * len(header)
+            for f in sample_files:
+                for row in f.rows:
+                    out = copy(empty_row)
+                    for i, field in zip(f.field_idx, row):
+                        out[i] = field
+                    w.writerow(f.groups + out)
 
 
 with file_logging(snakemake.log[0]):

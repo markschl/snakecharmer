@@ -1,3 +1,4 @@
+import re
 import sys
 from subprocess import check_call
 
@@ -6,14 +7,13 @@ from utils import file_logging
 
 def denoise_paired(
         input, 
+        layout,
         seq_out, 
         tab_out, 
         stats_out,
         trunc_qual=None,
-        trunclen_fwd=None,
-        trunclen_rev=None,
-        max_err_fwd=None,
-        max_err_rev=None,
+        trunc_len=None,
+        max_err=None,
         # the following settings have defaults (can be undefined without error)
         merge_maxdiffs=0,
         chimera_method=None,
@@ -21,6 +21,32 @@ def denoise_paired(
         threads=1,
         **unused
 ):
+    cmd = ["qiime", "dada2"]
+
+    # https://docs.qiime2.org/2023.7/plugins/available/dada2/denoise-paired/
+    if layout == "paired":
+        cmd += [
+            "denoise-paired",
+            "--p-trunc-len-f", "{:.0f}".format(trunc_len["fwd"]),
+            "--p-trunc-len-r", "{:.0f}".format(trunc_len["rev"]),
+            "--p-max-ee-f", str(max_err["fwd"]),
+            "--p-max-ee-r", str(max_err["rev"]),
+        ]
+    else:
+        dir_ = "fwd"
+        if layout.endswith(".rev"):
+            layout = re.sub(r"\.rev$", "", layout)
+            dir_ = "rev"
+        assert layout == "single"
+        # https://docs.qiime2.org/2023.7/plugins/available/dada2/denoise-single
+        cmd += [
+            "denoise-single",
+            "--p-trunc-len", "{:.0f}".format(trunc_len[dir_]),
+            "--p-max-ee", str(max_err[dir_]),
+        ]
+
+    # common options
+
     if chimera_method is None:
         chimera_method = "consensus"
     elif chimera_method == "per-sample":
@@ -30,15 +56,9 @@ def denoise_paired(
     elif pooling_method == "pooled":
         print('Warning: "pooling_method = pooled" not possible for QIIME2',
               file=sys.stderr)
-
-    cmd = [
-        "qiime", "dada2", "denoise-paired",
+    cmd += [
         "--i-demultiplexed-seqs", input,
         "--p-trunc-q", "{:.0f}".format(trunc_qual),
-        "--p-trunc-len-f", "{:.0f}".format(trunclen_fwd),
-        "--p-trunc-len-r", "{:.0f}".format(trunclen_rev),
-        "--p-max-ee-f", str(max_err_fwd),
-        "--p-max-ee-r", str(max_err_rev),
         "--p-n-reads-learn", "1000000",  # TODO: not configurable
         "--p-chimera-method", chimera_method,
         "--verbose",
@@ -47,6 +67,7 @@ def denoise_paired(
         "--o-table", tab_out,
         "--o-denoising-stats", stats_out
     ]
+
     if merge_maxdiffs > 0:
         if merge_maxdiffs > 1:
             print("WARNING: 'merge_maxdiffs' is > 1, but QIIME only allows up to one difference.",
@@ -60,6 +81,7 @@ def denoise_paired(
 with file_logging(snakemake.log[0]):
     denoise_paired(
         snakemake.input.trim,
+        layout=snakemake.wildcards.layout,
         seq_out=snakemake.output.asvs,
         tab_out=snakemake.output.tab,
         stats_out=snakemake.output.stats,

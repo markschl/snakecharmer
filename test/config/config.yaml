@@ -13,8 +13,19 @@ software:
 # Input files
 input:
   illumina:
+    # paired-end
     run1: gz/samples_run1.tsv
     run2: gz/samples_run2.tsv
+    # single-end R1 reads
+    run1s: gz/samples_run1_single.tsv
+    run2s: gz/samples_run2_single.tsv
+    # single-end R2 reads
+    run1srev:
+      samples: gz/samples_run1_single_rev.tsv
+      reverse: true
+    run2srev:
+      samples: gz/samples_run2_single_rev.tsv
+      reverse: true    
 
 # Workflow definition
 workflows:
@@ -52,6 +63,9 @@ workflows:
     cluster: qiime_dada2
     taxonomy: default
   # Amptk
+  amptk_uparse:
+    cluster: amptk_uparse
+    taxonomy: default
   amptk_unoise:
     cluster: amptk_unoise3
     taxonomy: default
@@ -91,6 +105,7 @@ primers:
   trim_settings:
     min_overlap: 15
     max_error_rate: 0.25
+    min_length: 100
 
 # Taxonomic databases
 taxonomy_dbs:
@@ -122,7 +137,6 @@ usearch:
 
   # read filtering before denoising
   filter:
-    min_length: 100
     max_error_rate: 0.002  #  0.8 errors per 400 bp
 
   unoise3:
@@ -138,15 +152,19 @@ usearch:
 
 # DADA2 specific settings
 dada2:
-  trunc_qual: 1.0
-  max_err_fwd: 5
-  max_err_rev: 15
-  trunclen_fwd: 280
-  trunclen_rev: 250
+  trunc_qual: 2.
+  # trunc_len = 0 means no truncation/filtering, which is better for ITS data
+  # https://benjjneb.github.io/dada2/ITS_workflow.html
+  trunc_len:
+    fwd: 0
+    rev: 0
+  max_err:
+    fwd: 2
+    rev: 5
   pooling_method: independent  # { independent, pseudo, pooled }
   chimera_method: consensus  # { consensus, per-sample, pooled }
   merge_maxdiffs: 1
-  min_length: 100
+
 
 # ITS recognition (fungi)
 ITSx:

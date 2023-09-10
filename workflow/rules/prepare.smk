@@ -4,7 +4,6 @@ localrules:
     make_pooling_list,
     dump_config,
     link_data_dir,
-    combine_sample_reports,
     collect_unique_files
 
 
@@ -119,7 +118,7 @@ rule collect_sample_files:
         "logs/input/{technology}/{layout}/{run}/collect_sample_files.log",
     wildcard_constraints:
         technology = r"\w+",
-        layout = r"(single|paired)",
+        layout = r"(single(\.rev)?|paired)",
         run = r"\w+",
     group:
         "run"
@@ -163,7 +162,7 @@ rule pool_runs_raw:
         "logs/input/{technology}/{layout}/{run}_pool/pool_raw.log",
     wildcard_constraints:
         technology = r"\w+",
-        layout = r"(single|paired)",
+        layout = r"(single(\.rev)?|paired)",
         run = r"\w+",
     threads: workflow.cores,
     conda:

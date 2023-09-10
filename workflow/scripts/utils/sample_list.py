@@ -31,15 +31,15 @@ class SampleList(object):
         if ncol == 3:
             assert header == SampleList.default_header["paired"] or header == SampleList.qiime_header["paired"], (
                 "Unknown paired-end sample file header: {}. "
-                "Valid are {} or {}").format(header, SampleList.header["single"], SampleList.qiime_header["single"])
+                "Valid are {} or {}").format(header, SampleList.default_header["single"], SampleList.qiime_header["single"])
             layout = "paired"
         else:
             assert ncol == 2, (
                 "Invalid number of columns in sample file. "
                 "Either two (single-end) or three (paired-end) are expected")
-            assert header == SampleList.header["single"] or header == SampleList.qiime_header["single"], (
+            assert header == SampleList.default_header["single"] or header == SampleList.qiime_header["single"], (
                 "Unknown paired-end sample file header: {}. "
-                "Valid are {} or {}").format(header, SampleList.header["single"], SampleList.qiime_header["single"])
+                "Valid are {} or {}").format(header, SampleList.default_header["single"], SampleList.qiime_header["single"])
             layout = "single"
         return ncol, layout
 

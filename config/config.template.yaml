@@ -279,26 +279,33 @@ usearch:
     # The program to use (optional; default: vsearch)
     program: vsearch  # { vsearch, usearch }
 
+
 # DADA2 specific settings (still incomplete)
-# for QIIME2 DADA2 plugin docs, see https://docs.qiime2.org/2022.11/plugins/available/dada2/cluster-paired/
+# for QIIME2 DADA2 plugin docs, see 
+# https://docs.qiime2.org/2023.7/plugins/available/cutadapt/trim-paired
+# The Amptk 'dada2' workflow makes only use of the 'chimera_method' setting
 dada2:
   # quality score at which sequences are truncated (--p-trunc-q)
   # (if the result is shorter than trunclen_fwd/trunclen_rev, the read is discarded)
-  trunc_qual: 2.0
-  # QIIME2: --p-max-ee-f
-  max_err_fwd: 1
-  # QIIME2: --p-max-ee-r
-  max_err_rev: 15
-  # QIIME2: --p-trunc-len-f
-  trunclen_fwd: 280
-  # QIIME2: --p-trunc-len-r
-  trunclen_rev: 250
+  trunc_qual: 2.
+  # Truncate reads to given number of bases. Shorter reads are discarded
+  # (truncLen option, QIIME2: --p-trunc-len-f / --p-trunc-len-r)
+  trunc_len:
+    fwd: 0
+    rev: 0
+  # Maximum number of expected errors in forward/reverse reads for them
+  # to be retained in the analysis
+  # (maxEE option, unlimited by default; QIIME2: --p-max-ee-f / --p-max-ee-r, 2.0 by default)
+  max_err:
+    fwd: 2
+    rev: 5
   # QIIME2: --p-pooling-method
   pooling_method: independent  # { independent, pseudo, pooled }
   # QIIME2: --p-chimera-method
   chimera_method: consensus  # { consensus, per-sample, pooled }
   # QIIME2: --p-allow-one-off (values > 1 are set to 1)
   merge_maxdiffs: 1
+
 
 # ITS recognition (fungi)
 # for options see https://microbiology.se/publ/itsx_users_guide.pdf

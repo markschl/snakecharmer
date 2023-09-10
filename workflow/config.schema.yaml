@@ -396,23 +396,30 @@ properties:
 
   dada2:
     type: object
-    default: {}
     properties:
       trunc_qual:
         type: number
         minimum: 0
-      max_err_fwd:
-        type: number
-        minimum: 0
-      max_err_rev:
-        type: number
-        minimum: 0
-      trunclen_fwd:
-        type: integer
-        minimum: 0
-      trunclen_rev:
-        type: integer
-        minimum: 0
+      trunc_len:
+        type: object
+        properties:
+          fwd:
+            type: integer
+            minimum: 0
+          rev:
+            type: integer
+            minimum: 0
+        required: [fwd, rev]
+      max_err:
+        type: object
+        properties:
+          fwd:
+            type: number
+            minimum: 0
+          rev:
+            type: number
+            minimum: 0
+        required: [fwd, rev]
       chimera_method:
         type: string
         enum: [consensus, per-sample, pooled]
@@ -422,7 +429,7 @@ properties:
       merge_maxdiffs:
         type: integer
         minimum: 0
-    required: [trunc_qual, max_err_fwd, max_err_rev, trunclen_fwd, trunclen_rev, pooling_method, chimera_method, merge_maxdiffs, min_length]
+    required: [trunc_qual, trunc_len, max_err, pooling_method, chimera_method, merge_maxdiffs]
     additionalProperties: false
 
   ITSx:

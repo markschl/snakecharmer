@@ -64,9 +64,10 @@ def process_primers(primers_by_marker, single_method='consensus:50'):
             for name, d in seq_dict.items()
         }
     # consensus
+    # TODO: warn/fail if sequences are too divergent
     if single_method.startswith('consensus:'):
         t = float(single_method.replace('consensus:', '').strip()) / 100.
-        fn = lambda seqs: oligo_consensus(seqs, threshold=t)
+        fn = lambda seqs: oligo_consensus(seqs, threshold=t) if len(seqs) > 1 else seqs[0]
     else:
         raise Exception('Currently no method other than "consensus:<threshold>" available to obtain a single oligo')
     for key, seq_dict in list(out.items()):

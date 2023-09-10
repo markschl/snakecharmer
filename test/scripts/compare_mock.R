@@ -33,25 +33,28 @@ if (length(dirs) > 0) {
     data = map_dfr(seq_along(primer_dirs), function(i) {
       # OTU tabs
       tab_file = tabs[i]
-      pipeline = basename(dirname(dirname(dirname(dirname(tab_file)))))
-      strategy = basename(dirname(tab_file))
+      groups = stringr::str_match(
+        primer_dirs[i], 
+        ".+?/(?<workflow>[^/]+)/workflow_.+?/(?<run>.+?)_(?<layout>[^/_]+)/(?<primers>[^/]+)"
+      )[, 2:5, drop=F]
       d = suppressMessages(read_tsv(tab_file))
       names(d)[1] = 'OTU'
       # OTU -> mock reference mapping
-      cmp = suppressMessages(read_tsv(mapping[i], 
-                                      col_names=c('OTU', 'species', 'ident')))
-      d %>% 
+      cmp = suppressMessages(read_tsv(
+        mapping[i], 
+        col_names=c('OTU', 'species', 'ident'),
+        col_types='ccn'
+      ))
+      d = d %>% 
         pivot_longer(-OTU, names_to='sample', values_to='count') %>% 
-        mutate(pipeline=!!pipeline,
-               strategy=!!strategy) %>% 
         left_join(cmp, 'OTU') %>% 
         left_join(freq, c('species', 'sample'))
+      bind_cols(groups, d)
     })
-    
-    stopifnot(!is.na(data$count) & !is.na(data$species))
-    
+
     data = data %>% 
-      group_by(pipeline, strategy, sample, species, rel_mixed) %>% 
+      mutate(group=paste(workflow, run, layout)) %>% 
+      group_by(group, sample, species, rel_mixed) %>% 
       summarise(
         count = sum(count), 
         n=n(), 
@@ -60,24 +63,26 @@ if (length(dirs) > 0) {
       )
     
     leg = guide_legend(ncol=1)
-    ggplot(data, aes(rel_mixed, count, colour=paste(pipeline, strategy), shape=paste(pipeline, strategy))) +
+    ggplot(data, aes(rel_mixed, count, colour=group, shape=group)) +
       facet_grid( ~ sample, scales='free') + 
-      geom_point(aes(size=as.factor(n)), pch=21, alpha=0.7) +
-      geom_smooth(method='lm', formula='y~x', se=F, size=0.3) +
-      scale_size_discrete(range=c(1, 2)) +
+      geom_point(aes(size=as.integer(as.factor(n))), pch=21, alpha=0.7) +
+      geom_smooth(method='lm', formula='y~x', se=F, linewidth=0.3) +
+      scale_size_continuous(range=c(1, 2)) +
       scale_colour_brewer(palette='Paired') +
       scale_x_log10() +
       scale_y_log10() +
       labs(x='Mixed relative concentration',
            y='Read count',
-           colour='Pipeline', size='Number of ASVs', shape='Pipeline') +
+           colour='Workflow/run',
+           shape='Workflow/run',
+           size='Number of ASVs') +
       guides(colour=leg, shape=leg, size=leg) +
       theme_bw() +
       theme(strip.text.y=element_text(angle=0),
             legend.position='bottom')
     ggsave(file.path(outdir, 'mock.png'),
            width=16, height=12, units='cm', dpi=300)
-    last_plot() + facet_grid(pipeline ~ sample, scales='free')
+    last_plot() + facet_grid(group ~ sample, scales='free')
     ggsave(file.path(outdir, 'mock_detail.png'),
                      width=16, height=25, units='cm', dpi=300)
 
@@ -88,8 +93,9 @@ if (length(dirs) > 0) {
       sample = smp$sample[1]
       m = smp %>% 
         select(-OTU, -sample, -n) %>% 
-        arrange(-rel_mixed, pipeline, strategy) %>% 
-        pivot_wider(names_from=c(pipeline, strategy), values_from=count, values_fill=0, names_sep=' ') %>% 
+        mutate(species=if_else(is.na(species), "(other)", species)) %>% 
+        arrange(-rel_mixed, group) %>% 
+        pivot_wider(names_from=group, values_from=count, values_fill=0, names_sep=' ') %>% 
         column_to_rownames('species')
       # add totals on top
       m = rbind(total=colSums(m), m)

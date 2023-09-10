@@ -58,7 +58,7 @@ class Config(object):
             )
             d["layout"] = layout = SampleList.infer_layout(d["sample_file"])
             if layout == "single" and d["orientation"] == "reverse":
-                d["layout"] = layout = "single_rev"
+                d["layout"] = layout = "single.rev"
             grouped[d["technology"]][layout][run] = d
             self.runs[(run, layout)] = d
 
@@ -174,6 +174,7 @@ class Config(object):
         del self.config['workflows']
         for name, p in self.workflows.items():
             p['name'] = name
+            p['pipeline'] = p['cluster'].split('_', 1)[0]
             # clustering workflow
             # copy settings over, add extra settings overriding the defaults
             if 'settings' in p:
@@ -182,6 +183,9 @@ class Config(object):
                 recursive_update(p['settings'], settings)
             else:
                 p['settings'] = copy.deepcopy(self.config)
+        # possible technology/layout combinations that work
+        # (populated in corresponding snakefiles)
+        self.pipeline_capabilities = {}
 
     def _assemble_taxonomy(self):
         """

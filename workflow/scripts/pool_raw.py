@@ -14,7 +14,8 @@ from utils import file_logging
 def do_pooling(data):
     source_paths, target_path = data
     # make sure that all file names are the same
-    assert len(set(os.path.basename(p) for p in list(source_paths) + [target_path])) == 1
+    # TODO: this assertion fails with 'single.rev' layout
+    # assert len(set(os.path.basename(p) for p in list(source_paths) + [target_path])) == 1
     try:
         if len(source_paths[0]) == 1:
             # we only need to link

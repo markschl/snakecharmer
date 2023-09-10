@@ -1,4 +1,10 @@
 from os.path import join, abspath, exists
+from lib import get_repo_location, download_repo
+
+cfg.pipeline_capabilities["usearch"] = [
+    ("illumina", "paired"),
+]
+
 
 usearch_cfg = config["software"]["usearch"]
 

@@ -11,14 +11,14 @@ rule vsearch_global:
         maxrejects=lambda w: with_default(cfg[w.workflow]["settings"]["compare"], w.comparison, "maxrejects"),
         maxhits=lambda w: with_default(cfg[w.workflow]["settings"]["compare"], w.comparison, "maxhits"),
     input:
-        otus="results/{workflow}/workflow_{cluster}/{run}/{primers}/clusters.fasta",
+        otus="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/clusters_fwd.fasta",
     output:
-        map="results/{workflow}/workflow_{cluster}/{run}/{primers}/cmp/{comparison}.txt",
-        bam="results/{workflow}/workflow_{cluster}/{run}/{primers}/cmp/{comparison}.bam",
-        clusters_notmatched="results/{workflow}/workflow_{cluster}/{run}/{primers}/cmp/{comparison}_clusters_notmatched.fasta.gz",
-        notmatched="results/{workflow}/workflow_{cluster}/{run}/{primers}/cmp/{comparison}_notmatched.fasta.gz",
+        map="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{comparison}.txt",
+        bam="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{comparison}.bam",
+        clusters_notmatched="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{comparison}_clusters_notmatched.fasta.gz",
+        notmatched="results/{workflow}/workflow_{cluster}/{run}_{layout}/{primers}/cmp/{comparison}_notmatched.fasta.gz",
     log:
-        "logs/{workflow}/{run}/{primers}/{cluster}_cmp_{comparison}.log",
+        "logs/{workflow}/{run}_{layout}/{primers}/{cluster}_cmp_{comparison}.log",
     group:
         "cmp"
     # TODO: resources? usually pretty fast
@@ -27,29 +27,37 @@ rule vsearch_global:
         "envs/vsearch-samtools.yaml"
     shell:
         """
-        bam={output.bam}
-        sam=${{bam%.*}}
-        notmatched={output.notmatched}; notmatched=${{notmatched%.gz}}
-        clusters_notmatched={output.clusters_notmatched}; clusters_notmatched=${{clusters_notmatched%.gz}}
-        vsearch -usearch_global {input.otus} -db "{params.db}" \
-            -userout {output.map} \
-            -samout $sam \
+        exec &> {log}
+        set -xeuo pipefail
+        bam="{output.bam}"
+        sam="${{bam%.*}}.sam"
+        notmatched="{output.notmatched}"
+        notmatched="${{notmatched%.gz}}"
+        clusters_notmatched="{output.clusters_notmatched}"
+        clusters_notmatched="${{clusters_notmatched%.gz}}"
+        vsearch -usearch_global "{input.otus}" -db "{params.db}" \
+            -userout "{output.map}" \
+            -samout "$sam" \
             -userfields 'query+target+id' \
-            -notmatched $clusters_notmatched \
-            -dbnotmatched $notmatched \
+            -notmatched "$clusters_notmatched" \
+            -dbnotmatched "$notmatched" \
             -threads {threads} \
             -maxaccepts {params.maxaccepts} \
             -maxrejects {params.maxrejects} \
             -maxhits {params.maxhits} \
-            -id {params.threshold} &> {log}
+            -id {params.threshold}
         # compress not-matched files
-        gzip -nf $notmatched $clusters_notmatched 2> {log}
-        # make BAM file
-        rm -f "{params.db}.fai" $bam.bai
-        samtools view -T "{params.db}" -b $sam |
-          samtools sort -@ {threads} > $bam 2> {log}
-        rm -f $sam "{params.db}.fai"
-        samtools index $bam 2> {log}
+        gzip -nf "$notmatched" "$clusters_notmatched"
+        if [ -s "$sam" ]; then
+            # make BAM file
+            rm -f "{params.db}.fai" "$bam.bai"
+            samtools view -T "{params.db}" -b "$sam" |
+            samtools sort -@ {threads} > "$bam"
+            samtools index "$bam"
+        else
+            echo -n > "$bam"
+        fi
+        rm -f "$sam" "{params.db}.fai"
         """
 
 

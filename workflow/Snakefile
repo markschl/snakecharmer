@@ -20,7 +20,7 @@ validate(config, "config.schema.yaml")
 
 include: "rules/common.smk"
 include: "rules/prepare.smk"
-include: "rules/stats.smk"
+include: "rules/post_cluster.smk"
 include: "rules/biom.smk"
 include: "rules/cmp.smk"
 include: "rules/qc.smk"
@@ -94,7 +94,7 @@ rule cluster:
         )),
         stats=expand("results/{workflow}/sample_report.tsv", workflow=cfg.workflows),
         data_dir=expand("results/{workflow}/.outdirs", workflow=cfg.workflows),
-        log=expand_runs("logs/{workflow}/{run}_paired_{cluster}_all.log"),
+        log=expand_runs("logs/{workflow}/{run}_{layout}_{cluster}_all.log"),
 
 
 rule taxonomy:

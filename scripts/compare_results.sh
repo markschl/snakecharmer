@@ -31,14 +31,14 @@ echo -n > $project_dir/cmp/self_cmp.txt
 
 # collect ASVs/OTUS by primer combination
 ls $project_dir/results/*/*/*/*/clusters.fasta | 
-  sed -E "s|.+?/([^/]+)/workflow_.+?/.+?_([^/]+)/([^/]+)/.*\.fasta|\1 \2 \3|g" |
+  sed -E "s|.+?/([^/]+)/.*\.fasta|\1|g" |
   sort -u |
-  while read name layout primers; do
+  while read primers; do
+    echo $primers
     # TODO: only one run possible, run pool assumed
-    echo "$name $layout $primers"
     # cluster all the OTUs/ASVs together at defined threshold
     cluster_file=$project_dir/cmp/clusters.$primers.fasta
-    cat $project_dir/results/*/*/*/$primers/clusters.fasta |
+    cat $project_dir/results/*/*/*/$primers/clusters_fwd.fasta |
       vsearch -cluster_fast - \
         -id $id \
         -centroids $cluster_file \
@@ -48,7 +48,10 @@ ls $project_dir/results/*/*/*/*/clusters.fasta |
         -maxaccepts 64 -maxrejects 64
 
     # map every OTU set against these clusters
-    for f in $project_dir/results/*/*/*/$primers/clusters.fasta; do
+    for f in $project_dir/results/*/*/*/$primers/clusters_fwd.fasta; do
+      pattern="s|.+?/([^/]+)/workflow_.+?/(.+?)_([^/_]+)/([^/]+)/.*\.fasta|\1 \2 \3 \4|g"
+      IFS=' ' read -r name run layout _primers < <(sed -E "$pattern" <<< $f)
+      echo "$name $run $layout $primers"
       vsearch -usearch_global $f -db $cluster_file \
         -id $map_id -maxhits 1 -quiet \
         -userout - -userfields query+target+id \
@@ -56,8 +59,8 @@ ls $project_dir/results/*/*/*/*/clusters.fasta |
         -quiet \
         -maxaccepts 64 -maxrejects 64 |
         awk -F$'\t' -v OFS=$'\t'  \
-          -v name=$name -v primers=$primers -v layout=$layout \
-          '$0=name FS primers FS layout FS $0' >> $project_dir/cmp/cmp.txt
+          -v dir=$(dirname $f) -v name=$name -v run=$run -v layout=$layout -v primers=$primers \
+          '$0=dir FS name FS run FS layout FS primers FS $0' >> $project_dir/cmp/cmp.txt
     done
 
     # also, map clusters against themselves to obtain the closest relatives
