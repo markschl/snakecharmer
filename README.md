@@ -4,12 +4,12 @@ This software makes use of the workflow management system [Snakemake](https://sn
 
 **Features**
 
-- Clustering/denoising of raw amplicon sequencing data, taxonomic assignments and further sequence comparisons and marker-specific processing (such as ITS extraction)
-- Comparison of different pipelines or variations of the same pipeline using different sets of parameters. Workflow output is presented in a common file structure.
-- Simultaneous processing of multi-marker amplicons generated using different primer sets
-- Multiple taxonomic assignment methods can be applied to each dataset using different marker-specific reference databases
+- *Clustering/denoising* of raw amplicon sequencing data, *taxonomic assignments* and further sequence comparisons and *marker-specific processing* (such as ITS extraction)
+- *Comparison* of different pipelines or variations of the same pipeline using *different sets of parameters*. Workflow output is presented in a common file structure.
+- Simultaneous processing of *multi-marker amplicons* generated using different primer sets
+- *Multiple taxonomic assignment methods* can be applied to each dataset using different marker-specific reference databases
 
-*Note:* To this is a work in progress and will be extended further (see [below](#further-steps)).
+This is a work in progress and will be extended further (see [below](#further-steps)).
 
 **Non-features**
 
@@ -17,14 +17,14 @@ The software does not assist with comprehensive statistical analyses, even thoug
 
 **Integrated pipelines**
 
-- [USEARCH](https://www.drive5.com/usearch/manual)/[VSEARCH](https://github.com/torognes/vsearch)-based amplicon pipeline using UNOISE3 for obtaining ASVs (paired-end implemented)
-- [QIIME2](https://qiime2.org) (currently with DADA2 denoising)
+- [uvsnake](https://github.com/markschl/uvsnake), an [USEARCH](https://www.drive5.com/usearch/manual)/[VSEARCH](https://github.com/torognes/vsearch)-based paired-end amplicon pipeline (UPARSE and UNOISE3)
+- [QIIME2](https://qiime2.org) with DADA2 denoising offering paired-end and single-end analyses
 - [Amptk](https://github.com/nextgenusfs/amptk) (UNOISE3 and DADA2, paired-end only)
 - ... (more to follow)
 
 **Validation**
 
-Validation is done using amplicon data from a fungal mock community ([details in `test` directory](test/README.md)) and a basic comparison of the different workflows can be done [using a script](#comparison-of-pipelines).
+Validation is done using amplicon data from a fungal mock community ([details in `test` directory](test/README.md)) and a basic comparison of the different workflows can be done [using a dedicated script](#comparison-of-pipelines).
 
 No snakes 🐍 were harmed in the process of creating this software
 
@@ -34,10 +34,10 @@ The software makes use of the [Conda package manager](https://conda.io), the ins
 
 ## Configuring
 
-The easiest is to copy the contents of the [config](config/) or [test/config](test/config) directory into a new analysis directory and then modify the files according to your needs. There are two YAML files:
+The easiest is to copy the contents of the [config](config/) directory into a new analysis directory and rename `config.template.yaml` to `config.yaml` and `taxonomy.template.yaml` to `taxonomy.yaml`, and then modify the files according to your needs. The two configuration files:
 
-* **`config.yaml`**: Main configuration file containing input and workflow definitions. [See here](docs/config.md) for a description and examples (incomplete). All available options are are documented [in `config/config.template.yaml`](config/config.template.yaml).
-* **`taxonomy.template.yaml`**: Defines all available taxonomcic databases. [See here for details](docs/taxonomy.md). See also [`config/taxonomy.template.yaml`](config/taxonomy.template.yaml).
+* **`config.yaml`**: Main configuration file containing input and workflow definitions. [See here](docs/config.md) for a (incomplete) description. The available options are are further documented [in `config/config.template.yaml`](config/config.template.yaml).
+* **`taxonomy.template.yaml`**: Defines all available taxonomcic databases. [See here for details](docs/taxonomy.md), as well as [`config/taxonomy.template.yaml`](config/taxonomy.template.yaml) for examples.
 
 ## Running
 
@@ -129,6 +129,5 @@ A list of possible next steps includes:
 - Offer more ways of comparing and validating pipelines and generally improve user experience
 - Testing deployment on different systems
 - Improve configuration of job resources (memory, CPUs)
-- The USEARCH pipeline may be moved into an extra repository to be used independently
 - ...
 

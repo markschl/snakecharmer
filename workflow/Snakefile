@@ -25,8 +25,8 @@ include: "rules/biom.smk"
 include: "rules/cmp.smk"
 include: "rules/qc.smk"
 
-if "usearch" in config["software"]:
-    include: "rules/usearch.smk"
+if "uvsnake" in config["software"]:
+    include: "rules/uvsnake.smk"
 
 if "qiime" in config["software"]:
     include: "rules/qiime.smk"

@@ -17,12 +17,15 @@ properties:
                 in $PATH. Alternatively, an absolute or relative path
                 (relative to analysis directory containing 'config') can be
                 specified.
+      uvsnake:
+        type: object
+        properties:
           snakemake_env:
             type: string
             description:
               Name of the Snakemake Conda environment (in case Snakemake was installed
               with Conda, if always in $PATH, this can be omitted
-          uvsnake:
+          repo:
             type: object
             properties:
               github:

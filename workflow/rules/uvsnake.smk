@@ -6,9 +6,6 @@ cfg.pipeline_capabilities["usearch"] = [
 ]
 
 
-usearch_cfg = config["software"]["usearch"]
-
-
 # def get_uvsnake_source():
 #     uvcfg = usearch_cfg["uvsnake"]
 #     path = uvcfg.get("path", None)
@@ -25,7 +22,7 @@ usearch_cfg = config["software"]["usearch"]
 # paths
 uvsnake_workdir = "workdir/{workflow}/{run}_paired"
 uvsnake_workdir_q = "workdir/{{workflow}}/{{run}}_paired"
-uvsnake_path, uvsnake_url, uvsnake_id = get_repo_location(**usearch_cfg["uvsnake"])
+uvsnake_path, uvsnake_url, uvsnake_id = get_repo_location(**config["software"]["uvsnake"]["repo"])
 if uvsnake_path is None:
     uvsnake_path = f"workdir/_uvsnake/{uvsnake_id}"
     if not exists(uvsnake_path):

@@ -2,9 +2,10 @@
 software:
   usearch:
     binary: usearch
+  uvsnake:
     snakemake_env: snakemake
-    uvsnake:
-      commit: bc31e78 
+    repo:
+      commit: 819830d 
   qiime:
     conda_env: qiime2-2022.11
   amptk:

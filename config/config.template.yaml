@@ -10,16 +10,19 @@ software:
   usearch:
     # Path to USEARCH  (download here: https://drive5.com/usearch/)
     # By default, assuming that the binary is in $PATH as 'usearch'
+    # This setting is used by the uvsnake and amptk workflows
     binary: usearch
+  uvsnake:
     # optional, if Snakemake was installed in Conda; otherwise it should be in $PATH
     snakemake_env: snakemake
     # https://github.com/markschl/uvsnake source and/or version
-    uvsnake:
+    repo:
       tag: v0.1
+      # # or...
       # commit: afec00c
       # path: <local path to downloaded repo>
   qiime:
-    conda_env: qiime2-2022.11
+    conda_env: qiime2-2023.7
   amptk:
     conda_env: amptk
 

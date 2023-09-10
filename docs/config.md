@@ -20,6 +20,10 @@ This example uses UNOISE3 clustering of an ITS2 amplicon and assigns taxonomy us
 software:
   usearch:
     binary: usearch  # only needed with program: usearch
+  uvsnake:
+    snakemake_env: snakemake
+    repo:
+      tag: v0.1
 
 input:
   illumina:
