@@ -1,7 +1,7 @@
 from os.path import join, abspath, exists
 from lib import get_repo_location, download_repo
 
-cfg.pipeline_capabilities["usearch"] = [
+cfg.pipeline_capabilities["uvsnake"] = [
     ("illumina", "paired"),
 ]
 
@@ -104,12 +104,12 @@ rule uvsnake_copy_results:
         log=rules.uvsnake_cluster.output.combined_log,
     output:
         results=expand(
-            "results/{{workflow}}/workflow_usearch_{{cluster_method}}/{{run}}_paired/{primers}/{what}", 
+            "results/{{workflow}}/workflow_uvsnake_{{cluster_method}}/{{run}}_paired/{primers}/{what}", 
             primers=cfg.primer_combinations_flat,
             what=["clusters.fasta", "otutab.txt.gz", "otutab.biom"],
         ),
-        stats="results/{workflow}/workflow_usearch_{cluster_method}/{run}_paired/sample_report.tsv",
-        log="logs/{workflow}/{run}_paired_usearch_{cluster_method}_all.log",
+        stats="results/{workflow}/workflow_uvsnake_{cluster_method}/{run}_paired/sample_report.tsv",
+        log="logs/{workflow}/{run}_paired_uvsnake_{cluster_method}_all.log",
     log:
         "logs/{workflow}/{run}_paired/uvsearch_copy_{cluster_method}.log",
     group:
@@ -147,7 +147,7 @@ rule usearch_multiqc:
         ),
         cutadapt_dir=rules.uvsnake_prepare.output.trim_dir,
     output:
-        "results/{workflow}/workflow_usearch_{cluster}/{run}_paired/_qc/multiqc_report.html",
+        "results/{workflow}/workflow_uvsnake_{cluster}/{run}_paired/_qc/multiqc_report.html",
     log:
         "logs/{workflow}/{run}_paired/usearch_{cluster}_paired_multiqc.log",
     conda:

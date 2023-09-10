@@ -242,10 +242,6 @@ rule collect_unique_files:
         "../scripts/collect_unique_files.py"
 
 
-
-#### Workdir ####
-
-
 # Creates a directory called 'data' inside the workflow results dir 
 # if there is only a single run/layout/primer combination in the whole datataset,
 # so it is not necessary to dive into all the nested directories

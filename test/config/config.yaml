@@ -32,11 +32,11 @@ input:
 workflows:
   # UPARSE pipeline (uses USEARCH)
   uparse:
-    cluster: usearch_uparse
+    cluster: uvsnake_uparse
     taxonomy: default
   # UNOISE3 pipeline using VSEARCH for denoising
   unoise:
-    cluster: usearch_unoise3
+    cluster: uvsnake_unoise3
     taxonomy: default
   # UNOISE3 pipeline using USEARCH for read merging
   # Read merging is the one step which differs most
@@ -46,7 +46,7 @@ workflows:
   # to the same results as with USEARCH at least for the test
   # dataset (just the OTU order is slightly different)
   unoise_umerge:
-    cluster: usearch_unoise3
+    cluster: uvsnake_unoise3
     taxonomy: default
     settings:
       usearch:
@@ -54,7 +54,7 @@ workflows:
   # UNOISE3 pipeline using USEARCH for all tasks
   # (except for simple ones such as de-replication and quality filtering)
   unoise_usearch:
-    cluster: usearch_unoise3
+    cluster: uvsnake_unoise3
     taxonomy: default
     settings:
       usearch:

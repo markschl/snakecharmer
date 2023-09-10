@@ -66,34 +66,20 @@ pool_raw: false
 workflows:
   # UNOISE3 pipeline using VSEARCH for denoising
   unoise:
-    cluster: usearch_unoise3  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
+    cluster: uvsnake_unoise3
     taxonomy: default # using all taxonomy_dbs and taxonomy_methods
   # UNOISE3 pipeline using USEARCH for denoising and a custom combination
   # of taxonomy databases/assignment methods
   unoise_usearch:
-    cluster: usearch_unoise3  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
+    cluster: uvsnake_unoise3
     taxonomy:
       dbs:  # chooses specific 'taxonomy_dbs' (below)
         ITS: [unite_species]
       methods:  # chooses specific 'taxonomy_methods' (below)
         - sintax_90
-    # Here, we choose USEARCH for all relevant tasks instead of VSEARCH.
-    # *Note* that VSEARCH is still used for minor tasks such as sequence filtering,
-    # where the outcome should anyway be the same between the two programs.
-    # These settings simply overwrite the default settings found below
-    # in this file. 
-    # The settings hierarchy needs to be exactly the same as below.
-    # You may run the 'config' rule first and then check the file 
-    # `results/<pipeline>/config.yaml` to see if the settings were 
-    # correctly overridden.
-    settings:
-      usearch:
-        merge: { program: usearch }
-        unoise: { program: usearch }
-        otutab: { program: usearch }
   # QIIME / DADA2
   qiime_dada2:
-    cluster: qiime_dada2  # { usearch_unoise3, qiime_dada2, amptk_unoise3, amptk_dada2 }
+    cluster: qiime_dada2
     taxonomy: default
   # Amptk with UNOISE3 clustering
   amptk_unoise:

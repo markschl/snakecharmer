@@ -215,6 +215,19 @@ cluster_method_b_settings:
 
 This runs `workflow1` and `workflow2`, which use the clustering/denoising pipelines "a" and "b" with default settings listed below. Extra detail: some advanced settings are actually not required to be listed in `config.yaml`. All these settings and their default values can currently only be found in this [JSON Schema file](../workflow/config.schema.yaml).
 
+### Cluster methods
+
+The following clustering methods are available:
+
+* *uvsnake* pipeline:
+  * `uvsnake_unoise3`
+  * `uvsnake_uparse`
+* *QIIME2*:
+  * `qiime2_dada2`
+* *Amptk*:
+  * `amptk_unoise3`
+  * `amptk_uparse`
+  * `amptk_dada2`
 
 ### Parameter variations
 
