@@ -300,6 +300,54 @@ def config_hash(items: Iterable[Tuple[str, str]], empty_str: Optional[str] = Non
     return sha256(s).hexdigest()
 
 
+
+def get_repo_location(**repo_config):
+    path = repo_config.get("path", None)
+    tag = repo_config.get("tag", None)
+    commit = repo_config.get("commit", None)
+    # remote
+    base_url = "https://github.com/{github}/archive".format(**repo_config)
+    if tag is not None:
+        url = f"{base_url}/refs/tags/{tag}.zip"
+        id_ = tag
+    elif commit is not None:
+        url = f"{base_url}/{commit}.zip"
+        id_ = commit
+    else:
+        id_ = "local"
+        url = None
+    assert url is not None or path is not None, \
+        "Either tag or commit or path must be defined with uvsnake source"
+    return path, url, id_
+
+
+def download_repo(url, target_dir):
+    """
+    Downloads the 'uvsnake' pipeline to the working directory.
+    This solution was chosen over specifying a remote
+    Snakefile with github(...) due to Python modules not being
+    included (see also https://github.com/snakemake/snakemake/issues/1632)
+    """
+    from urllib.request import urlopen
+    from io import BytesIO
+    import zipfile
+    import sys
+    import os
+    import shutil
+    print(f"Downloading {url}...", file=sys.stderr)
+    handle = urlopen(url)
+    memzip = BytesIO(handle.read())
+    archive = zipfile.ZipFile(memzip)
+    files = [f for f in archive.namelist() if "/workflow/" in f]
+    base_dir = files[0].split("/")[0]
+    parent = os.path.dirname(target_dir)
+    extr_dir = os.path.join(parent, base_dir)
+    os.makedirs(parent, exist_ok=True)
+    archive.extractall(parent, files)
+    shutil.copytree(extr_dir, target_dir, dirs_exist_ok=True)
+    shutil.rmtree(extr_dir)
+
+
 # def get_nested(d, *keys):
 #     """
 #     Get a nested dict entry or None if non-existent

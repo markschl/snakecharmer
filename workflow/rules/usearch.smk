@@ -15,62 +15,15 @@ usearch_cfg = config["software"]["usearch"]
 #         commit=uvcfg.get("commit", None)
 #     )
 
-def get_uvsnake_location():
-    uvcfg = usearch_cfg["uvsnake"]
-    path = uvcfg.get("path", None)
-    tag = uvcfg.get("tag", None)
-    commit = uvcfg.get("commit", None)
-    # remote
-    base_url = "https://github.com/{github}/archive".format(**uvcfg)
-    if tag is not None:
-        url = f"{base_url}/refs/tags/{tag}.zip"
-        id_ = tag
-    elif commit is not None:
-        url = f"{base_url}/{commit}.zip"
-        id_ = commit
-    else:
-        id_ = "local"
-        url = None
-    assert url is not None or path is not None, \
-        "Either tag or commit or path must be defined with uvsnake source"
-    return path, url, id_
-
-
-def download_uvsnake(url, target_dir):
-    """
-    Downloads the 'uvsnake' pipeline to the working directory.
-    This solution was chosen over specifying a remote
-    Snakefile with github(...) due to Python modules not being
-    included (see also https://github.com/snakemake/snakemake/issues/1632)
-    """
-    from urllib.request import urlopen
-    from io import BytesIO
-    import zipfile
-    import sys
-    import os
-    import shutil
-    print(f"Downloading {url}...", file=sys.stderr)
-    handle = urlopen(url)
-    memzip = BytesIO(handle.read())
-    archive = zipfile.ZipFile(memzip)
-    files = [f for f in archive.namelist() if "/workflow/" in f]
-    base_dir = files[0].split("/")[0]
-    parent = os.path.dirname(target_dir)
-    extr_dir = os.path.join(parent, base_dir)
-    os.makedirs(parent, exist_ok=True)
-    archive.extractall(parent, files)
-    shutil.copytree(extr_dir, target_dir, dirs_exist_ok=True)
-    shutil.rmtree(extr_dir)
-
 
 # paths
 uvsnake_workdir = "workdir/{workflow}/{run}_paired"
 uvsnake_workdir_q = "workdir/{{workflow}}/{{run}}_paired"
-uvsnake_path, uvsnake_url, uvsnake_id = get_uvsnake_location()
+uvsnake_path, uvsnake_url, uvsnake_id = get_repo_location(**usearch_cfg["uvsnake"])
 if uvsnake_path is None:
     uvsnake_path = f"workdir/_uvsnake/{uvsnake_id}"
     if not exists(uvsnake_path):
-        download_uvsnake(uvsnake_url, uvsnake_path)
+        download_repo(uvsnake_url, uvsnake_path)
 uvsnakefile_path = abspath(f"{uvsnake_path}/workflow/Snakefile")
 
 
