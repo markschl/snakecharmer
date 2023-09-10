@@ -56,6 +56,7 @@ primers:
   trim_settings:
     min_overlap: 15
     max_error_rate: 0.25
+    min_length: 100
 
 # Settings for sequence processing/clustering
 usearch:
@@ -66,7 +67,6 @@ usearch:
     expected_length: 400
 
   filter:
-    min_length: 100
     max_error_rate: 0.002  #  0.8 errors per 400 bp
 
   unoise:

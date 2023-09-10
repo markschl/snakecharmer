@@ -77,7 +77,7 @@ for f in "$@"; do
         -a "$r_primer" \
         --error-rate $primers_trim_settings_max_error_rate \
         --overlap $primers_trim_settings_min_overlap \
-        --minimum-length $usearch_filter_min_length \
+        --minimum-length $primers_trim_settings_min_length \
         --cores $THREADS \
         --discard-untrimmed \
         -o "$out"/$s.trimmed.fastq
@@ -102,7 +102,7 @@ for f in "$@"; do
 
     $VSEARCH --fastq_filter "$out"/$s.trimmed.fastq \
         --fastq_maxee_rate $usearch_filter_max_error_rate \
-        --fastq_minlen $usearch_filter_min_length \
+        --fastq_minlen $primers_trim_settings_min_length \
         --fastaout "$out"/$s.filtered.fasta \
         --fasta_width 0
     ## these options from the example workflow are not used:

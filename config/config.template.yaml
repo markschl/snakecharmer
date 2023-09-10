@@ -173,9 +173,13 @@ primers:
       # - ITS3-KYO2...ITS4
       # - fITS7...ITS4
   # Primer trimming settings
+  # (not all of them may be used by every pipeline)
   trim_settings:
     min_overlap: 15
     max_error_rate: 0.25
+    # minimum length after trimming
+    min_length: 100
+
 
 #### Taxonomy assignment ####
 

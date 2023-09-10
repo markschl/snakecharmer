@@ -208,7 +208,11 @@ properties:
             type: number
             exclusiveMinimum: 0
             maximum: 1
-        required: [min_overlap, max_error_rate]
+          min_length:
+            type: integer
+            minimum: 1
+            default: 1
+        required: [min_overlap, max_error_rate, min_length]
         additionalProperties: false
     if:
       required: [trim_settings]
@@ -331,10 +335,6 @@ properties:
             type: number
             minimum: 0
             maximum: 1
-          min_length:
-            type: integer
-            minimum: 1
-            default: 1
         required: [max_error_rate]
         additionalProperties: false
       
@@ -422,9 +422,6 @@ properties:
       merge_maxdiffs:
         type: integer
         minimum: 0
-      min_length:
-        type: integer
-        minimum: 1
     required: [trunc_qual, max_err_fwd, max_err_rev, trunclen_fwd, trunclen_rev, pooling_method, chimera_method, merge_maxdiffs, min_length]
     additionalProperties: false
 

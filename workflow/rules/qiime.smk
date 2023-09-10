@@ -52,7 +52,7 @@ rule qiime_import:
 rule qiime_trim_paired:
     params:
         err_rate=lambda w: cfg[w.workflow]["settings"]["primers"]["trim_settings"]["max_error_rate"],
-        min_length=lambda w: cfg[w.workflow]["settings"]["dada2"]["min_length"],
+        min_length=lambda w: cfg[w.workflow]["settings"]["primers"]["trim_settings"]["min_length"],
     input:
         yaml="workdir/primers/primers.yaml",
         demux="workdir/{workflow}/{run}_paired/demux.qza",

@@ -45,7 +45,7 @@ pmismatch=$(bc <<< "(${#f_primer} + ${#r_primer})/2 * $primers_trim_settings_max
 amptk illumina -i "$fq_dir" -o "$out" \
    -f "$f_primer" -r "$r_primer" \
     -f {params.f_primer_seq} -r {params.r_primer_seq} \
-    --min_len $filter_min_length \
+    --min_len $primers_trim_settings_min_length \
     --trim_len 10000000 `# high enough to never be longer`  \
     --cpus $threads \
     --cleanup \

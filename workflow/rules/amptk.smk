@@ -2,6 +2,10 @@ import os
 from os.path import basename
 import lib
 
+cfg.pipeline_capabilities["amptk"] = [
+    ("illumina", "paired"),
+]
+
 
 localrules:
     amptk_stats_paired,
@@ -10,9 +14,7 @@ localrules:
 rule amptk_merge_trim:
     params:
         err_rate=lambda w: cfg[w.workflow]["settings"]["primers"]["trim_settings"]["max_error_rate"],
-        min_len=lambda w: cfg[w.workflow]["settings"]["usearch"]["filter"]["min_length"] \
-            if cfg[w.workflow]["cluster"] == "amptk_unoise3" \
-            else cfg[w.workflow]["settings"]["dada2"]["min_length"],
+        min_len=lambda w: cfg[w.workflow]["settings"]["primers"]["trim_settings"]["min_length"],
         program=lambda w: with_default(cfg[w.workflow]["settings"]["usearch"], "merge", "program"),
         usearch_bin=config["software"]["usearch"]["binary"],
     input:
