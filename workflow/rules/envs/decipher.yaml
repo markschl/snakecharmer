@@ -1,0 +1,7 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bioconductor-decipher=2.28
+  - r-stringr=1.5
+  - r-yaml 2.3.7

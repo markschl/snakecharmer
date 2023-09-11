@@ -24,6 +24,7 @@ include: "rules/post_cluster.smk"
 include: "rules/biom.smk"
 include: "rules/cmp.smk"
 include: "rules/qc.smk"
+include: "rules/idtaxa.smk"
 
 if "uvsnake" in config["software"]:
     include: "rules/uvsnake.smk"

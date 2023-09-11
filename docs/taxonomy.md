@@ -147,6 +147,7 @@ The output file names (in the [`taxonomy` results folder](output.md)) are a bit 
 
 * `uvsnake_sintax`: SINTAX (through [UVSnake](https://github.com/markschl/uvsnake))
 * `qiime_sklearn`: Sklearn-based classifier ([QIIME 2](https://docs.qiime2.org/2023.7/plugins/available/feature-classifier/classify-sklearn))
+* `idtaxa`: The [IDTAXA](https://doi.org/10.1186/s40168-018-0521-5) classifier ([home page](http://www2.decipher.codes/ClassifyOrganisms.html))
 
 ## Details on database formats
 

@@ -1,6 +1,6 @@
 # Amplicon data processing workflows for diversity analysis
 
-This software makes use of the workflow management system [Snakemake](https://snakemake.github.io/) to build and integrate different amplicon workflows and allows for the flexible processing of data from different markers.
+This software makes use of the workflow management system [Snakemake](https://snakemake.github.io) to build and integrate different amplicon workflows and allows for the flexible processing of data from different markers.
 
 **Features**
 
@@ -18,13 +18,21 @@ The software does not assist with comprehensive statistical analyses, even thoug
 **Integrated pipelines**
 
 - [uvsnake](https://github.com/markschl/uvsnake), an [USEARCH](https://www.drive5.com/usearch/manual)/[VSEARCH](https://github.com/torognes/vsearch)-based paired-end amplicon pipeline (UPARSE and UNOISE3)
-- [QIIME2](https://qiime2.org) with DADA2 denoising offering paired-end and single-end analyses
+- [QIIME2](https://qiime2.org) with DADA2 denoising (paired-end and single-end)
 - [Amptk](https://github.com/nextgenusfs/amptk) (UNOISE3 and DADA2, paired-end only)
 - ... (more to follow)
 
+**Taxonomic classifiers**
+
+- [SINTAX](https://doi.org/10.1101/074161) (through [uvsnake](https://github.com/markschl/uvsnake))
+- [QIIME2 sklearn](https://docs.qiime2.org/2023.7/plugins/available/feature-classifier/classify-sklearn)
+- [IDTAXA](https://doi.org/10.1186/s40168-018-0521-5)
+
+In addition, a [variety of taxonomic databases](docs/taxonomy.md) can be automatically downloaded, filtered, and pre-trained datasets can be used as well.
+
 **Validation**
 
-Validation is done using amplicon data from a fungal mock community ([details in `test` directory](test/README.md)) and a basic comparison of the different workflows can be done [using a dedicated script](#comparison-of-pipelines).
+Validation is done using amplicon data from a fungal mock community ([details in `test` directory](test/README.md)) and a basic comparison of the different workflows can be done [using a dedicated script](#comparison-of-denoisingclustering-pipelines).
 
 No snakes 🐍 were harmed in the process of creating this software
 
@@ -32,9 +40,9 @@ No snakes 🐍 were harmed in the process of creating this software
 
 The software makes use of the [Conda package manager](https://conda.io), the installation is thus pretty straightforward ([see instructions here](INSTALL.md)).
 
-## Configuring
+## Configuration
 
-The easiest is to copy the contents of the [config](config/) directory into a new analysis directory and rename `config.template.yaml` to `config.yaml` and `taxonomy.template.yaml` to `taxonomy.yaml`, and then modify the files according to your needs. The two configuration files:
+The easiest is to copy the contents of the [config](config/) directory into a new analysis directory, rename `config.template.yaml` to `config.yaml` and `taxonomy.template.yaml` to `taxonomy.yaml`, and modify the files according to your needs. The two configuration files:
 
 * **`config.yaml`**: Main configuration file containing input and workflow definitions. [See here](docs/config.md) for a (incomplete) description. The available options are are further documented [in `config/config.template.yaml`](config/config.template.yaml).
 * **`taxonomy.template.yaml`**: Defines all available taxonomcic databases. [See here for details](docs/taxonomy.md), as well as [`config/taxonomy.template.yaml`](config/taxonomy.template.yaml) for examples.
@@ -121,7 +129,7 @@ There is a separate bash script `scripts/compare_results.sh`, which creates an E
 
 ## Further steps...
 
-A list of possible next steps includes:
+A list of To-Do items:
 
 - Integrate more pipelines / clustering methods and taxonomy databases
 - Integrate other platforms than Illumina and allow simultaneous analysis of multi-platform data
