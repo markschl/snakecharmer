@@ -26,24 +26,14 @@ def list_runs(input_cfg):
 
 
 class Config(object):
-    # strategy_names = ['merged', 'notmerged_R1', 'notmerged_R2']
-    # working_dir = 'workdir'
-    # read_num_map = {'single': [1], 'paired': [1, 2]}
-    
-    # The following database types can be used directly
-    # (specifically formatted or pre-trained), but 
-    # cannot be imported to the internal taxonomy FASTA file format and then
-    # filtered and converted to other formats.
-    formatted_dbs = {'qiime_nb', 'idtaxa'}    
 
     def __init__(self, config):
         self.config = config
         self.workflow = config['workflows']
         self._init_input()
         self._get_primer_combinations()
-        self._init_taxonomy()
         self._init_config()
-        self._assemble_taxonomy()
+        self._init_taxonomy()
         # from pprint import pprint; pprint(vars(self))
 
     def _init_input(self):
@@ -128,42 +118,6 @@ class Config(object):
             'Identical primer combinations found across markers.' \
             'This is not allowed.'
 
-    def _init_taxonomy(self):
-        """"
-        Sets up the taxonomy database sources and filtering options
-        """
-        # (1) parse contents of taxonomy.yaml:
-        
-        # Add "ids" (SHA-256 hashes of the database configuration),
-        # which are used for caching database downloads.
-        # We don't check for invalid/superfluous entries even though
-        # they will alter the hash.
-        self.taxdb_sources_by_hash = {}
-        for name, dbconfig in self.config['taxonomy_db_sources'].items():
-            _id = config_hash(dbconfig.items())
-            dbconfig['source_id'] = _id
-            dbconfig['name'] = name
-            dbconfig['preformatted'] = 'preformatted' if dbconfig['format'] in self.formatted_dbs else 'regular'
-            self.taxdb_sources_by_hash[_id] = dbconfig
-        
-        # (2) parse contents of config.yaml
-
-        # Prepare taxonomy databases in config file, adding in the database
-        # source configuration (such as type, URL, etc.) to have one dict
-        # with all information.
-        # We also hash the filtering options, the hashes are part of the database
-        # file paths to allow caching of filtered+trained databases.
-        # Snakemake uses nested paths for the caching:
-        # db_hash / flt_hash / dbname.fasta.zst.
-        self.taxdb_filter_by_hash = {}
-        for dbs in self.config['taxonomy_dbs'].values():  # per-marker
-            for name, db in dbs.items():  # dbs within marker
-                _id = config_hash(((k, v) for k, v in db.items() if k != 'db'), empty_str="unchanged")
-                db['filter_id'] = _id
-                db['name'] = name
-                self.taxdb_filter_by_hash[_id] = db
-                db['source'] = self.config['taxonomy_db_sources'][db['db']]
-
     def _init_config(self):
         """"
         Initialize workflow settings, overriding defaults by workflow-specific
@@ -171,7 +125,10 @@ class Config(object):
         """
         # parse workflow definitions
         self.workflows = self.config['workflows']
-        del self.config['workflows']
+        reduced_cfg = copy.deepcopy(self.config)
+        del reduced_cfg['workflows']
+        del reduced_cfg['taxonomy']
+        del reduced_cfg['taxonomy_db_sources']
         for name, p in self.workflows.items():
             p['name'] = name
             p['pipeline'] = p['cluster'].split('_', 1)[0]
@@ -179,65 +136,105 @@ class Config(object):
             # copy settings over, add extra settings overriding the defaults
             if 'settings' in p:
                 settings = p['settings']
-                p['settings'] = copy.deepcopy(self.config)
+                p['settings'] = copy.deepcopy(reduced_cfg)
                 recursive_update(p['settings'], settings)
             else:
-                p['settings'] = copy.deepcopy(self.config)
+                p['settings'] = copy.deepcopy(reduced_cfg)
         # possible technology/layout combinations that work
         # (populated in corresponding snakefiles)
-        self.pipeline_capabilities = {}
+        self.cluster_capabilities = {}
 
-    def _assemble_taxonomy(self):
+    def _init_taxonomy(self):
+        """"
+        Sets up the taxonomy database sources and filtering options
         """
-        Assemble the workflow-specific taxonomic assignment settings
-        """
-        # parse workflow definitions
-        for name, p in self.workflows.items():
-            # prepare list of taxonomy assignment methods (with corresponding databases)
-            # first, replace 'default' by all db/method combinatinos
-            settings = p['settings']
-            if p['taxonomy'] == 'default':
-                p['taxonomy'] = {
-                    'dbs': {marker: list(dbs) for marker, dbs in settings['taxonomy_dbs'].items()},
-                    'methods': list(settings['taxonomy_methods'])
-                }
-            else:
-                assert isinstance(p['taxonomy'], dict)
-                assert 'dbs' in p['taxonomy'], \
-                    "'dbs' option missing in 'taxonomy' definition of workflow {}.".format(name)
-                assert 'methods' in p['taxonomy'], \
-                    "'methods' option missing in 'taxonomy' definition of workflow {}.".format(name)
-            # validate method names
-            method_names = p['taxonomy']['methods']
-            method_cfg = settings['taxonomy_methods']
-            strange_methods = set(method_names).difference(method_cfg)
-            assert not strange_methods, \
-                "Workflow {} has taxonomy method names that are not listed in 'taxonomy_methods'" \
-                "below in the config file: {}".format(name, ', '.join(strange_methods))
-            # set VSEARCH as default program if not already present
-            # TODO: Jsonschema should do this, but the default keyword has no effect
-            for cfg in method_cfg.values():
-                if 'program' not in cfg:
-                    cfg['program'] = 'vsearch'
-            # then, for every marker, combine the assignment method and the
-            # source database configurations into a single dictionary
+        # first deep-copy the relevant settings, since empty dicts seem to be
+        # shared and thus unwanted modifications can happen
+        tax_cfg = self.config['taxonomy'] = copy.deepcopy(self.config['taxonomy'])
+        tax_source_cfg = self.config['taxonomy_db_sources'] = copy.deepcopy(self.config['taxonomy_db_sources'])
+        # First, parse contents of taxonomy.yaml:
+        # Add "ids" (SHA-256 hashes of the database configuration),
+        # which are used for caching database downloads.
+        self.taxdb_sources_by_hash = {}
+        for dbconfig in tax_source_cfg.values():
+            d = copy.deepcopy(dbconfig)
+            dbconfig['source_id'] = _id = config_hash(d.items())
+            self.taxdb_sources_by_hash[_id] = d
+        
+        # Prepare taxonomy databases listed in config.yaml:
+        # We hash the filtering options, the hashes are part of the database
+        # file paths to allow caching of filtered+trained databases.
+        # Snakemake uses nested paths for the caching:
+        # db_hash / flt_hash / dbname.fasta.zst.
+        self.taxdb_filter_by_hash = {}
+        for marker_dbs in tax_cfg['dbs'].values():  # per-marker
+            for flt_config in marker_dbs.values():  # dbs within marker
+                clean_db = copy.deepcopy(flt_config)
+                del clean_db['db']
+                flt_config['filter_id'] = _id = config_hash(clean_db.items(), empty_str="unfiltered")
+                if _id not in self.taxdb_filter_by_hash:
+                    self.taxdb_filter_by_hash[_id] = clean_db
+
+        # Similarly as above, get database training settings (if any),
+        # referenced by their hash
+        self.taxdb_training_cfg_by_hash = {}
+        for mcfg in tax_cfg["methods"].values():
+            tcfg = mcfg["train"] = copy.deepcopy(mcfg["train"])
+            d = copy.deepcopy(tcfg)
+            tcfg['conversion_id'] = _id = config_hash(d.items(), empty_str="standard")
+            if _id not in self.taxdb_training_cfg_by_hash:
+                self.taxdb_training_cfg_by_hash[_id] = d
+            print("added", tcfg, d, self.taxdb_training_cfg_by_hash)
+
+        # Assemble the workflow-specific taxonomic assignment settings
+        # First, initialize global method/db combinations
+        tax_combinations = tax_cfg.get('combinations', 'all')
+        if tax_combinations == 'all':
+            tax_combinations = {
+                marker: list(product(db_names, tax_cfg['methods']))
+                for marker, db_names in tax_cfg['dbs'].items()
+            }
+        # individual workflow definitions
+        for wcfg in self.workflows.values():
+            workflow_comb = wcfg.get('taxonomy', 'all')
+            if workflow_comb == 'all':
+                workflow_comb = tax_combinations
             tax = {}
-            for marker, db_names in p['taxonomy']['dbs'].items():
-                db_cfg = settings['taxonomy_dbs'][marker]
-                assert not set(db_names).difference(db_cfg)
-                tax[marker] = {
-                    (db, method): {
+            method_config = tax_cfg["methods"]
+            for marker, comb in workflow_comb.items():
+                marker_cfg = tax[marker] = {}
+                marker_db_cfg = tax_cfg['dbs'][marker]
+                for db_name, method_name in comb:
+                    try:
+                        filter_cfg = marker_db_cfg[db_name]
+                    except KeyError:
+                        raise Exception(f"Unknown database: {db_name}")
+                    try:
+                        d = method_config[method_name]
+                    except KeyError:
+                        raise Exception(f"Unknown taxonomy assignment method: {method_name}")
+                    try:
+                        source = tax_source_cfg[filter_cfg['db']]
+                    except KeyError:
+                        raise Exception(f"Unknown taxonomy source database: {filter_cfg['db']}")
+                    marker_cfg[(db_name, method_name)] = {
                         'marker': marker,
-                        'db_name': db,
-                        'method_name': method,
-                        'assign': method_cfg[method],
-                        **db_cfg[db]
+                        'db_name': db_name,
+                        'method_name': method_name,
+                        # make sure to copy everything, so later modifications
+                        # (outside of the Config object in common.smk) will not
+                        # cause confusion
+                        'assign': copy.deepcopy(d),
+                        'source': copy.deepcopy(source),
+                        'filter': copy.deepcopy(filter_cfg)
                     }
-                    for db, method in product(db_names, method_names)
-                }
-            # finally, replace the initial taxonomy configuration by the parsed one
-            p['taxonomy'] = tax
+            wcfg["taxonomy"] = tax
 
+        # The following dict contains format requirements for database assignment
+        # methods, it is populated in individual snakefiles.
+        # This is needed in order to know which method/database combinations
+        # are possible and which aren't
+        self.taxonomy_formats = {}
 
     # allow access to workflow settings in a dict-like way
     def __getitem__(self, workflow):
@@ -298,7 +295,7 @@ def config_hash(items: Iterable[Tuple[str, str]], empty_str: Optional[str] = Non
     the SHA-256 digest is returned.
     """
     sorted_cfg = sorted(str(k) + str(v) for k, v in items)
-    if empty_str is not None and sorted_cfg == "":
+    if empty_str is not None and len(sorted_cfg) == 0:
         return empty_str
     s = "".join(sorted_cfg).encode('utf-8')
     return sha256(s).hexdigest()

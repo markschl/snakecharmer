@@ -3,24 +3,33 @@ Rules for obtaining and workdir taxonomy databases, and some taxonomy-related
 sequence workdir code.
 
 Directory structure of 'refdb':
-refdb:
-  taxonomy:
-    db_(regular|preformatted)_<source config hash>
-      <format>.fasta.zst
-      <format>_db_config.yaml
-      flt_<filter config hash>:
+refdb/
+  taxonomy/
+    db_(regular|preformatted)_<source config hash>/
+      db.fasta.zst
+      db_config.yaml
+      flt_<filter config hash>/
         filter_config.yaml
-        <format.fasta.zst>
-        <other format>.fasta.zst
+        db.fasta.zst
+        db_full_ranks.fasta.zst 
+        <database format>/
+          cnv_<conversion config hash>.fasta.zst  (preformatted databases land here directly, without .fasta)
 
 Ultimately, filtered and converted (to <format>) databases are used as input
-for taxonomic assignments. If not filter configuration was supplied, 
+for taxonomic assignments.
+If no filtering is done, the 'unfiltered' is used as ID instead of the filter config hash.
+If there are no conversion options, 'standard' is used as ID instead of the conversion option hash.
 """
 
 localrules:
     clean_tax,
-    write_taxdb_config,
+    write_taxdb_source_config,
     write_taxdb_filter_config,
+    write_taxdb_conversion_config,
+
+
+# these formats can be imported by 'obtain_taxdb'
+cfg.imported_tax_formats = ("unite_otus", "midori", "gtdb", "utax", "qiime", "qiime_qza")
 
 
 # This rule writes the taxonomy database configuration to a file used as input
@@ -28,18 +37,14 @@ localrules:
 # The config file names contain a SHA-256 hash of the database configuration,
 # so after every change a new config file will be generated, leading to a new
 # download of the database.
-rule write_taxdb_config:
+rule write_taxdb_source_config:
     params:
         dbconfig=lambda wildcards: cfg.taxdb_sources_by_hash[wildcards.source_id],
         exclude=["source_id", "name", "preformatted"]
     output:
-        yml="refdb/taxonomy/db_{preformatted}_{source_id}/{type}_db_config.yaml",
+        yml="refdb/taxonomy/db_{preformatted}_{source_id}/db_config.yaml",
     log:
-        "logs/taxonomy/db_{preformatted}_{source_id}/write_db_config_{type}.log"
-    wildcard_constraints:
-        preformatted = "\w+",
-        source_id = "\w+",
-        type = "\w+",
+        "logs/taxonomy/db_{preformatted}_{source_id}/write_db_config.log"
     conda:
         "envs/basic.yaml"
     group:
@@ -50,15 +55,13 @@ rule write_taxdb_config:
 
 rule obtain_taxdb:
     input:
-        yml="refdb/taxonomy/db_{preformatted}_{source_id}/{type}_db_config.yaml",
+        yml="refdb/taxonomy/db_regular_{source_id}/db_config.yaml",
     output:
-        db="refdb/taxonomy/db_{preformatted}_{source_id}/{type}.fasta.zst",
+        db="refdb/taxonomy/db_regular_{source_id}/db.fasta.zst",
     log:
-        "logs/taxonomy/db_{preformatted}_{source_id}/obtain_{type}.log",
+        "logs/taxonomy/db_regular_{source_id}/obtain_taxdb.log",
     wildcard_constraints:
-        preformatted = "\w+",
-        source_id = "\w+",
-        type = "\w+",
+        source_id = "[a-z0-9]+",
     cache:
         True
     conda:
@@ -70,19 +73,16 @@ rule obtain_taxdb:
 
 
 # This rule writes a database filter config file (using SHA-256 of keys/values).
-# Similarly to write_taxdb_config, this ensures caching of trained databases.
+# Similarly to write_taxdb_config, this ensures caching of databases
+# as well as re-filtering if any setting changs.
 rule write_taxdb_filter_config:
     params:
         dbconfig=lambda wildcards: cfg.taxdb_filter_by_hash[wildcards.filter_id],
-        exclude=["filter_id", "source", "db", "name"],
+        exclude=["filter_id", "db", "name"],
     output:
         yml="refdb/taxonomy/db_{preformatted}_{source_id}/flt_{filter_id}/filter_config.yaml",
     log:
         "logs/taxonomy/db_{preformatted}_{source_id}/write_filter_config_{filter_id}.log"
-    wildcard_constraints:
-        preformatted = "\w+",
-        source_id = "\w+",
-        filter_id = "\w+",
     conda:
         "envs/basic.yaml"
     group:
@@ -93,17 +93,15 @@ rule write_taxdb_filter_config:
 
 rule filter_taxdb:
     input:
-        all="refdb/taxonomy/db_{source_id}/qiime.fasta.zst",
-        cfg="refdb/taxonomy/db_{source_id}/flt_{filter_id}/filter_config.yaml",
+        all="refdb/taxonomy/db_regular_{source_id}/db.fasta.zst",
+        cfg="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/filter_config.yaml",
     output:
-        filtered="refdb/taxonomy/db_{source_id}/flt_{filter_id}/qiime.fasta.zst",
+        filtered="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/db.fasta.zst",
     log:
-        "logs/taxonomy/db_{source_id}/filter_db_{filter_id}.log",
+        "logs/taxonomy/db_regular_{source_id}/filter_db_{filter_id}.log",
     wildcard_constraints:
-        preformatted = "\w+",
-        source_id = "\w+",
-        filter_id = "\w+",
-        dbfile = "[^/]+",
+        source_id = "[a-z0-9]+",
+        filter_id = "[a-z0-9]+",
     conda:
         "envs/taxonomy.yaml"
     group:
@@ -112,13 +110,54 @@ rule filter_taxdb:
         "../scripts/taxonomy/filter_taxdb.py"
 
 
+# This rule writes a database conversion/training config file
+# (using SHA-256 of keys/values).
+rule write_taxdb_conversion_config:
+    params:
+        dbconfig=lambda wildcards: cfg.taxdb_training_cfg_by_hash[wildcards.cnv_id],
+        exclude=["conversion_id"],
+    output:
+        yml="refdb/taxonomy/db_{preformatted}_{source_id}/flt_{filter_id}/{format}/conversion_config_{cnv_id}.yaml",
+    log:
+        "logs/taxonomy/db_{preformatted}_{source_id}/flt_{filter_id}/write_conversion_config_{format}_{cnv_id}.log"
+    conda:
+        "envs/basic.yaml"
+    group:
+        "taxonomy"
+    script:
+        "../scripts/taxonomy/write_db_config.py"
+
+
+# TODO: this returns a compressed database, even though trained datasets are usually already compressed
+rule obtain_taxdb_preformatted:
+    input:
+        params="refdb/taxonomy/db_preformatted_{source_id}/db_config.yaml",
+    output:
+        db="refdb/taxonomy/db_preformatted_{source_id}/flt_unfiltered/{format}/cnv_standard.zst",
+    log:
+        "logs/taxonomy/db_preformatted_{source_id}/flt_unfiltered/{format}/obtain_{format}_standard.log",
+    wildcard_constraints:
+        source_id = "[a-z0-9]+",
+        filter_id = "[a-z0-9]+",
+    cache:
+        True
+    conda:
+        "envs/taxonomy.yaml"
+    group:
+        "taxonomy"
+    script:
+        "../scripts/taxonomy/obtain_taxdb_formatted.py"
+
+
 rule uncompress_taxdb:
     input:
-        db="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/{format}.fasta.zst",
+        db="refdb/taxonomy/{sub_path}.zst",
     output:
-        db=temp("refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/{format}.fasta"),
+        db=temp("refdb/taxonomy/{sub_path}"),
     log:
-        "logs/taxonomy/db_regular_{source_id}/flt_{filter_id}/uncompress_{format}.log",
+        "logs/taxonomy/{sub_path}_uncompress.log",
+    wildcard_constraints:
+        sub_path=r".+?(?<!\.zst)$"
     group:
         "taxonomy"
     conda:
@@ -127,6 +166,25 @@ rule uncompress_taxdb:
         """
         zstd -dcqf "{input.db}" > "{output.db}"
         """
+
+
+rule taxdb_normalize_internal_ranks:
+    input:
+        db="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/db.fasta.zst",
+    output:
+        db=temp("refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/db_full_ranks.fasta.zst"),
+    log:
+        "logs/taxonomy/db_regular_{source_id}/flt_{filter_id}/normalize_internal_ranks.log",
+    wildcard_constraints:
+        source_id = "[a-z0-9]+",
+        filter_id = "[a-z0-9]+",
+    group:
+        "taxonomy"
+    conda:
+        "envs/taxonomy.yaml"
+    script:
+        "../scripts/taxonomy/rank_propagate.py"
+
 
 rule make_tax_fasta:
     input:

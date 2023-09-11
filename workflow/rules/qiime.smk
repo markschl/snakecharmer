@@ -1,9 +1,10 @@
 
-cfg.pipeline_capabilities["qiime"] = [
+cfg.cluster_capabilities["qiime"] = [
     ("illumina", "single"),
     ("illumina", "single.rev"),
     ("illumina", "paired"),
 ]
+cfg.taxonomy_formats["qiime_sklearn"] = "qiime_nb"
 
 
 localrules:
@@ -249,25 +250,32 @@ rule qiime_combine_logs:
 ##########################
 
 
-rule qiime_taxdb_import:
+rule qiime_taxdb_train_nb:
     input:
-        seq="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime.fasta.zst",
+        params="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime_nb/conversion_config_{cnv_id}.yaml",
+        seq="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/db.fasta.zst",
     output:
-        tmp=temp(directory("workdir/qiime_taxdb/db_regular_{source_id}/flt_{filter_id}")),
-        seq="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime-seqdb.qza",
-        tax="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime-taxonomy.qza",
+        "refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime_nb/cnv_{cnv_id}.zst",
     wildcard_constraints:
         source_id = "\w+",
         filter_id = "\w+",
+        cnv_id = "\w+",
+    cache: True
     conda:
         config["software"]["qiime"]["conda_env"]
     log:
-        "logs/taxdb/convert/db_regular_{source_id}/flt_{filter_id}-import-qiime.log",
-    group:
-        "taxonomy"
+        "logs/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime_train_nb-{cnv_id}.log",
+    resources:
+        mem_mb=40000,
+        runtime=24 * 60,
     shell:
         """
         exec &> {log}
+        par=$(cat {input.params)
+        if [ "$par" != "{}" ]; then
+            echo "Unknown QIIME naive-bayes classifier config: $par"
+            exit 1
+        fi
         mkdir -p {output.tmp}
         zstd -dcqf {input.seq} > {output.tmp}/seq.fasta 2> {log}
         # extract taxonomic lineages from FASTA for import in QIIME
@@ -275,49 +283,26 @@ rule qiime_taxdb_import:
         qiime tools import \
             --type 'FeatureData[Sequence]' \
             --input-path {output.tmp}/seq.fasta \
-            --output-path {output.seq}
+            --output-path {output.tmp}/seq.qza
         qiime tools import \
             --type 'FeatureData[Taxonomy]' \
             --input-format HeaderlessTSVTaxonomyFormat \
             --input-path {output.tmp}/tax.txt \
-            --output-path {output.tax}
-        """
-
-
-rule qiime_taxdb_train_nb:
-    input:
-        seq="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime-seqdb.qza",
-        tax="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime-taxonomy.qza",
-    output:
-        trained="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime_nb.qza",
-    wildcard_constraints:
-        source_id = "\w+",
-        filter_id = "\w+",
-    cache: True
-    conda:
-        config["software"]["qiime"]["conda_env"]
-    log:
-        "logs/taxdb/convert/db_regular_{source_id}/flt_{filter_id}-train_qiime_nb.log",
-    resources:
-        mem_mb=40000,
-        runtime=24 * 60,
-    shell:
-        """
+            --output-path {output.tmp}/tax.qza
         qiime feature-classifier fit-classifier-naive-bayes \
-            --i-reference-reads {input.seq} \
-            --i-reference-taxonomy {input.tax} \
-            --o-classifier {output.trained} 2> {log}
+            --i-reference-reads {output.tmp}/seq.qza \
+            --i-reference-taxonomy {output.tmp}/tax.qza \
+            --o-classifier {output.tmp}/trained.qza
+        zstd -dcq {output.tmp}/trained.qza > {output.trained}
         """
 
 
-rule assign_taxonomy_qiime_sklearn:
+rule qiime_classify_sklearn:
     params:
         par=lambda wildcards: cfg.tax_config(**wildcards)["assign"],
     input:
         seq="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/clusters.fasta",
-        db=lambda wildcards: "refdb/taxonomy/db_{preformatted}_{source_id}/flt_{filter_id}/qiime_nb.qza".format(
-            **cfg.tax_config(**wildcards)
-        ),
+        db=lambda wildcards: get_refdb_path(format="qiime_nb", **wildcards)
     output:
         tmp=temp(
             directory(

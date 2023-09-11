@@ -31,12 +31,6 @@ from tax_helpers import *
 from utils import file_logging
 
 
-def fail_on_invalid(data):
-    assert len(data) == 0, (
-        "The following taxonomy database settings are unknown: {}".format(
-            ", ".join("{}: {}".format(k, v) for k, v in data.items())
-        ))
-
 
 def report_problem(permissive, assertion, text):
     """

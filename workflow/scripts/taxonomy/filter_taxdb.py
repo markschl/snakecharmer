@@ -88,12 +88,12 @@ class Filters(object):
                 # if the empty prefix is found, this means that the rank
                 # is not defined.
                 undef_i = lineage.index(self.defined_rank_prefix)
-                # Before we return, we do some additional basic validation
-                for r in lineage[undef_i:]:
-                    assert self._prefix_re.fullmatch(r) is not None, (
-                        "Blank intermediate name detected for {}: {}. "
-                        "This is problematic with some classifiers, proper rank propagation needed.").format(id, r)
-                return False
+                # This hit could be an intermediate "blank" rank, therefore we have to further
+                # check if all lower ranks are empty. This procedure should still be faster
+                # than iterating backwards on every lineage, intermediate blank
+                # ranks are usually not so frequent.
+                if all(self._prefix_re.fullmatch(r) is not None for r in lineage[(undef_i+1):]):
+                    return False
             except ValueError:
                 pass
         
@@ -186,9 +186,13 @@ class Tester(unittest.TestCase):
         ("k__Kingdom;f__Family;g__Genus;s__Genus species", "TGTATAGCAATAG"),
         ("k__Kingdom;f__Family;g__;s__", "TGTATAGCAATAG"),
         ("k__Kingdom;f__;g__;s__", "TGTATAGCAATAG"),
+        # lineages with intermediate blanks
+        ("k__;f__Family;g__;s__", "A"),
+        ("k__;f__;g__Genus;s__Genus_species", "A"),
+    ]
+    tax_with_blanks = [
     ]
     invalid_tax = [
-        ("k__;f__Family;g__;s__", ""),
         ("f__Family;k__;g__;s__", ""),
         ("", ""),
         ("k_", ""),
@@ -211,11 +215,11 @@ class Tester(unittest.TestCase):
 
     def test_rank_filter(self):
         flt = _do_filter(self.tax_records, defined_rank="species")
-        self.assertEqual(flt, [self.tax_records[i] for i in [0]])
+        self.assertEqual(flt, [self.tax_records[i] for i in [0, 4]])
         flt = _do_filter(self.tax_records, defined_rank="genus")
-        self.assertEqual(flt, [self.tax_records[i] for i in [0]])
+        self.assertEqual(flt, [self.tax_records[i] for i in [0, 4]])
         flt = _do_filter(self.tax_records, defined_rank="family")
-        self.assertEqual(flt, [self.tax_records[i] for i in [0, 1]])
+        self.assertEqual(flt, [self.tax_records[i] for i in [0, 1, 3, 4]])
         with self.assertRaises(Exception) as ctx:
             _do_filter(self.tax_records, defined_rank="subfamily")
         self.assertTrue('Minimum unambiguous rank name not found in lineage: subfamily.' in str(ctx.exception))
@@ -250,21 +254,18 @@ class Tester(unittest.TestCase):
     def test_comb(self):
         rec = self.tax_records + self.ambig_records
         flt = _do_filter(rec, defined_rank="genus", max_ambig=3, max_n=0)
-        self.assertEqual(flt, [rec[i] for i in [0, 3, 5]])
+        self.assertEqual(flt, [rec[i] for i in [0, 4, 5, 7]])
         flt = _do_filter(rec, defined_rank="kingdom", max_ambig=2, max_n=1)
-        self.assertEqual(flt, [rec[i] for i in [0, 1, 2, 3]])
+        self.assertEqual(flt, [rec[i] for i in [0, 1, 2, 3, 4, 5]])
         flt = _do_filter(rec, defined_rank="species", max_ambig=2, min_len=8)
-        self.assertEqual(flt, [rec[i] for i in [0, 3]])
+        self.assertEqual(flt, [rec[i] for i in [0, 5]])
 
     def test_invalid_tax(self):
         # errors are only checked with rank filter
         with self.assertRaises(Exception) as ctx:
             _do_filter([self.invalid_tax[0]], defined_rank="kingdom")
-        self.assertTrue('Blank intermediate name detected' in str(ctx.exception))
-        with self.assertRaises(Exception) as ctx:
-            _do_filter([self.invalid_tax[1]], defined_rank="kingdom")
         self.assertTrue('Ranks in the first lineage are not in the correct order' in str(ctx.exception))
-        for rec in self.invalid_tax[2:]:
+        for rec in self.invalid_tax[1:]:
             with self.assertRaises(Exception) as ctx:
                 _do_filter([rec], defined_rank="kingdom")
             self.assertTrue('Not a valid QIIME-formatted lineage' in str(ctx.exception))

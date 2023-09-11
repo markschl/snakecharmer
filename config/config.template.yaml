@@ -172,52 +172,56 @@ primers:
 
 #### Taxonomy assignment ####
 
-# By default, every possible combination of databases and
-# assignment methods is used. This can be changed by modifying
-# the 'taxonomy' option in the 'pipelines' definion (above)
+taxonomy:
+  # Definition of all taxonomic databases used in this pipeline.
+  # Available 'db' sources are configured 'taxonomy.yaml'.
+  # Here, it is possible to use the same database source several times with
+  # different filtering settings.
+  dbs:
+    ITS:
+      # UNITE including global and 97% singletons (doi.org/10.15156/BIO/1264861)
+      unite:
+        db: unite_eukarya_all  # defined in taxonomy.yaml
+      unite_species:
+        db: unite_eukarya_all  # defined in taxonomy.yaml
+        # only keep references with known species annotation
+        defined_rank: species
+    COI:
+      midori:
+        db: Midori_COI
+    Mito_16S:
+      midori:
+        db: Midori_16S
 
-# Definition of all taxonomic databases used by default
-# (sources are configured in taxonomy.yaml).
-# Optional filters allow to only keep reference sequences
-# with a certain taxonomic rank defined.
-# TODO: More filtering or trimming options could be added
-taxonomy_dbs:
-  ITS:
-    # UNITE including global and 97% singletons (doi.org/10.15156/BIO/1264861)
-    unite:
-      db: unite_eukarya_all  # defined in taxonomy.yaml
-    unite_species:
-      db: unite_eukarya_all  # defined in taxonomy.yaml
-      # only keep references with known species annotation
-      defined_rank: species
-  COI:
-    midori:
-      db: Midori_COI
-  Mito_16S:
-    midori:
-      db: Midori_16S
+  # Assignment methods
+  methods:
+    # SINTAX (USEARCH)
+    sintax_90:
+      classifier: uvsnake_sintax
+      confidence: 0.9
+      # The program to use (optional; default: vsearch)
+      program: vsearch  # {vsearch, usearch}
+    # SINTAX (USEARCH)
+    sintax_90_usearch:
+      classifier: uvsnake_sintax
+      confidence: 0.9
+      program: usearch  # {vsearch, usearch}
+    sklearn_90:
+      # classify-sklearn plugin in QIIME2 with Naive Bayes classifier
+      # note: the creation of the database and the taxonomy assignment use
+      #   a lot of memory with the UNITE database.
+      classifier: qiime_sklearn
+      confidence: 0.9
 
-# Assignment methods
-taxonomy_methods:
-  # SINTAX (USEARCH)
-  sintax_90:
-    method: sintax_usearch  # { sintax_usearch, qiime_sklearn }
-    confidence: 0.9
-    # The program to use (optional; default: vsearch)
-    program: vsearch  # {vsearch, usearch}
-  # SINTAX (USEARCH)
-  sintax_90_usearch:
-    method: sintax_usearch  # { sintax_usearch, qiime_sklearn }
-    confidence: 0.9
-    program: usearch  # {vsearch, usearch}
-  sklearn_90:
-    # classify-sklearn plugin in QIIME2 with Naive Bayes classifier
-    # note: the creation of the database and the taxonomy assignment use
-    #   a lot of memory with the UNITE database.
-    method: qiime_sklearn  # { sintax_usearch, qiime_sklearn }
-    confidence: 0.9
+  # (optional default)
+  combinations: all
+  # alternatively, specify a list, grouped by marker:
+  # ITS:
+    # - [unite, sintax_90]
+    # - [unite_species, sklearn_90]
 
-#### Default settings ####
+
+#### General and pipeline-specific settings ####
 
 # All of these settings can be overridden by individual pipelines
 # using the 'settings' key (see 'pipelines' above)
@@ -308,7 +312,7 @@ ITSx:
   # note: 1e-5 does not work, only 1.e-5 or 1.0e-5 (otherwise validator will fail)
   e-value: 1.0e-5
   #
-  # All the following options are *optional*, we just show the defaults
+  # All the following settings are *optional*, we just show the defaults
   # here (sometimes different from ITSx defaults)
   allow_single_domain: 1e-9,0
   complement: F  # ITSx uses T (true) as default, but we know the orientation of our amplicon

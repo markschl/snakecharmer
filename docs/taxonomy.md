@@ -42,22 +42,23 @@ taxonomy_db_sources:
       - regex: "sp\\.?$"
 ```
 
-In `config.yaml`, the databases are referenced by their name.
+In `config.yaml`, the databases are referenced by their name. The same source database can be referenced several times with different filters (next chapter).
 
 ```yaml
-taxonomy_dbs:
-  ITS:
-    unite:
-      db: unite_all
-    unite_order:
-      db: unite_all
-      defined: order  # drops sequences not annotated at the order level
-  COI:
-    midori:
-        db: Midori_COI
-  16S:
-    silva:
-        db: SILVA_V4_QZA
+taxonomy:
+  dbs:
+    ITS:
+      unite:
+        db: unite_all
+      unite_order:
+        db: unite_all
+        defined: order  # drops sequences not annotated at the order level
+    COI:
+      midori:
+          db: Midori_COI
+    16S:
+      silva:
+          db: SILVA_V4_QZA
 ```
 
 Taxonomy assignment is done using all databases available for a given barcode/marker. In this example, the ITS marker has `unite` and `unite_order`, allowing to compare the effect of dropping "poorly" annotated sequences from the reference database.
@@ -65,7 +66,89 @@ Taxonomy assignment is done using all databases available for a given barcode/ma
 Markers are defined in the *primers* setting in `config.yaml`.
 
 
-## Database formats
+### Filter settings
+
+In addition to remove sequences with unclear taxonomic affiliation (`defined` filter), a few other filters are implemented:
+
+
+```yaml
+taxonomy:
+  dbs:
+    marker:
+      db_name:
+        db: unite_all
+        # drops sequences not annotated at the order level
+        defined: order
+        # keeps only sequences with length >= min_len
+        min_len: 300
+        # limit to maximum length
+        max_len: 700
+        # remove sequences with too many Ns
+        max_n: 2
+        # remove sequences with too many ambiguous letters
+        # (N or IUPAC ambiguity codes, not ACGT)
+        max_ambig: 3
+```
+
+If more advanced filtering should be done, consider assembling your own database (see below for example).
+
+
+## Classification methods
+
+The second section in `taxonomy` concerns the taxonomic assignment methods. Again, we can specify several methods with different settings:
+
+```yaml
+taxonomy:
+  dbs:
+    (...)
+  methods:
+    sintax_80:
+      method: uvsnake_sintax
+      confidence: 0.8
+    qiime_nb_80:
+      method: qiime_sklearn
+      confidence: 0.8
+```
+
+By default, each classifier is applied to every possible database. Except for pre-trained databases, databases are internally converted to match the input format required by classifiers.
+
+If you want to restrict the classifier/database combinations, this is possible (`combinations` setting, again grouped by marker):
+
+```yaml
+taxonomy:
+  dbs:
+    ITS:
+      unite:
+        db: unite_all
+      unite_order:
+        db: unite_all
+        defined: order
+  methods:
+    sintax_80:
+      classifier: uvsnake_sintax
+      confidence: 0.8
+    qiime_nb_80:
+      classifier: qiime_sklearn
+      confidence: 0.8
+  combinations:
+    ITS:
+      - [unite, sintax_80]
+      - [unite_order, sintax_80]
+      - [unite, qiime_nb_80]
+```
+
+The output file names (in the [`taxonomy` results folder](output.md)) are a bit complicated, following this pattern: `<database>-<classifier>-<method-name>`. The above configuration would generate:
+
+* `unite-uvsnake_sintax-sintax_80.txt.gz` (and BIOM files)
+* `unite_order-uvsnake_sintax-sintax_80.txt.gz`
+* `unite-qiime_nb-qiime_nb_80.txt.gz`
+
+### Available classifiers
+
+* `uvsnake_sintax`: SINTAX (through [UVSnake](https://github.com/markschl/uvsnake))
+* `qiime_sklearn`: Sklearn-based classifier ([QIIME 2](https://docs.qiime2.org/2023.7/plugins/available/feature-classifier/classify-sklearn))
+
+## Details on database formats
 
 ### General formats
 

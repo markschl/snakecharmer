@@ -5,12 +5,19 @@ Reference: https://www.drive5.com/usearch/manual/tax_annot.html
 
 import re
 
-from tax_helpers import zstd_fasta_reader, zstd_fasta_writer
+import yaml
+
+from tax_helpers import zstd_fasta_reader, zstd_fasta_writer, fail_on_invalid
 from utils import file_logging
 
 
 
-def convert_taxdb_utax(input, output):
+def convert_taxdb_utax(input, param_file, output):
+    # we don't allow any parameters
+    with open(param_file) as f:
+        params = yaml.safe_load(f)
+        fail_on_invalid(params)
+
     reserved_chars = re.compile("[ ,:]")
     rank_pat = re.compile('\s*?([a-z]+)__(.*?)\s*')
     with zstd_fasta_reader(input) as records, zstd_fasta_writer(output) as out:
@@ -40,4 +47,4 @@ def convert_taxdb_utax(input, output):
 
 
 with file_logging(snakemake.log[0]):
-    convert_taxdb_utax(snakemake.input.db, snakemake.output.db)
+    convert_taxdb_utax(snakemake.input.db, snakemake.input.params, snakemake.output.db)

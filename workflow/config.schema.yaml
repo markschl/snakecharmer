@@ -38,7 +38,7 @@ properties:
                 type: string
               commit:
                 type: string
-          required: [binary, uvsnake]
+        required: [snakemake_env, repo]
       qiime:
         type: object
         properties:
@@ -87,29 +87,11 @@ properties:
             type: string
             enum: [uvsnake_unoise3, uvsnake_uparse, qiime_dada2, amptk_uparse, amptk_unoise3, amptk_dada2]
           taxonomy:
-            oneOf:
-              - { type: string, enum: [default], default: default }
-              - 
-                type: object
-                properties:
-                  dbs:
-                    type: object
-                    patternProperties: 
-                      ^(\w+)$:
-                        type: array
-                        items: { type: string }
-                        minItems: 1
-                  methods:
-                    type: array
-                    items: { type: string }
-                    minItems: 1
-                required: [dbs, methods]
-                additionalProperties: false
-                description: >
-                  If "default", all taxonomy databases (defined in taxonomy_dbs)
-                  and assignment methods (see taxonomy_methods) are used. 
-                  Alternatively, a subset can be specified
-                  (dbs: marker: [list of databases], and methods: [list of metods])
+            $ref: "#/properties/taxonomy/properties/combinations"
+            description: >
+              If missing, all taxonomy databases (defined in taxonomy/dbs)
+              and assignment methods (taxonomy/methods) are used. 
+              Alternatively, a list be specified (like in taxonomy/combinations)
           settings:
             type: object
             #   *note*: validating these sub-schemas would require all
@@ -127,7 +109,7 @@ properties:
               Workflow-specific settings that should override different default
               settings specified below (compare, primers, pool_raw, filter, usearch, dada2
               and ITSx)
-        required: [cluster, taxonomy]
+        required: [cluster]
         additionalProperties: false
     additionalProperties: false
 
@@ -253,41 +235,63 @@ properties:
       minProperties: 1
       additionalProperties: false
 
-  taxonomy_dbs:
+  taxonomy:
     type: object
-    patternProperties:
-      ^(\w+)$:
+    properties:
+      dbs:
+        type: object
+        patternProperties:
+          ^(\w+)$:
+            type: object
+            patternProperties:
+              ^(\w+)$:
+                type: object
+                properties:
+                  db: { type: string }
+                  defined_rank: { type: string }
+                required: [ db ]
+                additionalProperties: false
+            additionalProperties: false
+        additionalProperties: false
+      methods:
         type: object
         patternProperties:
           ^(\w+)$:
             type: object
             properties:
-              db: { type: string }
-              defined_rank: { type: string }
-            required: [ db ]
+              classifier:
+                type: string
+                enum: [uvsnake_sintax, qiime_sklearn, idtaxa]
+              confidence:
+                type: number
+                minimum: 0
+                maximum: 1
+              train:
+                type: object
+                default: {}
+            required: [classifier, confidence]
+            # note: additionalProperties missing here, we do allow for more settings
+        additionalProperties: false
+      combinations:
+        oneOf:
+          -
+            type: string
+            enum: [all]
+          -
+            type: object
+            patternProperties:
+              ^(\w+)$:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                        type: string
+                    minItems: 2
+                    maxItems: 2
+                  minItems: 1
             additionalProperties: false
-        additionalProperties: false
-    additionalProperties: false
-
-  taxonomy_methods:
-    type: object
-    patternProperties:
-      ^(\w+)$:
-        type: object
-        properties:
-          method:
-            type: string
-            enum: [sintax_usearch, qiime_sklearn]
-          confidence:
-            type: number
-            minimum: 0
-            maximum: 1
-          program:
-            type: string
-            enum: [vsearch, usearch]
-            default: vsearch
-        required: [method, confidence]
-        additionalProperties: false
+        default: all
+    required: [dbs, methods, combinations]
     additionalProperties: false
 
   # This is almost identical with the workflow/config.schema.yaml
@@ -501,5 +505,5 @@ properties:
 additionalProperties: false
 
 required: [input, workflows, primers,
-          taxonomy_dbs, taxonomy_methods,
+          taxonomy,
           taxonomy_db_sources]

@@ -42,17 +42,6 @@ include: "rules/taxonomy.smk"
 
 
 
-#### Paths ####
-
-
-taxdirs = lambda sub_path, ext: result_paths(lambda marker, _, p: expand(
-    "/{sub_path}/{name}.{ext}",
-    sub_path=sub_path,
-    ext=ext,
-    name=expand("{tax[db_name]}-{tax[assign][method]}-{tax[method_name]}", tax=p["taxonomy"][marker].values())
-))
-
-
 #### target rules #####
 
 from itertools import chain
@@ -99,8 +88,8 @@ rule cluster:
 
 rule taxonomy:
     input:
-        lambda _: taxdirs("taxonomy", ("txt.gz", "biom.gz")),
-        lambda _: taxdirs("taxonomy/fasta", ("fasta.gz"))
+        lambda _: tax_dirs("taxonomy", ("txt.gz", "biom.gz")),
+        lambda _: tax_dirs("taxonomy/fasta", ("fasta.gz"))
 
 
 rule ITS:

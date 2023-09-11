@@ -82,16 +82,17 @@ usearch:
     ident_threshold: 97  # percent
 
 # taxonomy assignment
-taxonomy_dbs:
-  ITS:
-    unite:
-      db: unite_all
-      defined: order
+taxonomy:
+  dbs:
+    ITS:
+      unite:
+        db: unite_all
+        defined: order
 
-taxonomy_methods:
-  sintax_70:
-    method: sintax_usearch
-    confidence: 0.8
+  methods:
+    sintax_70:
+      method: sintax_usearch
+      confidence: 0.8
 
 # ITS recognition (fungi)
 ITSx:

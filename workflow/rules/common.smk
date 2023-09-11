@@ -1,16 +1,9 @@
-from os.path import *
-import shutil
-import lib
-import os
 from os.path import dirname
-import csv
-import re
-from collections import OrderedDict, defaultdict
-from itertools import chain
-from glob import glob
-import copy
+import os
 
 from snakemake.workflow import srcdir
+
+from lib import Config
 
 # Set environment variable of workflow root dir to allow post-deploy
 # scripts to run other scripts stored in that directory
@@ -19,7 +12,7 @@ os.environ['PIPELINE_DIR'] = dirname(dirname(dirname(srcdir('.'))))
 
 #### Configuration ####
 
-cfg = lib.Config(config)
+cfg = Config(config)
 
 # commonly used
 run_config_path = "input/sample_config/{technology}/{layout}/{run}"
@@ -60,7 +53,7 @@ def iter_runs(workflows=cfg.workflows, pooled=True):
     for workflow in workflows:
         for run_data in cfg.get_runs(workflow, pooled=pooled):
             wcfg = cfg.workflows[workflow]
-            if (run_data["technology"], run_data["layout"]) in cfg.pipeline_capabilities[wcfg["pipeline"]]:
+            if (run_data["technology"], run_data["layout"]) in cfg.cluster_capabilities[wcfg["pipeline"]]:
                 # print(workflow, wcfg["cluster"], run_data)
                 yield workflow, wcfg, run_data
 
@@ -97,3 +90,47 @@ def result_paths(sub_path="", workflows=cfg.workflows, pooled=True):
                 **wcfg,
                 **run_data
             )
+
+
+def tax_dirs(sub_path, ext, workflows=cfg.workflows, pooled=True):
+    return result_paths(lambda marker, _, p: expand(
+        "/{sub_path}/{name}.{ext}",
+        sub_path=sub_path,
+        ext=ext,
+        name=[
+            "{db_name}-{assign[classifier]}-{method_name}".format(**settings)
+            for settings in list_taxonomy_runs(p["name"], marker)
+        ]
+    ), workflows, pooled)
+
+
+def list_taxonomy_runs(workflow, marker):
+    """
+    Lists taxonomy settings, removing impossible combinations
+    (preformatted/trained databases that cannot be used as input for a given method).
+    We don't do the filtering earlier in the Config object because
+    cfg.taxonomy_formats is only known after all snakefiles are parsed, while
+    the Config object is constructed earlier.
+    * training settings are forced to 'standard' (empty) if dealing with a database
+       that cannot be imported, but has to be used as-is (pre-formatted/trained)
+    * the 'preformatted' option is also set here
+    """
+    marker_db_cfg = cfg.workflows[workflow]["taxonomy"][marker]
+    for d in marker_db_cfg.values():
+        db_source_cfg = d["source"]
+        classifier = d["assign"]["classifier"]
+        expected_format = cfg.taxonomy_formats[classifier]
+        if db_source_cfg['format'] in cfg.imported_tax_formats:
+            db_source_cfg['preformatted'] = 'regular'
+        else:
+            db_source_cfg['preformatted'] = 'preformatted'
+            d["assign"]["train"] = {"conversion_id": "standard"}
+        if db_source_cfg["preformatted"] == "regular" or db_source_cfg["format"] == expected_format:
+            yield d
+
+
+def get_refdb_path(format, ext="", **settings):
+    settings = cfg.tax_config(**settings)
+    return "refdb/taxonomy/db_{source[preformatted]}_{source[source_id]}/flt_{filter[filter_id]}/{format}/cnv_{assign[train][conversion_id]}{ext}".format(
+        format=format, ext=ext, **settings
+    )

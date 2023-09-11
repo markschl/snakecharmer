@@ -8,7 +8,7 @@ from utils import file_logging
 
 def anchored(seq_d):
     if seq_d['anchor']:
-        print(f"WARNING: The primer: {seq_d['seq']} should be anochored, but "
+        print(f"WARNING: The primer: {seq_d['seq']} should be anchored, but "
               "this is not possible with the Amptk workflow",
               file=sys.stderr)
     return seq_d['seq']

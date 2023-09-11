@@ -33,14 +33,14 @@ Usually the results are found in `<my analysis>/results/<workflow name>/data` wi
  │ │ │ │ │ ├ 🗋 otutab.hdf5.biom
  │ │ │ │ │ ├ 🗋 otutab.txt.gz
  │ │ │ │ │ ├ 📂 taxonomy
- │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sintax_70.txt.gz
- │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sintax_70.biom.gz
- │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sintax_70.hdf5.biom.gz
+ │ │ │ │ │ │ ├ 🗋 unite-uvsnake_sintax-sintax_70.txt.gz
+ │ │ │ │ │ │ ├ 🗋 unite-uvsnake_sintax-sintax_70.biom.gz
+ │ │ │ │ │ │ ├ 🗋 unite-uvsnake_sintax-sintax_70.hdf5.biom.gz
  │ │ │ │ │ │ └ 🗋 unite-qiime_sklearn-sklearn_70.txt.gz
  │ │ │ │ │ │ ├ 🗋 unite-qiime_sklearn-sklearn_70.biom.gz
  │ │ │ │ │ │ ├ 🗋 unite-qiime_sklearn-sklearn_70.hdf5.biom.gz
  │ │ │ │ │ │ ├ 📂 fasta
- │ │ │ │ │ │ │ ├ 🗋 unite-sintax_usearch-sintax_70.fasta.gz
+ │ │ │ │ │ │ │ ├ 🗋 unite-uvsnake_sintax-sintax_70.fasta.gz
  │ │ │ │ │ │ │ └ 🗋 unite-qiime_sklearn-sklearn_70.fasta.gz
  │ │ │ │ │ │ ├ 📂 sintax
  │ │ │ │ │ │ │ └ ... (original SINTAX output)
@@ -122,23 +122,23 @@ primers:
     combinations: default
   (...)
 
-taxonomy_dbs:
-  ITS:
-    unite:
-      db: unite_eukarya_all
-      defined: species
-  COI:
-    midori:
-      db: Midori_COI
-      defined: species
-
-taxonomy_methods:
-  sintax_70:
-    method: sintax_usearch
-    confidence: 0.7
-  sklearn_70:
-    method: qiime_sklearn
-    confidence: 0.7
+taxonomy:
+  dbs:
+    ITS:
+      unite:
+        db: unite_eukarya_all
+        defined: species
+    COI:
+      midori:
+        db: Midori_COI
+        defined: species
+  methods:
+    sintax_70:
+      method: uvsnake_sintax
+      confidence: 0.7
+    sklearn_70:
+      method: qiime_sklearn
+      confidence: 0.7
 
 (...)
 ```

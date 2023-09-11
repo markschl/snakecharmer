@@ -66,12 +66,18 @@ def _fasta_reader(handle, full_desc=False):
 
 
 @contextmanager
-def zstd_writer(filename, **wrapper_args):
+def zstd_bin_writer(filename):
     with open(filename, "wb") as outh:
         cctx = zstd.ZstdCompressor()
         with cctx.stream_writer(outh) as out:
-            with TextIOWrapper(out, **wrapper_args) as w:
-                yield w
+            yield out
+
+
+@contextmanager
+def zstd_writer(filename, **wrapper_args):
+    with zstd_bin_writer(filename) as out:
+        with TextIOWrapper(out, **wrapper_args) as w:
+            yield w
 
 
 @contextmanager
@@ -166,3 +172,10 @@ def archive(path=None, format="tar", **kwargs):
             _open = zipfile.ZipFile
         with _open(f) as out:
             yield out
+
+
+def fail_on_invalid(data):
+    assert len(data) == 0, (
+        "The following taxonomy database settings are not valid: {}".format(
+            ", ".join("{}: {}".format(k, v) for k, v in data.items())
+        ))

@@ -2,7 +2,7 @@ import os
 from os.path import basename
 import lib
 
-cfg.pipeline_capabilities["amptk"] = [
+cfg.cluster_capabilities["amptk"] = [
     ("illumina", "paired"),
 ]
 

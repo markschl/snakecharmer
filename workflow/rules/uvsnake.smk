@@ -1,9 +1,10 @@
 from os.path import join, abspath, exists
 from lib import get_repo_location, download_repo
 
-cfg.pipeline_capabilities["uvsnake"] = [
+cfg.cluster_capabilities["uvsnake"] = [
     ("illumina", "paired"),
 ]
+cfg.taxonomy_formats["uvsnake_sintax"] = "utax",
 
 
 # def get_uvsnake_source():
@@ -166,14 +167,15 @@ rule usearch_multiqc:
 
 rule convert_taxdb_utax:
     input:
-        db="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/qiime.fasta.zst"
+        params="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/utax/conversion_config_{cnv_id}.yaml",
+        db="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/db.fasta.zst"
     output:
-        db="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/utax.fasta.zst"
+        db="refdb/taxonomy/db_regular_{source_id}/flt_{filter_id}/utax/cnv_{cnv_id}.fasta.zst"
     log:
-        "logs/taxdb/filter/db_regular_{source_id}/flt_{filter_id}/convert_utax.log",
-    wildcard_constraints:
-        source_id = "\w+",
-        filter_id = "\w+",
+        "logs/taxonomy/db_regular_{source_id}/flt_{filter_id}/utax/convert-{cnv_id}.log",
+    # wildcard_constraints:
+    #     source_id = "\w+",
+    #     filter_id = "\w+",
     conda:
         "envs/taxonomy.yaml"
     group:
@@ -193,21 +195,19 @@ module uvsnake:
     skip_validation: True 
 
 
-use rule assign_taxonomy_sintax from uvsnake with:
+use rule assign_taxonomy_sintax from uvsnake as uvsnake_classify_sintax with:
     params:
         confidence=lambda wildcards: cfg.tax_config(**wildcards)["assign"]["confidence"],
-        program=lambda wildcards: cfg.tax_config(**wildcards)["assign"]["program"],
+        program=lambda wildcards: cfg.tax_config(**wildcards)["assign"].get("program", "vsearch"),
         usearch_bin=config["software"]["usearch"]["binary"],
         maxaccepts=1,
         maxrejects=1,
     input:
         fa="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/clusters.fasta",
-        db=lambda wildcards: "refdb/taxonomy/db_{source[preformatted]}_{source[source_id]}/flt_{filter_id}/utax.fasta".format(
-            **cfg.tax_config(**wildcards)
-        ),
+        db=lambda wildcards: get_refdb_path(format="utax", ext=".fasta", **wildcards),
     output:
-        taxtab="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/taxonomy/{db_name}-sintax_usearch-{tax_method}.txt.gz",
-        sintax="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/taxonomy/sintax/{db_name}-sintax_usearch-{tax_method}.txt.gz",
+        taxtab="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/taxonomy/{db_name}-uvsnake_sintax-{tax_method}.txt.gz",
+        sintax="results/{workflow}/workflow_{cluster}/{run}/{marker}__{primers}/taxonomy/sintax/{db_name}-uvsnake_sintax-{tax_method}.txt.gz",
     log:
         "logs/{workflow}/{run}/{marker}__{primers}/taxonomy/{cluster}_{db_name}-{tax_method}.log",
     group:
@@ -216,6 +216,6 @@ use rule assign_taxonomy_sintax from uvsnake with:
         "envs/vsearch.yaml"
     threads:
         lambda wildcards: workflow.cores \
-        if cfg.tax_config(**wildcards)["assign"]["program"] == "vsearch" \
+        if cfg.tax_config(**wildcards)["assign"].get("program", "vsearch") == "vsearch" \
         else 1
  
