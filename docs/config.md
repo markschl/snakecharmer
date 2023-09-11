@@ -56,7 +56,6 @@ primers:
       - ITS3-KYO2: GGGATGAAGAACGYAGYRAA
     reverse:
       - ITS4: AATCCTCCGCTTATTGATATGC
-    combinations: default
   trim_settings:
     min_overlap: 15
     max_error_rate: 0.25
@@ -189,6 +188,105 @@ sample1	raw_reads/run1/sample1_R1.fastq.gz	raw_reads/run1/sample1_R2.fastq.gz
 sample2_1	raw_reads/run1/sample2_R1.fastq.gz	raw_reads/run1/sample2_R2.fastq.gz
 sample2_2	raw_reads/run2/sample2_R1.fastq.gz	raw_reads/run2/sample2_R2.fastq.gz
 sample3	raw_reads/run2/sample3_R1.fastq.gz	raw_reads/run2/sample3_R2.fastq.gz
+```
+
+## Primers
+
+Forward and reverse amplicon primers have to be listed for them to be trimmed before further processing. The trimming settings are added in the same section and used by all pipelines. Currently, the UVSnake and QIIME2 pipelines make use of all settings, while we limit mismatches to 2 for Amptk ([explanation in code](../workflow/scripts/amptk_trim_paired.py)).
+
+Primers are grouped per marker. The marker name needs to be present in the [`taxonomy`/`dbs`](taxonomy.md) configuration as well. Only databases from the given marker will be used for classification. Furthermore, some rules are marker-specific. For example, 'ITSx' only runs
+on ITS amplicons (make sure to always use `ITS` as marker name).
+
+*Example:*
+
+```yaml
+primers:
+  marker:
+    forward: 
+      - fwd_primer: SEQUENCE
+    reverse:
+      - rev_primer: SEQUENCE
+  trim_settings:
+    min_overlap: 15
+    max_error_rate: 0.25
+    min_length: 100
+```
+
+### Primer mixes
+
+Each primer can further be a comma delimited list of oligos, which were mixed together. Such mixes can be advantageous over simple degenerate primers to limit the number of variants present in the mix (see e.g. [Tedersoo 2015](https://doi.org/10.3897/mycokeys.10.4852)).
+
+The oligos should all still start at the same nucleotide position to allow global trimming.
+
+```yaml
+primers:
+  marker:
+    forward: 
+      - fwd_primer:
+        SEQUENCE1,
+        SEQUENCE2,
+        SEQUENCE3
+    reverse:
+      - rev_primer:
+        SEQUENCE1,
+        SEQUENCE2
+  (...)
+```
+
+**Important note:**: From the integrated pipelines some (QIIME2, Amptk) cannot deal with primer mixes out of the box, only [UVSnake](https://github.com/markschl/uvsnake) can. For the others, we currently use the **consensus sequence** of all primers in the mix.
+The consensus threshold is 50%, meaning that at each position, 50% of the bases are represented in the consensus. This may lead to some rare ambiguous variants being removed, while adding some other unneeded wobbles. A higher threshold consensus threshold could lead to too many unspecific hits. With a sufficiently high `max_error_rate`, primers should still be trimmed well.
+More options on this may be added in the future.
+
+### Anchoring
+
+The oligos may include adapter and/or linker sequences, but their position is not
+required to be at the exact sequence start or end. If this is necessary,
+you can anchor the sequences using: `^SEQUENCE`. UVSnake and QIIME2 will currently
+use this setting.
+
+### Combinations
+
+Multiple primers can be specified in each direction. All combinations will be searched (per marker):
+
+
+```yaml
+primers:
+  marker1:
+    forward: 
+      - fwd_primer1: FORWARD1
+      - fwd_primer2: FORWARD2
+    reverse:
+      - rev_primer1: FORWARD1
+      - rev_primer2: FORWARD2
+  marker2:
+    forward:
+      - fwd_primer3: FORWARD3
+    reverse:
+      - rev_primer3: FORWARD3
+  (...)
+```
+
+After trimming, the clustered sequences, OTU tables, etc. are found in the following directory:
+`results/<workflow>/workflow_<method>/<run>/marker__<fwd primer>...<rev primer>/`
+(see also [this documentation](output.md)).
+
+Combinations can also be limited as follows:
+
+
+```yaml
+primers:
+  marker1:
+    forward: 
+      - fwd_primer1: FORWARD1
+      - fwd_primer2: FORWARD2
+    reverse:
+      - rev_primer1: FORWARD1
+      - rev_primer2: FORWARD2
+    combinations:
+      - fwd_primer1...rev_primer1
+      - fwd_primer2...rev_primer1
+      - fwd_primer2...rev_primer2
+  (...)
 ```
 
 ## Workflows

@@ -121,31 +121,14 @@ compare:
 
 primers:
   # Primers are grouped per marker. The marker name (in this case ITS) needs to be
-  # present in the 'taxonomy_dbs' configuration. Only databases from the given
-  # marker will be used for taxonomy assignments.
-  # Furthermore, some marker-specific rules such as 'ITSx' will only be run with ITS sequences
+  # present in the taxonomy -> dbs configuration (below).
   ITS:
-    # Several primers can be specified. The desired combinations can be
-    # specified as well (see 'combinations' below. Multiple primer combinations
-    # may occur if:
-    # - Different samples were amplified with different primers
-    # - Some or all samples are a mix of different amplicons, which were pooled before indexing
-    # The oligos may include adapter and/or linker sequences, but their position is not
-    # required to be at the exact sequence start or end.
+    # Forward and reverse primers are listed here.
+    # Several primers can be specified; all possible combinations will be
+    # searched (if not restricted by 'combinations').
+    # Sequences can be achored using: ^SEQUENCE (UVSnake and QIIME2)
     # Each primer can further be a comma delimited list of oligos, which
-    # were mixed together. However, they should still start at the same
-    # nucleotide position to allow global trimming.
-    # Also note that many pipelines (QIIME, Amptk) cannot deal with primer mixes.
-    # In this case, the consensus sequence of all primers is currently used.
-    # The consensus threshold is 50%, meaning that at each position,
-    # 50% of the bases are represented in the consensus.
-    # This may lead to some rare ambiguous variants being removed. However,
-    # a higher threshold could lead to too many unspecific hits.
-    # With a sufficiently high `max_error_rate`, this will not be a problem.
-    # More options may be added in the future.
-    # *Anchoring*: A sequence (list) can start with '^' to indicate that the
-    # primer cannot occur internally, each read should start with the primer.
-    # This may not be done by every pipeline.
+    # were mixed together. QIIME2 and Amptk will however use the 50% consensus (see docs).
     forward:
       - ITS3-KYO2: GGGATGAAGAACGYAGYRAA
       # - fITS7: GTGARTCATCGAATCTTTG
@@ -156,9 +139,7 @@ primers:
     # (optional) Primer combinations: either missing, 'all' (has the same effect)
     # or a list of combinations (see below)
     combinations: all
-      ## Custom list of combinations:
-      ## Every combination will obtain its own results directory
-      ## The primer combination format must be: "forward...reverse"
+      # custom list of combinations:
       # - ITS3-KYO2...ITS4
       # - fITS7...ITS4
   # Primer trimming settings
